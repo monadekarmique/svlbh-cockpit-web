@@ -95,12 +95,15 @@ export default function ChronoFuPage() {
             <article
               key={o.id}
               className={`rounded-2xl border p-4 shadow-sm transition ${
-                isActiveNow ? "ring-4 shadow-lg" : ""
+                isActiveNow ? "shadow-lg" : ""
               }`}
               style={{
                 borderColor: o.color,
                 backgroundColor: o.bg,
-                ringColor: isActiveNow ? `${o.color}66` : undefined,
+                borderWidth: isActiveNow ? 3 : 1,
+                boxShadow: isActiveNow
+                  ? `0 8px 24px ${o.color}33`
+                  : undefined,
               }}
             >
               <div className="flex items-baseline justify-between gap-2">
