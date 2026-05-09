@@ -9,6 +9,33 @@ export type ShamaneRole =
   | "t3-en-attente" // T3 en cours de certification
   | "superviseur"; // Patrick/Patrick P. — non visibles aux participantes
 
+/** Apprenantes en parcours sans code praticien actif (T0/T2/T3 attente). */
+export type ParticipantTier = "t0" | "t2" | "t3-en-attente";
+
+export type Participant = {
+  name: string;
+  tier: ParticipantTier;
+  emoji?: string;
+};
+
+export const APPRENANTES: Participant[] = [
+  { name: "Daphné", tier: "t3-en-attente", emoji: "🌙" },
+  { name: "Paola", tier: "t2", emoji: "🌺" },
+  { name: "Béatrice Pathey", tier: "t0", emoji: "🌱" },
+];
+
+export const TIER_LABEL: Record<ParticipantTier, string> = {
+  t0: "T0 · Lead",
+  t2: "T2 · MyShaman (Formation)",
+  "t3-en-attente": "T3 en attente",
+};
+
+export const TIER_COLOR: Record<ParticipantTier, string> = {
+  t0: "#6B7280",
+  t2: "#7C3AED",
+  "t3-en-attente": "#C28D43",
+};
+
 export type ShamaneRef = {
   code: string;
   name: string;

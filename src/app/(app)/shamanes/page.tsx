@@ -5,6 +5,9 @@ import {
   fetchShamanesPending,
   ROLE_LABEL,
   ROLE_COLOR,
+  APPRENANTES,
+  TIER_LABEL,
+  TIER_COLOR,
 } from "@/lib/cercle/shamanes";
 import { createClient } from "@/lib/supabase/server";
 
@@ -137,6 +140,42 @@ export default async function ShamanesPage() {
         Source : webhook Make.com SHAMANES-PENDING · pull en temps réel à
         chaque visite
       </p>
+
+      {/* Apprenantes en parcours — sans code praticien actif */}
+      <section className="space-y-3 pt-4">
+        <header>
+          <h2 className="text-lg font-bold tracking-tight text-blue-950">
+            🌱 Apprenantes en parcours
+          </h2>
+          <p className="mt-0.5 text-xs text-neutral-600">
+            Personnes en parcours VLBH sans code praticien actif (pas de
+            badge sessions pending).
+          </p>
+        </header>
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {APPRENANTES.map((a) => {
+            const c = TIER_COLOR[a.tier];
+            return (
+              <li
+                key={a.name}
+                className="flex items-center gap-3 rounded-xl border bg-white p-4 shadow-sm"
+                style={{ borderLeftColor: c, borderLeftWidth: 4 }}
+              >
+                <span className="text-2xl">{a.emoji ?? "·"}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-neutral-900">{a.name}</p>
+                  <p
+                    className="mt-0.5 text-[11px] font-semibold"
+                    style={{ color: c }}
+                  >
+                    {TIER_LABEL[a.tier]}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
     </div>
   );
 }
