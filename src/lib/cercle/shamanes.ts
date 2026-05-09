@@ -16,9 +16,15 @@ export type Participant = {
   name: string;
   tier: ParticipantTier;
   emoji?: string;
+  /** Code praticien actif si la personne en a un (Véronique 200) — pour
+   * récupérer son badge sessions pending dans le webhook SHAMANES-PENDING. */
+  code?: string;
 };
 
+/** Apprenantes en parcours — visibles uniquement aux superviseurs T4/T5
+ * (cachées aux participantes T2/T3). */
 export const APPRENANTES: Participant[] = [
+  { name: "Véronique", tier: "t3-en-attente", emoji: "🔮", code: "200" },
   { name: "Daphné", tier: "t3-en-attente", emoji: "🌙" },
   { name: "Paola", tier: "t2", emoji: "🌺" },
   { name: "Béatrice Pathey", tier: "t0", emoji: "🌱" },
@@ -47,14 +53,9 @@ export type ShamaneRef = {
   hiddenForParticipantes?: boolean;
 };
 
-/** 8 shamanes hardcodées (référence du Cercle de Lumière). */
+/** Shamanes du Cercle actives — Véronique (T3 attente) déplacée dans
+ * APPRENANTES, gardée hors de cette liste car non encore certifiée. */
 export const SHAMANES_ALL: ShamaneRef[] = [
-  {
-    code: "200",
-    name: "Véronique",
-    emoji: "🔮",
-    role: "t3-en-attente",
-  },
   {
     code: "0300",
     name: "Cornelia",
@@ -141,10 +142,8 @@ function parsePending(text: string): Record<string, number> {
   return result;
 }
 
-export async function fetchShamanesPending(
-  isSuperviseur: boolean,
-): Promise<ShamaneBadge[]> {
-  let counts: Record<string, number> = {};
+/** Charge les counts SHAMANES-PENDING bruts (Record code → count). */
+export async function fetchPendingCounts(): Promise<Record<string, number>> {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 10_000);
@@ -158,7 +157,7 @@ export async function fetchShamanesPending(
     clearTimeout(t);
     if (res.ok) {
       const text = await res.text();
-      if (text && text !== "READ") counts = parsePending(text);
+      if (text && text !== "READ") return parsePending(text);
     }
   } catch (e) {
     console.error(
@@ -166,6 +165,13 @@ export async function fetchShamanesPending(
       e instanceof Error ? e.message : e,
     );
   }
+  return {};
+}
+
+export async function fetchShamanesPending(
+  isSuperviseur: boolean,
+): Promise<ShamaneBadge[]> {
+  const counts = await fetchPendingCounts();
   return visibleShamanes(isSuperviseur).map((s) => ({
     ...s,
     count: counts[s.code] ?? 0,
