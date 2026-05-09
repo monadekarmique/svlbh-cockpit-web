@@ -34,6 +34,20 @@ const TILES = [
     color: "#BE185D",
   },
   {
+    href: "/chrono-fu",
+    icon: "⏰",
+    label: "Chrono Fu",
+    desc: "6 organes Fu MTC · Zi Wu Liu Zhu · organe actif live",
+    color: "#4A7C3F",
+  },
+  {
+    href: "/pierres",
+    icon: "💎",
+    label: "Pierres d'enseignement",
+    desc: "8 pierres de protection — Tourmaline, Obsidienne, Nuummite…",
+    color: "#1E3A8A",
+  },
+  {
     href: "/scores",
     icon: "💡",
     label: "Scores de Lumière",
