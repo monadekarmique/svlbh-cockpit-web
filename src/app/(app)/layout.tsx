@@ -7,6 +7,10 @@ const NAV = [
   { href: "/shamanes", label: "Shamanes" },
   { href: "/routines", label: "Routines" },
   { href: "/tores", label: "Tores" },
+  { href: "/chakras", label: "Chakras" },
+  { href: "/scores", label: "Scores" },
+  { href: "/demandes", label: "Demandes" },
+  { href: "/historique", label: "Historique" },
 ];
 
 const PRO_LEVELS = ["MYSHAMANFAMILY", "MYSHAMAN"] as const;

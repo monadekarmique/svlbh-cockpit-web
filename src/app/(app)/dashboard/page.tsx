@@ -1,5 +1,4 @@
-// Cockpit Dashboard — V0 minimal.
-// Hub des routines Cercle de Lumière pour praticiennes certifiées T4+.
+// Cockpit Dashboard — Hub des modules Cercle de Lumière (V2).
 
 import Link from "next/link";
 
@@ -10,22 +9,50 @@ const TILES = [
     href: "/shamanes",
     icon: "👥",
     label: "Shamanes du Cercle",
-    desc: "Les apprenantes T2/T3 dans ton parcours",
+    desc: "8 codes praticien·nes + badges sessions pending",
     color: "#000099",
   },
   {
     href: "/routines",
     icon: "🔄",
-    label: "Routines quotidiennes",
-    desc: "Soin matinal · check-in · libérations",
+    label: "Routine matin",
+    desc: "Quotas billing certifiées + checks énergie M/F",
     color: "#7C3AED",
   },
   {
     href: "/tores",
     icon: "🌀",
     label: "Tores énergétiques",
-    desc: "Visualisations & protocoles dôme/anti-dôme",
+    desc: "4 dimensions : Champ · Glycémie · Sclérose · Sclérose tissulaire",
     color: "#0E7490",
+  },
+  {
+    href: "/chakras",
+    icon: "◈",
+    label: "Chakras / Dimensions",
+    desc: "10 dimensions hDOM (D22, D9-D1, D0)",
+    color: "#BE185D",
+  },
+  {
+    href: "/scores",
+    icon: "💡",
+    label: "Scores de Lumière",
+    desc: "SLA · SLSA · SLPMO · SLM avec seuils",
+    color: "#C28D43",
+  },
+  {
+    href: "/demandes",
+    icon: "📥",
+    label: "Demandes",
+    desc: "Factures + sessions via vlbh-energy-mcp",
+    color: "#1D9E75",
+  },
+  {
+    href: "/historique",
+    icon: "📜",
+    label: "Historique sessions",
+    desc: "Timeline · diff log · provocations",
+    color: "#6B3A8A",
   },
 ];
 
@@ -62,15 +89,6 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
-
-      <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        <p className="font-semibold">⚙️ Bootstrap V0</p>
-        <p className="mt-1 text-xs">
-          PWA déployée sur cockpit.svlbh.com — auth Supabase + tier-gate
-          T4+ actifs. Les modules Shamanes / Routines / Tores seront portés
-          progressivement depuis svlbh-cercle-de-lumiere (iOS).
-        </p>
-      </section>
     </div>
   );
 }
