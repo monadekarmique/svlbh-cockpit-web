@@ -4,16 +4,20 @@ import { createClient } from "@/lib/supabase/server";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
+  // Bloc Shamanes
   { href: "/shamanes", label: "Shamanes" },
+  { href: "/scores", label: "Scores" },
+  { href: "/historique", label: "Historique" },
+  // Bloc Routines
   { href: "/routines", label: "Routines" },
   { href: "/tores", label: "Tores" },
+  // Bloc Chakras
   { href: "/chakras", label: "Chakras" },
   { href: "/chrono-fu", label: "Chrono Fu" },
-  { href: "/linggui-bafa", label: "Linggui Bafa" },
   { href: "/pierres", label: "Pierres" },
-  { href: "/scores", label: "Scores" },
+  // Autonomes
+  { href: "/linggui-bafa", label: "Linggui Bafa" },
   { href: "/demandes", label: "Demandes" },
-  { href: "/historique", label: "Historique" },
 ];
 
 const PRO_LEVELS = ["MYSHAMANFAMILY", "MYSHAMAN"] as const;

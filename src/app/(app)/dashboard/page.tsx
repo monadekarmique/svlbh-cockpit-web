@@ -4,7 +4,10 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+// Ordre Patrick : grouper Scores + Historique sous Shamanes,
+// grouper Chrono Fu + Pierres sous Chakras.
 const TILES = [
+  // ── Bloc Shamanes ──
   {
     href: "/shamanes",
     icon: "👥",
@@ -12,6 +15,21 @@ const TILES = [
     desc: "8 codes praticien·nes + badges sessions pending",
     color: "#000099",
   },
+  {
+    href: "/scores",
+    icon: "💡",
+    label: "Scores de Lumière",
+    desc: "SLA · SLSA · SLPMO · SLM avec seuils",
+    color: "#C28D43",
+  },
+  {
+    href: "/historique",
+    icon: "📜",
+    label: "Historique sessions",
+    desc: "Timeline · diff log · provocations",
+    color: "#6B3A8A",
+  },
+  // ── Bloc Routines ──
   {
     href: "/routines",
     icon: "🔄",
@@ -26,11 +44,12 @@ const TILES = [
     desc: "4 dimensions : Champ · Glycémie · Sclérose · Sclérose tissulaire",
     color: "#0E7490",
   },
+  // ── Bloc Chakras ──
   {
     href: "/chakras",
     icon: "◈",
     label: "Chakras / Dimensions",
-    desc: "10 dimensions hDOM (D22, D9-D1, D0)",
+    desc: "46 chakras hDOM sur 11 dimensions (D22, D9-D1, D99)",
     color: "#BE185D",
   },
   {
@@ -41,24 +60,18 @@ const TILES = [
     color: "#4A7C3F",
   },
   {
-    href: "/linggui-bafa",
-    icon: "灵",
-    label: "Linggui Bafa 灵龟八法",
-    desc: "8 points de confluence MTC · paire active selon Tian Gan / Di Zhi",
-    color: "#C28D43",
-  },
-  {
     href: "/pierres",
     icon: "💎",
     label: "Pierres d'enseignement",
     desc: "8 pierres de protection — Tourmaline, Obsidienne, Nuummite…",
     color: "#1E3A8A",
   },
+  // ── Bloc autonome ──
   {
-    href: "/scores",
-    icon: "💡",
-    label: "Scores de Lumière",
-    desc: "SLA · SLSA · SLPMO · SLM avec seuils",
+    href: "/linggui-bafa",
+    icon: "灵",
+    label: "Linggui Bafa 灵龟八法",
+    desc: "8 points de confluence MTC · paire active selon Tian Gan / Di Zhi",
     color: "#C28D43",
   },
   {
@@ -67,13 +80,6 @@ const TILES = [
     label: "Demandes",
     desc: "Factures + sessions via vlbh-energy-mcp",
     color: "#1D9E75",
-  },
-  {
-    href: "/historique",
-    icon: "📜",
-    label: "Historique sessions",
-    desc: "Timeline · diff log · provocations",
-    color: "#6B3A8A",
   },
 ];
 
