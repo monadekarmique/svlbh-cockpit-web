@@ -14,9 +14,9 @@ const NAV = [
   // Bloc Chakras
   { href: "/chakras", label: "Chakras" },
   { href: "/chrono-fu", label: "Chrono Fu" },
+  { href: "/linggui-bafa", label: "Linggui Bafa" },
   { href: "/pierres", label: "Pierres" },
   // Autonomes
-  { href: "/linggui-bafa", label: "Linggui Bafa" },
   { href: "/demandes", label: "Demandes" },
 ];
 
