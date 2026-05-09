@@ -1,0 +1,47 @@
+export const dynamic = "force-static";
+
+export default function AccessDeniedPage() {
+  return (
+    <main className="flex min-h-dvh items-center justify-center bg-neutral-50 p-6">
+      <div className="w-full max-w-md space-y-4 rounded-2xl bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-6 w-6"
+          >
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </div>
+        <div className="space-y-1">
+          <h1 className="text-lg font-semibold tracking-tight">
+            Accès non autorisé
+          </h1>
+          <p className="text-sm text-neutral-600">
+            SVLBH Pro 1 est réservé aux praticiennes certifiées (T4
+            MyShamanFamily et T5 MyShaman).
+          </p>
+          <p className="pt-2 text-sm text-neutral-500">
+            Pour les niveaux T0-T3 (Lead, Formation, Certifiée Priv),
+            l&apos;app SVLBH Priv-1 sera bientôt disponible.
+          </p>
+        </div>
+        <form action="/auth/signout" method="post">
+          <button
+            type="submit"
+            className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-black px-4 text-sm font-medium text-white"
+          >
+            Se déconnecter
+          </button>
+        </form>
+      </div>
+    </main>
+  );
+}
