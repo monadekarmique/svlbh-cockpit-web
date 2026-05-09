@@ -41,6 +41,13 @@ const TILES = [
     color: "#4A7C3F",
   },
   {
+    href: "/linggui-bafa",
+    icon: "灵",
+    label: "Linggui Bafa 灵龟八法",
+    desc: "8 points de confluence MTC · paire active selon Tian Gan / Di Zhi",
+    color: "#C28D43",
+  },
+  {
     href: "/pierres",
     icon: "💎",
     label: "Pierres d'enseignement",
