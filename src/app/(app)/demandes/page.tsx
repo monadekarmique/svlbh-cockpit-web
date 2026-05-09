@@ -11,6 +11,7 @@ import {
   STATUS_COLOR,
   type Invoice,
 } from "@/lib/cercle/demandes";
+import { SiZhuValidationSection } from "@/components/sizhu-validation-section";
 
 const KEY_TOKEN = "vlbh_token";
 const KEY_PATIENT = "vlbh_demandes_patient_id";
@@ -63,8 +64,20 @@ export default function DemandesPage() {
           📥 Demandes
         </h1>
         <p className="mt-1 text-sm text-neutral-700">
-          Factures via API vlbh-energy-mcp (iTherapeut 6.0). Token + patient_id
-          persistés en localStorage.
+          Concept de validation Si Zhu + dates de libération efficaces, puis
+          factures live via API vlbh-energy-mcp.
+        </p>
+      </header>
+
+      {/* Concept doctrinal Si Zhu — points de validation radiesthésique */}
+      <SiZhuValidationSection />
+
+      <header className="pt-2">
+        <h2 className="text-lg font-bold tracking-tight text-blue-950">
+          💳 Factures iTherapeut
+        </h2>
+        <p className="mt-0.5 text-xs text-neutral-600">
+          Token + patient_id persistés en localStorage.
         </p>
       </header>
 
