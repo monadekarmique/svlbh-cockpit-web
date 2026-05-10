@@ -161,18 +161,23 @@ export default function ScoresPage() {
         </p>
       </header>
 
-      {/* Image Body Planes (SLPMO) à gauche + TOTAL à droite — DEC Patrick
-          2026-05-10. Sur mobile, stack vertical (image puis total). */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <figure className="overflow-hidden rounded-xl border border-neutral-200 bg-white lg:col-span-2">
+      {/* Layout DEC Patrick 2026-05-10 :
+          [ Image Body Planes (col-span-2, row-span-2) ] [ TOTAL ]
+          [ Image continue                              ] [ SLPMO ]
+          [ SLA ] [ SLSA ] [ SLM ]
+          → image descend jusqu'à la base de SLA, SLPMO monte au niveau de TOTAL. */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <figure className="overflow-hidden rounded-xl border border-neutral-200 bg-white lg:col-span-2 lg:row-span-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/scores/body-planes-slpmo.jpg"
             alt="Body Planes annotés — Sagittal, Coronal, Transverse (référence SLPMO)"
-            className="mx-auto h-[280px] w-auto object-contain"
+            className="mx-auto h-full max-h-[600px] w-auto object-contain p-2"
           />
         </figure>
-        <section className="flex flex-col items-center justify-center rounded-xl border-2 border-blue-300 bg-blue-50 p-4 text-center lg:col-span-1">
+
+        {/* TOTAL en haut à droite */}
+        <section className="flex flex-col items-center justify-center rounded-xl border-2 border-blue-300 bg-blue-50 p-4 text-center">
           <p className="text-xs font-bold uppercase tracking-wide text-neutral-700">
             Total
           </p>
@@ -181,72 +186,19 @@ export default function ScoresPage() {
             <span className="ml-1 text-2xl font-bold text-blue-700">%</span>
           </p>
         </section>
+
+        {/* SLPMO sous TOTAL (extrait des 4 SLx) */}
+        {SCORES.filter((s) => s.id === "slpmo").map((s) => (
+          <SlxCard key={s.id} score={s} value={values[s.id]} setScore={setScore} />
+        ))}
       </div>
 
-      {/* 4 SLx en ligne sur grand écran (xl), 2×2 sur tablette, 1 col mobile.
-          DEC Patrick 2026-05-10 — Seuil X% centré vertical au milieu, input
-          aligné en bas (cards même hauteur via items-stretch implicite grid). */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {SCORES.map((s) => {
-          const v = parseInt(values[s.id]) || 0;
-          const reached = values[s.id] !== "" && v >= s.seuil;
-          return (
-            <article
-              key={s.id}
-              className="flex flex-col rounded-xl border bg-white p-4 shadow-sm"
-              style={{
-                borderColor: reached ? s.color : "#E5E5E5",
-                borderLeftWidth: 4,
-                borderLeftColor: s.color,
-              }}
-            >
-              {/* Top : label + nom */}
-              <div>
-                <p
-                  className="font-mono text-base font-extrabold"
-                  style={{ color: s.color }}
-                >
-                  {s.label}
-                </p>
-                <p className="text-[11px] text-neutral-500">{s.fullName}</p>
-              </div>
-
-              {/* Middle : Seuil X% centré vertical (flex-1 prend l'espace
-                  restant entre top et bottom). */}
-              <div className="flex flex-1 items-center justify-end py-2">
-                <span className="font-mono text-[10px] text-neutral-400">
-                  Seuil {s.seuil}%
-                </span>
-              </div>
-
-              {/* Bottom : input + % + badge "Seuil atteint" alignés au bas */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={values[s.id]}
-                  onChange={(e) => setScore(s.id, e.target.value)}
-                  placeholder="0"
-                  className="w-24 rounded-lg border-2 px-2 py-1.5 text-center font-mono text-lg font-bold outline-none"
-                  style={{
-                    borderColor: reached ? s.color : "#E5E5E5",
-                    color: s.color,
-                  }}
-                />
-                <span className="text-sm font-semibold text-neutral-700">%</span>
-                {reached ? (
-                  <span
-                    className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
-                    style={{ backgroundColor: s.color }}
-                  >
-                    ✓ Seuil atteint
-                  </span>
-                ) : null}
-              </div>
-            </article>
-          );
-        })}
+      {/* 3 SLx restants (SLA, SLSA, SLM) en ligne en dessous.
+          SLPMO a été remonté à droite de l'image. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {SCORES.filter((s) => s.id !== "slpmo").map((s) => (
+          <SlxCard key={s.id} score={s} value={values[s.id]} setScore={setScore} />
+        ))}
       </div>
 
       {/* Bloc Total déplacé à droite de l'image Body Planes (DEC Patrick
@@ -296,5 +248,74 @@ export default function ScoresPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+// MARK: - SlxCard (extrait pour réutiliser SLPMO topright + 3 autres bottom)
+
+function SlxCard({
+  score,
+  value,
+  setScore,
+}: {
+  score: (typeof SCORES)[number];
+  value: string;
+  setScore: (id: ScoreId, raw: string) => void;
+}) {
+  const v = parseInt(value) || 0;
+  const reached = value !== "" && v >= score.seuil;
+  return (
+    <article
+      className="flex flex-col rounded-xl border bg-white p-4 shadow-sm"
+      style={{
+        borderColor: reached ? score.color : "#E5E5E5",
+        borderLeftWidth: 4,
+        borderLeftColor: score.color,
+      }}
+    >
+      {/* Top : label + nom */}
+      <div>
+        <p
+          className="font-mono text-base font-extrabold"
+          style={{ color: score.color }}
+        >
+          {score.label}
+        </p>
+        <p className="text-[11px] text-neutral-500">{score.fullName}</p>
+      </div>
+
+      {/* Middle : Seuil X% centré vertical */}
+      <div className="flex flex-1 items-center justify-end py-2">
+        <span className="font-mono text-[10px] text-neutral-400">
+          Seuil {score.seuil}%
+        </span>
+      </div>
+
+      {/* Bottom : input + % + badge */}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={value}
+          onChange={(e) => setScore(score.id, e.target.value)}
+          placeholder="0"
+          className="w-24 rounded-lg border-2 px-2 py-1.5 text-center font-mono text-lg font-bold outline-none"
+          style={{
+            borderColor: reached ? score.color : "#E5E5E5",
+            color: score.color,
+          }}
+        />
+        <span className="text-sm font-semibold text-neutral-700">%</span>
+        {reached ? (
+          <span
+            className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
+            style={{ backgroundColor: score.color }}
+          >
+            ✓ Seuil atteint
+          </span>
+        ) : null}
+      </div>
+    </article>
   );
 }
