@@ -269,7 +269,7 @@ function SlxCard({
   const reached = value !== "" && v >= score.seuil;
   return (
     <article
-      className="flex flex-col rounded-xl border bg-white p-4 shadow-sm"
+      className="rounded-xl border bg-white p-4 shadow-sm"
       style={{
         borderColor: reached ? score.color : "#E5E5E5",
         borderLeftWidth: 4,
@@ -287,15 +287,15 @@ function SlxCard({
         <p className="text-[11px] text-neutral-500">{score.fullName}</p>
       </div>
 
-      {/* Middle : Seuil X% centré vertical */}
-      <div className="flex flex-1 items-center justify-end py-2">
+      {/* Ligne en dessous à droite : Seuil X% (DEC Patrick 2026-05-10) */}
+      <div className="mt-1 text-right">
         <span className="font-mono text-[10px] text-neutral-400">
           Seuil {score.seuil}%
         </span>
       </div>
 
       {/* Bottom : input + % + badge */}
-      <div className="flex items-center gap-2">
+      <div className="mt-2 flex items-center gap-2">
         <input
           type="text"
           inputMode="numeric"
