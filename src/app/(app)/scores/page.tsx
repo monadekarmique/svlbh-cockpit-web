@@ -161,40 +161,51 @@ export default function ScoresPage() {
         </p>
       </header>
 
-      {/* Layout DEC Patrick 2026-05-10 v3 :
-          Row 1 : [ SLA ] [ SLSA ] [ SLM ] [ SLPMO ] [ TOTAL ]
-          Row 2 : [ ─────── Image Body Planes (toute largeur) ─────── ]
-          → SLPMO à gauche de TOTAL, image prend la place de l'ancien
-            range SLA/SLSA/SLM en bas, les 3 SLx montent en haut. */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {/* SLA, SLSA, SLM puis SLPMO (ordre du SCORES filtrés) */}
-        {SCORES.filter((s) => s.id !== "slpmo").map((s) => (
-          <SlxCard key={s.id} score={s} value={values[s.id]} setScore={setScore} />
-        ))}
-        {SCORES.filter((s) => s.id === "slpmo").map((s) => (
-          <SlxCard key={s.id} score={s} value={values[s.id]} setScore={setScore} />
-        ))}
-        {/* TOTAL à droite (5e colonne) */}
-        <section className="flex flex-col items-center justify-center rounded-xl border-2 border-blue-300 bg-blue-50 p-4 text-center">
-          <p className="text-xs font-bold uppercase tracking-wide text-neutral-700">
-            Total
-          </p>
-          <p className="mt-1 font-mono text-4xl font-extrabold tabular-nums text-blue-900">
-            {total}
-            <span className="ml-1 text-2xl font-bold text-blue-700">%</span>
-          </p>
-        </section>
-      </div>
+      {/* Layout DEC Patrick 2026-05-10 v4 :
+          ┌──────────┬──────────┬──────────┐
+          │          │  SLPMO   │  TOTAL   │   ← niveau 1
+          │  Image   ├──────────┴──────────┤
+          │  Body    │ SLA  │ SLSA │ SLM   │   ← niveau 2
+          │  Planes  │      │      │       │
+          └──────────┴──────┴──────┴───────┘
+          → image gauche sur 2 niveaux, droite divisée en 2 rangées. */}
+      <div className="flex flex-col gap-3 lg:flex-row">
+        {/* Image à gauche sur 2 niveaux (lg:w-1/2 sur grand écran) */}
+        <figure className="overflow-hidden rounded-xl border border-neutral-200 bg-white lg:w-1/2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/scores/body-planes-slpmo.jpg"
+            alt="Body Planes annotés — Sagittal, Coronal, Transverse (référence SLPMO)"
+            className="mx-auto h-full max-h-[500px] w-auto object-contain p-2"
+          />
+        </figure>
 
-      {/* Image Body Planes pleine largeur sous les SLx + TOTAL */}
-      <figure className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/scores/body-planes-slpmo.jpg"
-          alt="Body Planes annotés — Sagittal, Coronal, Transverse (référence SLPMO)"
-          className="mx-auto h-[400px] w-auto object-contain p-2"
-        />
-      </figure>
+        {/* Côté droit : 2 niveaux empilés */}
+        <div className="flex flex-1 flex-col gap-3">
+          {/* Niveau 1 : SLPMO + TOTAL */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {SCORES.filter((s) => s.id === "slpmo").map((s) => (
+              <SlxCard key={s.id} score={s} value={values[s.id]} setScore={setScore} />
+            ))}
+            <section className="flex flex-col items-center justify-center rounded-xl border-2 border-blue-300 bg-blue-50 p-4 text-center">
+              <p className="text-xs font-bold uppercase tracking-wide text-neutral-700">
+                Total
+              </p>
+              <p className="mt-1 font-mono text-4xl font-extrabold tabular-nums text-blue-900">
+                {total}
+                <span className="ml-1 text-2xl font-bold text-blue-700">%</span>
+              </p>
+            </section>
+          </div>
+
+          {/* Niveau 2 : SLA + SLSA + SLM */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {SCORES.filter((s) => s.id !== "slpmo").map((s) => (
+              <SlxCard key={s.id} score={s} value={values[s.id]} setScore={setScore} />
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Plans anatomiques SLPMO — DEC Patrick 2026-05-10.
           5 plans de référence pour la lecture du SLPMO. */}
