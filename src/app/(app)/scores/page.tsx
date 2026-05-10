@@ -312,10 +312,10 @@ function SlxCard({
         <span className="text-sm font-semibold text-neutral-700">%</span>
       </div>
 
-      {/* Badge "Seuil atteint" sur une ligne dédiée sous l'input
-          (DEC Patrick 2026-05-10) */}
+      {/* Badge "Seuil atteint" sur une ligne dédiée sous l'input,
+          aligné à droite (DEC Patrick 2026-05-10) */}
       {reached ? (
-        <div className="mt-2">
+        <div className="mt-2 text-right">
           <span
             className="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
             style={{ backgroundColor: score.color }}
