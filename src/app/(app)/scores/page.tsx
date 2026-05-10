@@ -161,22 +161,20 @@ export default function ScoresPage() {
         </p>
       </header>
 
-      {/* Layout DEC Patrick 2026-05-10 :
-          [ Image Body Planes (col-span-2, row-span-2) ] [ TOTAL ]
-          [ Image continue                              ] [ SLPMO ]
-          [ SLA ] [ SLSA ] [ SLM ]
-          → image descend jusqu'à la base de SLA, SLPMO monte au niveau de TOTAL. */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <figure className="overflow-hidden rounded-xl border border-neutral-200 bg-white lg:col-span-2 lg:row-span-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/scores/body-planes-slpmo.jpg"
-            alt="Body Planes annotés — Sagittal, Coronal, Transverse (référence SLPMO)"
-            className="mx-auto h-full max-h-[600px] w-auto object-contain p-2"
-          />
-        </figure>
-
-        {/* TOTAL en haut à droite */}
+      {/* Layout DEC Patrick 2026-05-10 v3 :
+          Row 1 : [ SLA ] [ SLSA ] [ SLM ] [ SLPMO ] [ TOTAL ]
+          Row 2 : [ ─────── Image Body Planes (toute largeur) ─────── ]
+          → SLPMO à gauche de TOTAL, image prend la place de l'ancien
+            range SLA/SLSA/SLM en bas, les 3 SLx montent en haut. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {/* SLA, SLSA, SLM puis SLPMO (ordre du SCORES filtrés) */}
+        {SCORES.filter((s) => s.id !== "slpmo").map((s) => (
+          <SlxCard key={s.id} score={s} value={values[s.id]} setScore={setScore} />
+        ))}
+        {SCORES.filter((s) => s.id === "slpmo").map((s) => (
+          <SlxCard key={s.id} score={s} value={values[s.id]} setScore={setScore} />
+        ))}
+        {/* TOTAL à droite (5e colonne) */}
         <section className="flex flex-col items-center justify-center rounded-xl border-2 border-blue-300 bg-blue-50 p-4 text-center">
           <p className="text-xs font-bold uppercase tracking-wide text-neutral-700">
             Total
@@ -186,23 +184,17 @@ export default function ScoresPage() {
             <span className="ml-1 text-2xl font-bold text-blue-700">%</span>
           </p>
         </section>
-
-        {/* SLPMO sous TOTAL (extrait des 4 SLx) */}
-        {SCORES.filter((s) => s.id === "slpmo").map((s) => (
-          <SlxCard key={s.id} score={s} value={values[s.id]} setScore={setScore} />
-        ))}
       </div>
 
-      {/* 3 SLx restants (SLA, SLSA, SLM) en ligne en dessous.
-          SLPMO a été remonté à droite de l'image. */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {SCORES.filter((s) => s.id !== "slpmo").map((s) => (
-          <SlxCard key={s.id} score={s} value={values[s.id]} setScore={setScore} />
-        ))}
-      </div>
-
-      {/* Bloc Total déplacé à droite de l'image Body Planes (DEC Patrick
-          2026-05-10) — voir grid en haut de la page. */}
+      {/* Image Body Planes pleine largeur sous les SLx + TOTAL */}
+      <figure className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/scores/body-planes-slpmo.jpg"
+          alt="Body Planes annotés — Sagittal, Coronal, Transverse (référence SLPMO)"
+          className="mx-auto h-[400px] w-auto object-contain p-2"
+        />
+      </figure>
 
       {/* Plans anatomiques SLPMO — DEC Patrick 2026-05-10.
           5 plans de référence pour la lecture du SLPMO. */}
