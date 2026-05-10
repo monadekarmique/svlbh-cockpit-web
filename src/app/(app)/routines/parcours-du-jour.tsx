@@ -8,6 +8,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { toggleAttachment } from "./parcours-actions";
 
+// Format renvoyé par la RPC get_parcours_cercle_du_jour (flat columns).
+type CleRpcRow = {
+  id: string;
+  praticienne_svlbh_id: string;
+  consultante_id: string | null;
+  key_hex: string;
+  session_label: string | null;
+  created_at: string;
+  consultante_first_name: string | null;
+  consultante_last_name: string | null;
+  consultante_parcours_stage: string | null;
+};
+
+// Format normalisé utilisé par les sub-views (avec consultante imbriquée).
 type CleRow = {
   id: string;
   praticienne_svlbh_id: string;
@@ -47,16 +61,28 @@ export async function ParcoursDuJourSection() {
     return null;
   }
 
-  // 2. Toutes les clés du jour (auto-soins + clés pour consultantes)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const { data: cles } = await supabase
-    .from("cles_chromatiques_soin_matinal")
-    .select(
-      "id, praticienne_svlbh_id, consultante_id, key_hex, session_label, created_at, consultante:consultante_record!consultante_id(first_name, last_name, parcours_stage)",
-    )
-    .gte("created_at", today.toISOString())
-    .order("created_at", { ascending: false });
+  // 2. Toutes les clés du jour de TOUS les membres du Cercle.
+  //    Bypass de la RLS cles_chrom_owner_rw via RPC SECURITY DEFINER —
+  //    sinon le cockpit auth Patrick ne voit que ses propres clés.
+  const { data: rpcRows } = await supabase.rpc("get_parcours_cercle_du_jour");
+
+  // Normalise format RPC (flat) → format imbriqué utilisé par les sub-views.
+  const allCles: CleRow[] = ((rpcRows ?? []) as CleRpcRow[]).map((r) => ({
+    id: r.id,
+    praticienne_svlbh_id: r.praticienne_svlbh_id,
+    consultante_id: r.consultante_id,
+    key_hex: r.key_hex,
+    session_label: r.session_label,
+    created_at: r.created_at,
+    consultante:
+      r.consultante_first_name !== null
+        ? {
+            first_name: r.consultante_first_name,
+            last_name: r.consultante_last_name ?? "",
+            parcours_stage: r.consultante_parcours_stage,
+          }
+        : null,
+  }));
 
   // 3. Attachements existants
   const { data: attachments } = await supabase
@@ -68,8 +94,6 @@ export async function ParcoursDuJourSection() {
       (a: AttachmentRow) => `${a.parcours_cle_id}::${a.certifiee_svlbh_id}`,
     ),
   );
-
-  const allCles = (cles ?? []) as unknown as CleRow[];
 
   return (
     <section className="space-y-4">
