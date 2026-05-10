@@ -187,15 +187,55 @@ export default function ScoresPage() {
             {SCORES.filter((s) => s.id === "slpmo").map((s) => (
               <SlxCard key={s.id} score={s} value={values[s.id]} setScore={setScore} />
             ))}
-            <section className="flex flex-col items-center justify-center rounded-xl border-2 border-blue-300 bg-blue-50 p-4 text-center">
-              <p className="text-xs font-bold uppercase tracking-wide text-neutral-700">
-                Total
-              </p>
-              <p className="mt-1 font-mono text-4xl font-extrabold tabular-nums text-blue-900">
-                {total}
-                <span className="ml-1 text-2xl font-bold text-blue-700">%</span>
-              </p>
-            </section>
+            {/* TOTAL — même squelette que SlxCard pour aligner Seuil/valeur/badge
+                avec SLPMO (DEC Patrick 2026-05-10). Seuil = 300%. */}
+            {(() => {
+              const totalSeuil = 300;
+              const totalReached = total >= totalSeuil;
+              const totalBlue = "#1E3A8A";
+              return (
+                <article
+                  className="flex h-full flex-col rounded-xl border-2 bg-blue-50 p-4 shadow-sm"
+                  style={{
+                    borderColor: totalReached ? totalBlue : "#93C5FD",
+                    borderLeftWidth: 4,
+                    borderLeftColor: totalBlue,
+                  }}
+                >
+                  <div>
+                    <p
+                      className="font-mono text-base font-extrabold"
+                      style={{ color: totalBlue }}
+                    >
+                      Total
+                    </p>
+                    <p className="text-[11px] text-neutral-500">
+                      Somme SLA · SLSA · SLPMO · SLM
+                    </p>
+                  </div>
+                  <div className="flex-1" />
+                  <div className="text-right">
+                    <span className="font-mono text-[10px] text-neutral-400">
+                      Seuil {totalSeuil}%
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <p className="font-mono text-2xl font-extrabold tabular-nums text-blue-900">
+                      {total}
+                    </p>
+                    <span className="text-sm font-semibold text-neutral-700">%</span>
+                  </div>
+                  <div className="mt-2 text-right">
+                    <span
+                      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${totalReached ? "" : "opacity-0"}`}
+                      style={{ backgroundColor: totalBlue }}
+                    >
+                      ✓ Seuil atteint
+                    </span>
+                  </div>
+                </article>
+              );
+            })()}
           </div>
 
           {/* Niveau 2 : SLA + SLSA + SLM */}
@@ -269,14 +309,14 @@ function SlxCard({
   const reached = value !== "" && v >= score.seuil;
   return (
     <article
-      className="rounded-xl border bg-white p-4 shadow-sm"
+      className="flex h-full flex-col rounded-xl border bg-white p-4 shadow-sm"
       style={{
         borderColor: reached ? score.color : "#E5E5E5",
         borderLeftWidth: 4,
         borderLeftColor: score.color,
       }}
     >
-      {/* Top : label + nom */}
+      {/* Top : label + nom (fixe en haut) */}
       <div>
         <p
           className="font-mono text-base font-extrabold"
@@ -287,14 +327,21 @@ function SlxCard({
         <p className="text-[11px] text-neutral-500">{score.fullName}</p>
       </div>
 
-      {/* Ligne en dessous à droite : Seuil X% (DEC Patrick 2026-05-10) */}
-      <div className="mt-1 text-right">
+      {/* Spacer : pousse les 3 lignes du bas (Seuil, input, badge) tout en
+          bas de la card. Comme toutes les cards sont en grid items-stretch
+          (default), elles ont toutes la même hauteur → les Seuils, inputs
+          et badges s'alignent horizontalement entre cards (DEC Patrick
+          2026-05-10). */}
+      <div className="flex-1" />
+
+      {/* Ligne Seuil X% (à droite) */}
+      <div className="text-right">
         <span className="font-mono text-[10px] text-neutral-400">
           Seuil {score.seuil}%
         </span>
       </div>
 
-      {/* Bottom : input + % */}
+      {/* Input + % */}
       <div className="mt-2 flex items-center gap-2">
         <input
           type="text"
@@ -312,18 +359,17 @@ function SlxCard({
         <span className="text-sm font-semibold text-neutral-700">%</span>
       </div>
 
-      {/* Badge "Seuil atteint" sur une ligne dédiée sous l'input,
-          aligné à droite (DEC Patrick 2026-05-10) */}
-      {reached ? (
-        <div className="mt-2 text-right">
-          <span
-            className="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
-            style={{ backgroundColor: score.color }}
-          >
-            ✓ Seuil atteint
-          </span>
-        </div>
-      ) : null}
+      {/* Badge "Seuil atteint" sur ligne dédiée alignée droite (toujours
+          rendu pour préserver l'alignement vertical entre cards — invisible
+          si non atteint via opacity-0). */}
+      <div className="mt-2 text-right">
+        <span
+          className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${reached ? "" : "opacity-0"}`}
+          style={{ backgroundColor: score.color }}
+        >
+          ✓ Seuil atteint
+        </span>
+      </div>
     </article>
   );
 }
