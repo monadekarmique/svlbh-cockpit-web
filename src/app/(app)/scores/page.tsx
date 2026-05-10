@@ -161,20 +161,30 @@ export default function ScoresPage() {
         </p>
       </header>
 
-      {/* Image Body Planes (SLPMO) — DEC Patrick 2026-05-10.
-          Hauteur ≈ 2 cards SLx (≈ 280px), centrée, contenue. */}
-      <figure className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/scores/body-planes-slpmo.jpg"
-          alt="Body Planes annotés — Sagittal, Coronal, Transverse (référence SLPMO)"
-          className="mx-auto h-[280px] w-auto object-contain"
-        />
-      </figure>
+      {/* Image Body Planes (SLPMO) à gauche + TOTAL à droite — DEC Patrick
+          2026-05-10. Sur mobile, stack vertical (image puis total). */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <figure className="overflow-hidden rounded-xl border border-neutral-200 bg-white lg:col-span-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/scores/body-planes-slpmo.jpg"
+            alt="Body Planes annotés — Sagittal, Coronal, Transverse (référence SLPMO)"
+            className="mx-auto h-[280px] w-auto object-contain"
+          />
+        </figure>
+        <section className="flex flex-col items-center justify-center rounded-xl border-2 border-blue-300 bg-blue-50 p-4 text-center lg:col-span-1">
+          <p className="text-xs font-bold uppercase tracking-wide text-neutral-700">
+            Total
+          </p>
+          <p className="mt-1 font-mono text-4xl font-extrabold tabular-nums text-blue-900">
+            {total}
+          </p>
+        </section>
+      </div>
 
       {/* 4 SLx en ligne sur grand écran (xl), 2×2 sur tablette, 1 col mobile.
-          DEC Patrick 2026-05-10 — passer de la liste verticale à grille
-          horizontale. */}
+          DEC Patrick 2026-05-10 — Seuil X% centré vertical au milieu, input
+          aligné en bas (cards même hauteur via items-stretch implicite grid). */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {SCORES.map((s) => {
           const v = parseInt(values[s.id]) || 0;
@@ -182,28 +192,34 @@ export default function ScoresPage() {
           return (
             <article
               key={s.id}
-              className="rounded-xl border bg-white p-4 shadow-sm"
+              className="flex flex-col rounded-xl border bg-white p-4 shadow-sm"
               style={{
                 borderColor: reached ? s.color : "#E5E5E5",
                 borderLeftWidth: 4,
                 borderLeftColor: s.color,
               }}
             >
-              <div className="flex items-baseline justify-between gap-2">
-                <div>
-                  <p
-                    className="font-mono text-base font-extrabold"
-                    style={{ color: s.color }}
-                  >
-                    {s.label}
-                  </p>
-                  <p className="text-[11px] text-neutral-500">{s.fullName}</p>
-                </div>
+              {/* Top : label + nom */}
+              <div>
+                <p
+                  className="font-mono text-base font-extrabold"
+                  style={{ color: s.color }}
+                >
+                  {s.label}
+                </p>
+                <p className="text-[11px] text-neutral-500">{s.fullName}</p>
+              </div>
+
+              {/* Middle : Seuil X% centré vertical (flex-1 prend l'espace
+                  restant entre top et bottom). */}
+              <div className="flex flex-1 items-center justify-end py-2">
                 <span className="font-mono text-[10px] text-neutral-400">
                   Seuil {s.seuil}%
                 </span>
               </div>
-              <div className="mt-3 flex items-center gap-2">
+
+              {/* Bottom : input + % + badge "Seuil atteint" alignés au bas */}
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   inputMode="numeric"
@@ -232,14 +248,8 @@ export default function ScoresPage() {
         })}
       </div>
 
-      <section className="rounded-xl border-2 border-blue-300 bg-blue-50 p-4 text-center">
-        <p className="text-xs font-bold uppercase tracking-wide text-neutral-700">
-          Total
-        </p>
-        <p className="mt-1 font-mono text-3xl font-extrabold tabular-nums text-blue-900">
-          {total}
-        </p>
-      </section>
+      {/* Bloc Total déplacé à droite de l'image Body Planes (DEC Patrick
+          2026-05-10) — voir grid en haut de la page. */}
 
       {/* Plans anatomiques SLPMO — DEC Patrick 2026-05-10.
           5 plans de référence pour la lecture du SLPMO. */}
