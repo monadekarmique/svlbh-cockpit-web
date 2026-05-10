@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { navItems } from "@/lib/cockpit-nav";
-
-// Source unique de vérité ordre/contenu : src/lib/cockpit-nav.ts
-const NAV = [{ href: "/dashboard", label: "Dashboard" }, ...navItems()];
+import { groupedNav } from "@/lib/cockpit-nav";
+import { CockpitNav } from "@/components/cockpit-nav";
 
 const PRO_LEVELS = ["MYSHAMANFAMILY", "MYSHAMAN"] as const;
 
@@ -78,16 +76,8 @@ export default async function CockpitLayout({
           >
             🎯 SVLBH Cockpit
           </Link>
-          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-600">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="hover:text-neutral-900 active:text-neutral-900"
-              >
-                {item.label}
-              </Link>
-            ))}
+          <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-600">
+            <CockpitNav groups={groupedNav()} />
             <span className="text-neutral-400">·</span>
             <span
               className="hidden font-mono text-[10px] text-neutral-400 sm:inline"

@@ -122,3 +122,29 @@ export function navItems(): { href: string; label: string }[] {
     label: i.navLabel ?? i.label,
   }));
 }
+
+/** Métadonnées des 4 groupes affichés en dropdowns dans le NAV header. */
+export const GROUP_LABELS: Record<CockpitNavGroup, string> = {
+  shamanes: "Shamanes",
+  routines: "Routines",
+  chakras: "Chakras MTC",
+  autonome: "Demandes",
+};
+
+export type CockpitNavGroupRendered = {
+  id: CockpitNavGroup;
+  label: string;
+  items: CockpitNavItem[];
+};
+
+/** Items regroupés par group, dans l'ordre du COCKPIT_NAV. */
+export function groupedNav(): CockpitNavGroupRendered[] {
+  const order: CockpitNavGroup[] = ["shamanes", "routines", "chakras", "autonome"];
+  return order
+    .map((id) => ({
+      id,
+      label: GROUP_LABELS[id],
+      items: COCKPIT_NAV.filter((i) => i.group === id),
+    }))
+    .filter((g) => g.items.length > 0);
+}
