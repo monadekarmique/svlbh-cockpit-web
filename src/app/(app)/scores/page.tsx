@@ -114,7 +114,21 @@ export default function ScoresPage() {
         </p>
       </header>
 
-      <div className="space-y-3">
+      {/* Image Body Planes (SLPMO) — DEC Patrick 2026-05-10.
+          Hauteur ≈ 2 cards SLx (≈ 280px), centrée, contenue. */}
+      <figure className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/scores/body-planes-slpmo.jpg"
+          alt="Body Planes annotés — Sagittal, Coronal, Transverse (référence SLPMO)"
+          className="mx-auto h-[280px] w-auto object-contain"
+        />
+      </figure>
+
+      {/* 4 SLx en ligne sur grand écran (xl), 2×2 sur tablette, 1 col mobile.
+          DEC Patrick 2026-05-10 — passer de la liste verticale à grille
+          horizontale. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {SCORES.map((s) => {
           const v = parseInt(values[s.id]) || 0;
           const reached = values[s.id] !== "" && v >= s.seuil;
