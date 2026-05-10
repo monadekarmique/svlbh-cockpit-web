@@ -8,6 +8,53 @@ import { useEffect, useState } from "react";
 
 type ScoreId = "sla" | "slsa" | "slpmo" | "slm";
 
+// Plans anatomiques SLPMO — DEC Patrick 2026-05-10.
+// 5 plans de référence pour la lecture du Score de Lumière Personnel
+// Multi-Octave (cf image Body Planes annotée juste au-dessus).
+const SLPMO_PLANES: {
+  id: string;
+  name: string;
+  desc: string;
+  color: string;
+  icon: string;
+}[] = [
+  {
+    id: "frontal-coronal",
+    name: "Frontal / Coronal",
+    desc: "Plan vertical séparant l'avant et l'arrière du corps (face/dos).",
+    color: "#2B5EA7",
+    icon: "▤",
+  },
+  {
+    id: "sagittal-median",
+    name: "Sagittal médian",
+    desc: "Plan vertical séparant le corps en moitiés gauche et droite égales.",
+    color: "#6B3A8A",
+    icon: "▥",
+  },
+  {
+    id: "transversal-pelvien",
+    name: "Transversal pelvien",
+    desc: "Plan horizontal au niveau du bassin (séparation haut/bas).",
+    color: "#C28D43",
+    icon: "▬",
+  },
+  {
+    id: "levre-labium",
+    name: "Lèvre / Labium",
+    desc: "Plan spécifique des lèvres / labium — repère vibratoire VLBH.",
+    color: "#BD3482",
+    icon: "◖",
+  },
+  {
+    id: "thoracique",
+    name: "Plan thoracique",
+    desc: "Plan transversal au niveau du thorax (diaphragme — cœur — poumons).",
+    color: "#4A7C28",
+    icon: "▭",
+  },
+];
+
 const SCORES: {
   id: ScoreId;
   label: string;
@@ -192,6 +239,50 @@ export default function ScoresPage() {
         <p className="mt-1 font-mono text-3xl font-extrabold tabular-nums text-blue-900">
           {total}
         </p>
+      </section>
+
+      {/* Plans anatomiques SLPMO — DEC Patrick 2026-05-10.
+          5 plans de référence pour la lecture du SLPMO. */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-bold tracking-tight text-blue-950">
+          Plans anatomiques SLPMO
+        </h2>
+        <p className="text-xs text-neutral-600">
+          5 plans de référence pour la lecture vibratoire — voir image Body
+          Planes en haut de la page.
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {SLPMO_PLANES.map((p) => (
+            <article
+              key={p.id}
+              className="rounded-xl border bg-white p-3 shadow-sm"
+              style={{
+                borderColor: "#E5E5E5",
+                borderLeftWidth: 4,
+                borderLeftColor: p.color,
+              }}
+            >
+              <div className="flex items-baseline gap-2">
+                <span
+                  className="font-mono text-xl"
+                  style={{ color: p.color }}
+                  aria-hidden
+                >
+                  {p.icon}
+                </span>
+                <p
+                  className="font-mono text-sm font-extrabold"
+                  style={{ color: p.color }}
+                >
+                  {p.name}
+                </p>
+              </div>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-600">
+                {p.desc}
+              </p>
+            </article>
+          ))}
+        </div>
       </section>
     </div>
   );
