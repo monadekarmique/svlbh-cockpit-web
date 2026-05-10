@@ -21,6 +21,19 @@ const nextConfig: NextConfig = {
       .replace("T", " ")
       .slice(0, 16),
   },
+  // Désactive le cache HTML browser sur les pages dynamiques.
+  // Sans ça, Cloudflare + Safari servent l'ancien HTML après un nouveau
+  // déploiement et les utilisateurs ne voient pas les changements.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, must-revalidate" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
