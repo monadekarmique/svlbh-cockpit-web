@@ -7,7 +7,9 @@ import { CockpitNav } from "@/components/cockpit-nav";
 const PRO_LEVELS = ["MYSHAMANFAMILY", "MYSHAMAN"] as const;
 
 /**
- * Cockpit access policy :
+ * Cockpit access policy (validé Patrick 2026-05-10) :
+ *   - Membre actif du Cercle de Lumière Suisse Romande : accès automatique
+ *     (cercle_lumiere_sr = true sur praticienne_profile)
  *   - T4 (MyShamanFamily) ou T5 (MyShaman) actives : accès automatique
  *   - T3 (Certifiée Priv) : whitelist via table cockpit_access
  *     (sélectionnées pour vibrations proches du 300% quasi permanent)
@@ -19,15 +21,21 @@ async function isCockpitAllowed(
 ): Promise<boolean> {
   const { data: profile } = await supabase
     .from("praticienne_profile")
-    .select("certification_level, pro_status")
+    .select("certification_level, pro_status, cercle_lumiere_sr")
     .eq("supabase_user_id", userId)
     .maybeSingle();
+  // 1. Cercle de Lumière Suisse Romande
+  if (profile?.cercle_lumiere_sr === true) {
+    return true;
+  }
+  // 2. Certification active T4/T5
   if (
     profile?.pro_status === "ACTIVE" &&
     (PRO_LEVELS as readonly string[]).includes(profile.certification_level)
   ) {
     return true;
   }
+  // 3. Whitelist T3 via cockpit_access
   const { data: access } = await supabase
     .from("cockpit_access")
     .select("user_id, revoked_at")
