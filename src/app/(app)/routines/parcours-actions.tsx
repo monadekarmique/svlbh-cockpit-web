@@ -2,6 +2,9 @@
 
 // Server actions pour la section Parcours du jour.
 // DEC Patrick 2026-05-10 — Sprint A : attach/detach manuel par Patrick.
+// Le visuel est géré par AttachCheckbox client (optimistic update),
+// donc plus besoin de revalidatePath pour la réactivité — on garde
+// quand même pour qu'un autre onglet ouvert se synchronise.
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";

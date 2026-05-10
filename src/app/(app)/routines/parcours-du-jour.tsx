@@ -6,7 +6,7 @@
 // certifiées prévue Sprint C).
 
 import { createClient } from "@/lib/supabase/server";
-import { toggleAttachment } from "./parcours-actions";
+import { AttachCheckbox } from "./attach-checkbox";
 
 // Format renvoyé par la RPC get_parcours_cercle_du_jour (flat columns).
 type CleRpcRow = {
@@ -200,23 +200,11 @@ function SubSection({
                 key={k.id}
                 className="flex items-center gap-2 rounded-lg border border-neutral-100 bg-neutral-50 px-2 py-1.5"
               >
-                <form action={toggleAttachment}>
-                  <input type="hidden" name="parcoursCleId" value={k.id} />
-                  <input type="hidden" name="certifieeId" value={certifieeId} />
-                  <button
-                    type="submit"
-                    aria-label={attached ? "Détacher" : "Attacher"}
-                    className="flex h-5 w-5 items-center justify-center rounded border-2"
-                    style={{
-                      borderColor: attached ? "#2B5EA7" : "#D4D4D4",
-                      backgroundColor: attached ? "#2B5EA7" : "transparent",
-                    }}
-                  >
-                    {attached ? (
-                      <span className="text-[10px] font-bold text-white">✓</span>
-                    ) : null}
-                  </button>
-                </form>
+                <AttachCheckbox
+                  parcoursCleId={k.id}
+                  certifieeId={certifieeId}
+                  initialAttached={attached}
+                />
                 <span
                   className="h-4 w-4 shrink-0 rounded ring-1 ring-black/10"
                   style={{ backgroundColor: k.key_hex }}
