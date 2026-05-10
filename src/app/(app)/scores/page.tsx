@@ -294,7 +294,7 @@ function SlxCard({
         </span>
       </div>
 
-      {/* Bottom : input + % + badge */}
+      {/* Bottom : input + % */}
       <div className="mt-2 flex items-center gap-2">
         <input
           type="text"
@@ -310,15 +310,20 @@ function SlxCard({
           }}
         />
         <span className="text-sm font-semibold text-neutral-700">%</span>
-        {reached ? (
+      </div>
+
+      {/* Badge "Seuil atteint" sur une ligne dédiée sous l'input
+          (DEC Patrick 2026-05-10) */}
+      {reached ? (
+        <div className="mt-2">
           <span
-            className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
+            className="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
             style={{ backgroundColor: score.color }}
           >
             ✓ Seuil atteint
           </span>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </article>
   );
 }
