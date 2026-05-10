@@ -1,7 +1,11 @@
 // Routines matin Certifiées — quotas billing avec checks Cercle de Lumière.
+// + Section "Parcours priv du jour" (DEC Patrick 2026-05-10) — clés
+// chromatiques soin matinal du jour par certifiée + ses thérapeutes,
+// avec attach/detach (Sprint A).
 
 import Link from "next/link";
 import { fetchAllQuotas, computeChecks } from "@/lib/cercle/routines";
+import { ParcoursDuJourSection } from "./parcours-du-jour";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -117,6 +121,9 @@ export default async function RoutinesPage() {
         Source : webhook Make.com svlbh-sync-praticien · billing_praticien
         datastore
       </p>
+
+      {/* Section Parcours priv du jour — Sprint A DEC Patrick 2026-05-10 */}
+      <ParcoursDuJourSection />
     </div>
   );
 }
