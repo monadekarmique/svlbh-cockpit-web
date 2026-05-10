@@ -178,6 +178,7 @@ export default function ScoresPage() {
           </p>
           <p className="mt-1 font-mono text-4xl font-extrabold tabular-nums text-blue-900">
             {total}
+            <span className="ml-1 text-2xl font-bold text-blue-700">%</span>
           </p>
         </section>
       </div>
