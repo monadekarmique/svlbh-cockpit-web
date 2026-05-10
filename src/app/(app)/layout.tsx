@@ -1,24 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { navItems } from "@/lib/cockpit-nav";
 
-const NAV = [
-  { href: "/dashboard", label: "Dashboard" },
-  // Bloc Shamanes
-  { href: "/shamanes", label: "Shamanes" },
-  { href: "/scores", label: "Scores" },
-  { href: "/historique", label: "Historique" },
-  // Bloc Routines
-  { href: "/routines", label: "Routines" },
-  { href: "/tores", label: "Tores" },
-  // Bloc Chakras
-  { href: "/chakras", label: "Chakras" },
-  { href: "/chrono-fu", label: "Chrono Fu" },
-  { href: "/linggui-bafa", label: "Linggui Bafa" },
-  { href: "/pierres", label: "Pierres" },
-  // Autonomes
-  { href: "/demandes", label: "Demandes" },
-];
+// Source unique de vérité ordre/contenu : src/lib/cockpit-nav.ts
+const NAV = [{ href: "/dashboard", label: "Dashboard" }, ...navItems()];
 
 const PRO_LEVELS = ["MYSHAMANFAMILY", "MYSHAMAN"] as const;
 

@@ -1,87 +1,10 @@
-// Cockpit Dashboard — Hub des modules Cercle de Lumière (V2).
+// Cockpit Dashboard — Hub des modules Cercle de Lumière.
+// Source de vérité ordre/contenu : src/lib/cockpit-nav.ts
 
 import Link from "next/link";
+import { COCKPIT_NAV } from "@/lib/cockpit-nav";
 
 export const dynamic = "force-dynamic";
-
-// Ordre Patrick : grouper Scores + Historique sous Shamanes,
-// grouper Chrono Fu + Pierres sous Chakras.
-const TILES = [
-  // ── Bloc Shamanes ──
-  {
-    href: "/shamanes",
-    icon: "👥",
-    label: "Shamanes du Cercle",
-    desc: "8 codes praticien·nes + badges sessions pending",
-    color: "#000099",
-  },
-  {
-    href: "/scores",
-    icon: "💡",
-    label: "Scores de Lumière",
-    desc: "SLA · SLSA · SLPMO · SLM avec seuils",
-    color: "#C28D43",
-  },
-  {
-    href: "/historique",
-    icon: "📜",
-    label: "Historique sessions",
-    desc: "Timeline · diff log · provocations",
-    color: "#6B3A8A",
-  },
-  // ── Bloc Routines ──
-  {
-    href: "/routines",
-    icon: "🔄",
-    label: "Routine matin",
-    desc: "Quotas billing certifiées + checks énergie M/F",
-    color: "#7C3AED",
-  },
-  {
-    href: "/tores",
-    icon: "🌀",
-    label: "Tores énergétiques",
-    desc: "4 dimensions : Champ · Glycémie · Sclérose · Sclérose tissulaire",
-    color: "#0E7490",
-  },
-  // ── Bloc Chakras ──
-  {
-    href: "/chakras",
-    icon: "◈",
-    label: "Chakras / Dimensions",
-    desc: "46 chakras hDOM sur 11 dimensions (D22, D9-D1, D99)",
-    color: "#BE185D",
-  },
-  {
-    href: "/chrono-fu",
-    icon: "⏰",
-    label: "Chrono Fu",
-    desc: "6 organes Fu MTC · Zi Wu Liu Zhu · organe actif live",
-    color: "#4A7C3F",
-  },
-  {
-    href: "/linggui-bafa",
-    icon: "灵",
-    label: "Linggui Bafa 灵龟八法",
-    desc: "8 points de confluence MTC · paire active selon Tian Gan / Di Zhi",
-    color: "#C28D43",
-  },
-  {
-    href: "/pierres",
-    icon: "💎",
-    label: "Pierres d'enseignement",
-    desc: "8 pierres de protection — Tourmaline, Obsidienne, Nuummite…",
-    color: "#1E3A8A",
-  },
-  // ── Bloc autonome ──
-  {
-    href: "/demandes",
-    icon: "📥",
-    label: "Demandes",
-    desc: "Factures + sessions via vlbh-energy-mcp",
-    color: "#1D9E75",
-  },
-];
 
 export default function DashboardPage() {
   return (
@@ -99,7 +22,7 @@ export default function DashboardPage() {
       </header>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {TILES.map((t) => (
+        {COCKPIT_NAV.map((t) => (
           <Link
             key={t.href}
             href={t.href}
