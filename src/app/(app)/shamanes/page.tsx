@@ -118,7 +118,7 @@ export default async function ShamanesPage() {
                     {s.hiddenForParticipantes ? (
                       <span
                         className="text-[9px] font-bold uppercase text-neutral-400"
-                        title="Non visible pour les participantes T2/T3"
+                        title="Non visible pour les participantes ST2/ST3"
                       >
                         🙈 caché
                       </span>

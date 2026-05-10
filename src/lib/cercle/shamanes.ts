@@ -31,9 +31,9 @@ export const APPRENANTES: Participant[] = [
 ];
 
 export const TIER_LABEL: Record<ParticipantTier, string> = {
-  t0: "T0 · Lead",
-  t2: "T2 · MyShaman (Formation)",
-  "t3-en-attente": "T3 en attente",
+  t0: "ST0 · Lead",
+  t2: "ST2 · MyShaman (Formation)",
+  "t3-en-attente": "ST3 en attente",
 };
 
 export const TIER_COLOR: Record<ParticipantTier, string> = {
