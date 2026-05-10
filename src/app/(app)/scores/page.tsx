@@ -18,6 +18,19 @@ const SLPMO_PLANES: {
   color: string;
   icon: string;
 }[] = [
+  // Ordre DEC Patrick 2026-05-10 :
+  // 1. Sagittal médian (avant Frontal/Coronal)
+  // 2. Frontal/Coronal
+  // 3. Plan thoracique (avant Transversal pelvien)
+  // 4. Transversal pelvien
+  // 5. Lèvre / Labium
+  {
+    id: "sagittal-median",
+    name: "Sagittal médian",
+    desc: "Plan vertical séparant le corps en moitiés gauche et droite égales.",
+    color: "#6B3A8A",
+    icon: "▥",
+  },
   {
     id: "frontal-coronal",
     name: "Frontal / Coronal",
@@ -26,11 +39,11 @@ const SLPMO_PLANES: {
     icon: "▤",
   },
   {
-    id: "sagittal-median",
-    name: "Sagittal médian",
-    desc: "Plan vertical séparant le corps en moitiés gauche et droite égales.",
-    color: "#6B3A8A",
-    icon: "▥",
+    id: "thoracique",
+    name: "Plan thoracique",
+    desc: "Plan transversal au niveau du thorax (diaphragme — cœur — poumons).",
+    color: "#4A7C28",
+    icon: "▭",
   },
   {
     id: "transversal-pelvien",
@@ -45,13 +58,6 @@ const SLPMO_PLANES: {
     desc: "Plan spécifique des lèvres / labium — repère vibratoire VLBH.",
     color: "#BD3482",
     icon: "◖",
-  },
-  {
-    id: "thoracique",
-    name: "Plan thoracique",
-    desc: "Plan transversal au niveau du thorax (diaphragme — cœur — poumons).",
-    color: "#4A7C28",
-    icon: "▭",
   },
 ];
 
