@@ -33,20 +33,12 @@ export default function AccessDeniedPage() {
             l&apos;app SVLBH Priv-1 est disponible :
           </p>
         </div>
-        <div className="space-y-2">
-          <a
-            href="https://priv.svlbh.com"
-            className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            Ouvrir priv.svlbh.com (PWA web)
-          </a>
-          <a
-            href="https://apps.apple.com/app/id6761095011"
-            className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-900 hover:bg-neutral-50"
-          >
-            Télécharger sur l&apos;App Store (iPhone / iPad)
-          </a>
-        </div>
+        <a
+          href="https://priv.svlbh.com"
+          className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          Ouvrir SVLBH Priv-1 →
+        </a>
         <form action="/auth/signout" method="post">
           <button
             type="submit"
