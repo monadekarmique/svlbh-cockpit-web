@@ -4,38 +4,34 @@ import { createClient } from "@/lib/supabase/server";
 import { groupedNav } from "@/lib/cockpit-nav";
 import { CockpitNav } from "@/components/cockpit-nav";
 
-const PRO_LEVELS = ["MYSHAMANFAMILY", "MYSHAMAN"] as const;
+// DEC Patrick 2026-05-12 — doctrine ST. Cockpit accessible à ST3+ (Certifiée
+// Priv, Thérapeute PRO, Superviseur, Owner). Les modules Admin / Compliance /
+// Facturation sont gated ST6 (Owner) au niveau page individuelle. Cercle SR
+// reste un signal indépendant (utilisé par la nav, pas par le gate).
+const ALLOWED_STX = ["ST3", "ST4", "ST5", "ST6"] as const;
 
-/**
- * Cockpit access policy (validé Patrick 2026-05-10) :
- *   - Membre actif du Cercle de Lumière Suisse Romande : accès automatique
- *     (cercle_lumiere_sr = true sur praticienne_profile)
- *   - T4 (MyShamanFamily) ou T5 (MyShaman) actives : accès automatique
- *   - T3 (Certifiée Priv) : whitelist via table cockpit_access
- *     (sélectionnées pour vibrations proches du 300% quasi permanent)
- *   - Tout autre tier : redirect /access-denied
- */
 async function isCockpitAllowed(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
 ): Promise<boolean> {
   const { data: profile } = await supabase
     .from("praticienne_profile")
-    .select("certification_level, pro_status, cercle_lumiere_sr")
+    .select("stx, pro_status, cercle_lumiere_sr")
     .eq("supabase_user_id", userId)
     .maybeSingle();
-  // 1. Cercle de Lumière Suisse Romande
+  // Cercle de Lumière SR : accès gardé (sécurité indépendante)
   if (profile?.cercle_lumiere_sr === true) {
     return true;
   }
-  // 2. Certification active T4/T5
+  // Praticienne ACTIVE avec stx ST3+
   if (
     profile?.pro_status === "ACTIVE" &&
-    (PRO_LEVELS as readonly string[]).includes(profile.certification_level)
+    !!profile.stx &&
+    (ALLOWED_STX as readonly string[]).includes(profile.stx)
   ) {
     return true;
   }
-  // 3. Whitelist T3 via cockpit_access
+  // Whitelist via cockpit_access (cas d'ajout ad-hoc hors stage)
   const { data: access } = await supabase
     .from("cockpit_access")
     .select("user_id, revoked_at")
