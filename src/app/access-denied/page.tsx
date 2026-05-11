@@ -25,12 +25,11 @@ export default function AccessDeniedPage() {
             Accès non autorisé
           </h1>
           <p className="text-sm text-neutral-600">
-            SVLBH Pro 1 est réservé aux praticiennes certifiées (ST4
-            MyShamanFamily et ST5 MyShaman).
+            SVLBH Pro est disponible pour les praticiennes certifiées ST4.
           </p>
           <p className="pt-2 text-sm text-neutral-500">
-            Pour les niveaux ST0-ST3 (Lead, Formation, Certifiée Priv),
-            l&apos;app SVLBH Priv-1 est disponible :
+            Pour les niveaux ST1 à ST2, l&apos;App SVLBH-Priv 1 est disponible
+            pour vos formations.
           </p>
         </div>
         <a
