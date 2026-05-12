@@ -66,6 +66,15 @@ export default async function CockpitLayout({
     redirect("/access-denied");
   }
 
+  // Profil pour la nav : Owner (ST6) ou Cercle SR voient les modules
+  // Admin / Compliance / Facturation directement dans la nav (DEC Patrick 2026-05-12).
+  const { data: navProfile } = await supabase
+    .from("praticienne_profile")
+    .select("stx, cercle_lumiere_sr")
+    .eq("supabase_user_id", user.id)
+    .maybeSingle();
+  const isOwner = navProfile?.stx === "ST6" || navProfile?.cercle_lumiere_sr === true;
+
   return (
     <div className="min-h-dvh bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <header
@@ -95,7 +104,7 @@ export default async function CockpitLayout({
               color="#F2BF1A"
               title="Ouvrir priv.svlbh.com (PWA Priv-1)"
             />
-            <CockpitNav groups={groupedNav()} />
+            <CockpitNav groups={groupedNav({ includeOwner: isOwner })} />
             <span className="text-neutral-400">·</span>
             <span
               className="hidden font-mono text-[10px] text-neutral-400 sm:inline"

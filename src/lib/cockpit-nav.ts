@@ -4,7 +4,7 @@
 //   - src/app/(app)/layout.tsx (NAV header avec juste label)
 // Modifier l'ordre/ajouter/retirer un module ici met à jour les 2.
 
-export type CockpitNavGroup = "shamanes" | "routines" | "chakras" | "autonome";
+export type CockpitNavGroup = "shamanes" | "routines" | "chakras" | "autonome" | "owner";
 
 export type CockpitNavItem = {
   href: string;
@@ -113,6 +113,32 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     color: "#1D9E75",
     group: "autonome",
   },
+
+  // ── Owner (ST6 only — gate côté layout via requireOwner) ──
+  {
+    href: "/admin",
+    label: "Admin",
+    icon: "🛠️",
+    desc: "Gestion stx praticiennes, révocations, whitelist cockpit_access",
+    color: "#9333EA",
+    group: "owner",
+  },
+  {
+    href: "/compliance",
+    label: "Compliance",
+    icon: "📋",
+    desc: "DPIA, registre Art. 30, journaux audit, DPA",
+    color: "#0891B2",
+    group: "owner",
+  },
+  {
+    href: "/facturation",
+    label: "Facturation",
+    icon: "💰",
+    desc: "Paiements praticiennes, PostFinance, exports comptables",
+    color: "#15803D",
+    group: "owner",
+  },
 ];
 
 /** Items du NAV header (label court, sans Dashboard car ajouté séparément). */
@@ -123,12 +149,13 @@ export function navItems(): { href: string; label: string }[] {
   }));
 }
 
-/** Métadonnées des 4 groupes affichés en dropdowns dans le NAV header. */
+/** Métadonnées des 5 groupes affichés en dropdowns dans le NAV header. */
 export const GROUP_LABELS: Record<CockpitNavGroup, string> = {
   shamanes: "Shamanes",
   routines: "Routines",
   chakras: "Chakras MTC",
   autonome: "Demandes",
+  owner: "Owner",
 };
 
 export type CockpitNavGroupRendered = {
@@ -137,9 +164,14 @@ export type CockpitNavGroupRendered = {
   items: CockpitNavItem[];
 };
 
-/** Items regroupés par group, dans l'ordre du COCKPIT_NAV. */
-export function groupedNav(): CockpitNavGroupRendered[] {
-  const order: CockpitNavGroup[] = ["shamanes", "routines", "chakras", "autonome"];
+/** Items regroupés par group, dans l'ordre du COCKPIT_NAV.
+ * Si includeOwner=false, exclut le groupe "owner" (modules ST6).
+ * DEC Patrick 2026-05-12 — apparaît auto dans la nav pour ST6 + Cercle SR. */
+export function groupedNav(options?: { includeOwner?: boolean }): CockpitNavGroupRendered[] {
+  const includeOwner = options?.includeOwner ?? false;
+  const order: CockpitNavGroup[] = includeOwner
+    ? ["shamanes", "routines", "chakras", "autonome", "owner"]
+    : ["shamanes", "routines", "chakras", "autonome"];
   return order
     .map((id) => ({
       id,
