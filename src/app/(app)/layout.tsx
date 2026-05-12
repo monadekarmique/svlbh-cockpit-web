@@ -70,10 +70,13 @@ export default async function CockpitLayout({
   // Admin / Compliance / Facturation directement dans la nav (DEC Patrick 2026-05-12).
   const { data: navProfile } = await supabase
     .from("praticienne_profile")
-    .select("stx, cercle_lumiere_sr")
+    .select("stx, cercle_lumiere_sr, email")
     .eq("supabase_user_id", user.id)
     .maybeSingle();
   const isOwner = navProfile?.stx === "ST6" || navProfile?.cercle_lumiere_sr === true;
+  // Privilégie l'email DB praticienne_profile (vrai email) sur user.email
+  // (qui peut être un alias privaterelay.appleid.com avec Hide My Email).
+  const displayEmail = navProfile?.email ?? user.email;
 
   return (
     <div className="min-h-dvh bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -112,7 +115,7 @@ export default async function CockpitLayout({
             >
               build {process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}
             </span>
-            <span className="hidden text-neutral-500 sm:inline">{user.email}</span>
+            <span className="hidden text-neutral-500 sm:inline">{displayEmail}</span>
             <form action="/auth/signout" method="post">
               <button
                 type="submit"
