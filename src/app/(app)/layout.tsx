@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { groupedNav } from "@/lib/cockpit-nav";
 import { CockpitNav } from "@/components/cockpit-nav";
 import { autoRelinkProfile } from "@/lib/auto-relink-profile";
+import { ExternalAppLink } from "@/components/external-app-link";
 
 // DEC Patrick 2026-05-12 — doctrine ST. Cockpit accessible à ST3+ (Certifiée
 // Priv, Thérapeute PRO, Superviseur, Owner). Les modules Admin / Compliance /
@@ -78,13 +79,22 @@ export default async function CockpitLayout({
             paddingRight: "max(1rem, env(safe-area-inset-right))",
           }}
         >
-          <Link
-            href="/dashboard"
-            className="font-semibold tracking-tight"
-            style={{ color: "#000099" }}
-          >
-            🎯 SVLBH Cockpit
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* Priv link — convention iPad boussole jaune doré (DEC Patrick 2026-05-12) */}
+            <ExternalAppLink
+              href="https://priv.svlbh.com"
+              label="Priv"
+              color="#F2BF1A"
+              title="Ouvrir priv.svlbh.com (PWA Priv-1)"
+            />
+            <Link
+              href="/dashboard"
+              className="font-semibold tracking-tight"
+              style={{ color: "#000099" }}
+            >
+              🎯 SVLBH Cockpit
+            </Link>
+          </div>
           <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-600">
             <CockpitNav groups={groupedNav()} />
             <span className="text-neutral-400">·</span>
@@ -103,6 +113,13 @@ export default async function CockpitLayout({
                 Déconnexion
               </button>
             </form>
+            {/* Pro link — convention iPad boussole magenta (DEC Patrick 2026-05-12) */}
+            <ExternalAppLink
+              href="https://pwa.app.svlbh.com"
+              label="Pro"
+              color="#DB338C"
+              title="Ouvrir pwa.app.svlbh.com (PWA Pro 1)"
+            />
           </nav>
         </div>
       </header>
