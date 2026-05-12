@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { groupedNav } from "@/lib/cockpit-nav";
 import { CockpitNav } from "@/components/cockpit-nav";
+import { autoRelinkProfile } from "@/lib/auto-relink-profile";
 
 // DEC Patrick 2026-05-12 — doctrine ST. Cockpit accessible à ST3+ (Certifiée
 // Priv, Thérapeute PRO, Superviseur, Owner). Les modules Admin / Compliance /
@@ -54,6 +55,10 @@ export default async function CockpitLayout({
   if (!user) {
     redirect("/login");
   }
+
+  // Hook post-login : relink praticienne_profile par email match si nécessaire.
+  // DEC Patrick 2026-05-12.
+  await autoRelinkProfile(supabase, user);
 
   const allowed = await isCockpitAllowed(supabase, user.id);
   if (!allowed) {
