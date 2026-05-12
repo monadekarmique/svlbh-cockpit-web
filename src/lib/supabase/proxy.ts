@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// DEC Patrick 2026-05-12 — SSO entre sous-domaines svlbh.com (cf. client.ts).
+const COOKIE_DOMAIN = process.env.NEXT_PUBLIC_COOKIE_DOMAIN;
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -18,7 +21,10 @@ export async function updateSession(request: NextRequest) {
           );
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
+            response.cookies.set(name, value, {
+              ...options,
+              ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
+            }),
           );
         },
       },
