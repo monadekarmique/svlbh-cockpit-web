@@ -79,23 +79,22 @@ export default async function CockpitLayout({
             paddingRight: "max(1rem, env(safe-area-inset-right))",
           }}
         >
-          <div className="flex items-center gap-2">
-            {/* Priv link — convention iPad boussole jaune doré (DEC Patrick 2026-05-12) */}
+          <Link
+            href="/dashboard"
+            className="font-semibold tracking-tight"
+            style={{ color: "#000099" }}
+          >
+            SVLBH Cockpit
+          </Link>
+          <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-600">
+            {/* Priv link — convention iPad boussole jaune doré (DEC Patrick 2026-05-12).
+                À gauche de Dashboard (premier item de la nav). */}
             <ExternalAppLink
               href="https://priv.svlbh.com"
               label="Priv"
               color="#F2BF1A"
               title="Ouvrir priv.svlbh.com (PWA Priv-1)"
             />
-            <Link
-              href="/dashboard"
-              className="font-semibold tracking-tight"
-              style={{ color: "#000099" }}
-            >
-              🎯 SVLBH Cockpit
-            </Link>
-          </div>
-          <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-600">
             <CockpitNav groups={groupedNav()} />
             <span className="text-neutral-400">·</span>
             <span

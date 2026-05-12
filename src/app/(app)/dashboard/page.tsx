@@ -14,7 +14,7 @@ export default function DashboardPage() {
           Cockpit MyShamanFamily
         </p>
         <h1 className="text-3xl font-bold tracking-tight text-blue-950 sm:text-4xl">
-          🎯 Routines Cercle de Lumière
+          Routines ◉ de Lumière
         </h1>
         <p className="mt-2 text-neutral-700">
           Pilotage quotidien des routines + suivi des shamanes du cercle.

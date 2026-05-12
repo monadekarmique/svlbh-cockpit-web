@@ -21,7 +21,7 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
   // ── Bloc Shamanes ──
   {
     href: "/shamanes",
-    label: "Shamanes du Cercle",
+    label: "Shamanes du ◉",
     navLabel: "Shamanes",
     icon: "👥",
     desc: "8 codes praticien·nes + badges sessions pending",

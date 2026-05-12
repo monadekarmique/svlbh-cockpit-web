@@ -71,12 +71,12 @@ export default async function ShamanesPage() {
       <header className="flex items-baseline justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-blue-950">
-            👥 Shamanes du Cercle
+            👥 Shamanes du ◉
           </h1>
           <p className="mt-1 text-sm text-neutral-700">
             {isSuperviseur
               ? `Vue superviseur · ${badges.length} actives + ${APPRENANTES.length} apprenantes`
-              : `Cercle de Lumière · ${badges.length} shamanes actives`}
+              : `◉ de Lumière · ${badges.length} shamanes actives`}
           </p>
         </div>
         <div className="text-right">
