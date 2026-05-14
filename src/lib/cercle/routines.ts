@@ -10,7 +10,7 @@ const BILLING_KEYS = [
   "0302", // Anne
   "0303", // Chloé
   "0304", // Irène
-  "0305", // Daphné (DEC Patrick 2026-05-14)
+  "305",  // Daphné (DEC Patrick 2026-05-14, alias sans préfixe 0)
   "455000",
   "754545",
 ];
