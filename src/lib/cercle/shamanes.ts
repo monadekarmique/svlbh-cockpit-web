@@ -25,7 +25,7 @@ export type Participant = {
  * (cachées aux participantes T2/T3). */
 export const APPRENANTES: Participant[] = [
   { name: "Véronique", tier: "t3-en-attente", emoji: "🔮", code: "200" },
-  { name: "Daphné", tier: "t3-en-attente", emoji: "🌙" },
+  // Daphné Friederich promue ST4 MYSHAMANFAMILY le 2026-05-13 (code 305) — déplacée vers SHAMANES_ALL
   { name: "Paola", tier: "t2", emoji: "🌺" },
   { name: "Béatrice Pathey", tier: "t0", emoji: "🌱" },
 ];
@@ -83,6 +83,13 @@ export const SHAMANES_ALL: ShamaneRef[] = [
     emoji: "💫",
     role: "cercle",
     cercleNumber: 4,
+  },
+  {
+    code: "305",
+    name: "Daphné",
+    emoji: "🌙",
+    role: "cercle",
+    cercleNumber: 5,
   },
   {
     code: "0304",
