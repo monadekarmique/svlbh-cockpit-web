@@ -5,11 +5,12 @@ const SYNC_URL = "https://hook.eu2.make.com/f5ezym67mfmywuwoov7fbb4gf3ufhqq8";
 
 const BILLING_KEYS = [
   "200",
-  "0300",
-  "0301",
-  "0302",
-  "0303",
-  "0304",
+  "0300", // Cornelia
+  "0301", // Flavia
+  "0302", // Anne
+  "0303", // Chloé
+  "0304", // Irène
+  "0305", // Daphné (DEC Patrick 2026-05-14)
   "455000",
   "754545",
 ];
