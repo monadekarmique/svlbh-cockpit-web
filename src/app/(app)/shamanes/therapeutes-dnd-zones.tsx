@@ -7,7 +7,7 @@
 // Note : les server actions setTherapeuteDailyStatus revalident /shamanes
 // après chaque drop. Mutation optimiste pour rendu instantané.
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -53,6 +53,15 @@ export function TherapeutesDnDZones({
   const [items, setItems] = useState<DnDTherapeute[]>(initial);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  // Resync local state with server props after revalidatePath
+  // (form actions update DB + revalidate but client state would stay stale).
+  // Compare by signature (svlbh_id + status) to avoid resyncing on identical re-renders.
+  const initialSig = initial.map((t) => `${t.svlbh_id}:${t.status}`).join("|");
+  useEffect(() => {
+    setItems(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSig]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
