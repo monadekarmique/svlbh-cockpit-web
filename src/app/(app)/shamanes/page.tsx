@@ -222,17 +222,20 @@ export default async function ShamanesPage() {
 
   const canEditBacklog = isOwner || myStx === "ST5";
 
-  // 3bis. Soins en commun — healing_paths multi-praticiennes (≥ 2 ST4+).
-  // 1) charger toutes les relations (owner) + 2) attribution panel +
-  // 3) healing_path_share. Filtre côté Node : contributors distincts ≥ 2.
-  // DEC Patrick 2026-05-18 : section au-dessus de Thérapeutes actives.
+  // 3bis. Soins en commun — relations + énergies offensives multi-praticiennes.
+  // Filtre côté Node : contributors distincts ≥ 2.
+  // DEC Patrick 2026-05-18 (option 2) : inclus aussi energie_offensive_tiers.
   const { data: relsRaw } = await sb
     .from("relation")
     .select("relation_id, praticienne_svlbh_id, slideshow_title, relation_type, relation_state");
+  const { data: enesRaw } = await sb
+    .from("energie_offensive_tiers")
+    .select("id, source_description, intensity, created_by_svlbh_id")
+    .eq("status", "active");
   const { data: attrsRaw } = await sb
     .from("consultante_attribution")
-    .select("resource_id, praticienne_svlbh_id")
-    .in("resource_type", ["relation", "soul_mission", "healing_path"]);
+    .select("resource_id, praticienne_svlbh_id, resource_type")
+    .in("resource_type", ["relation", "soul_mission", "healing_path", "energie_offensive"]);
   const { data: sharesRaw } = await sb
     .from("healing_path_share")
     .select("source_relation_id, sender_svlbh_id, recipient_svlbh_id");
@@ -243,38 +246,66 @@ export default async function ShamanesPage() {
   );
 
   // (SoinCommun importé depuis ./soins-communs-list)
-  const contribsByRel = new Map<string, Set<string>>();
-  for (const a of (attrsRaw ?? []) as Array<{ resource_id: string; praticienne_svlbh_id: string }>) {
-    if (!contribsByRel.has(a.resource_id)) contribsByRel.set(a.resource_id, new Set());
-    contribsByRel.get(a.resource_id)!.add(a.praticienne_svlbh_id);
+  // Index contributors par ressource (relation OU energie_offensive).
+  // Clé = `${resourceType}:${resourceId}`.
+  const contribsByRef = new Map<string, Set<string>>();
+  for (const a of (attrsRaw ?? []) as Array<{ resource_id: string; praticienne_svlbh_id: string; resource_type: string }>) {
+    const rt = a.resource_type === "soul_mission" || a.resource_type === "healing_path" ? "relation" : a.resource_type;
+    const key = `${rt}:${a.resource_id}`;
+    if (!contribsByRef.has(key)) contribsByRef.set(key, new Set());
+    contribsByRef.get(key)!.add(a.praticienne_svlbh_id);
   }
   for (const s of (sharesRaw ?? []) as Array<{ source_relation_id: string; sender_svlbh_id: string; recipient_svlbh_id: string }>) {
-    if (!contribsByRel.has(s.source_relation_id)) contribsByRel.set(s.source_relation_id, new Set());
-    contribsByRel.get(s.source_relation_id)!.add(s.sender_svlbh_id);
-    contribsByRel.get(s.source_relation_id)!.add(s.recipient_svlbh_id);
+    const key = `relation:${s.source_relation_id}`;
+    if (!contribsByRef.has(key)) contribsByRef.set(key, new Set());
+    contribsByRef.get(key)!.add(s.sender_svlbh_id);
+    contribsByRef.get(key)!.add(s.recipient_svlbh_id);
   }
-  const soinsCommuns: SoinCommun[] = ((relsRaw ?? []) as Array<{
+
+  const soinsFromRels: SoinCommun[] = ((relsRaw ?? []) as Array<{
     relation_id: string; praticienne_svlbh_id: string; slideshow_title: string | null;
     relation_type: string | null; relation_state: string | null;
   }>)
     .map((r) => {
-      const all = new Set<string>(contribsByRel.get(r.relation_id) ?? []);
+      const all = new Set<string>(contribsByRef.get(`relation:${r.relation_id}`) ?? []);
       all.add(r.praticienne_svlbh_id);
       const distinct = Array.from(all).filter((id) => profileByIdRaw.has(id));
       if (distinct.length < 2) return null;
       return {
-        relation_id: r.relation_id,
+        kind: "relation" as const,
+        ref_id: r.relation_id,
         owner_svlbh_id: r.praticienne_svlbh_id,
         title: r.slideshow_title?.trim() || r.relation_type || "(sans titre)",
         relation_type: r.relation_type,
         relation_state: r.relation_state,
-        contributors: distinct.map((id) => ({
-          svlbh_id: id,
-          ...profileByIdRaw.get(id)!,
-        })),
+        contributors: distinct.map((id) => ({ svlbh_id: id, ...profileByIdRaw.get(id)! })),
       };
     })
-    .filter((x): x is SoinCommun => x !== null)
+    .filter(Boolean) as SoinCommun[];
+
+  const soinsFromEnes: SoinCommun[] = ((enesRaw ?? []) as Array<{
+    id: string; source_description: string; intensity: number | null; created_by_svlbh_id: string;
+  }>)
+    .map((e) => {
+      const all = new Set<string>(contribsByRef.get(`energie_offensive:${e.id}`) ?? []);
+      all.add(e.created_by_svlbh_id);
+      const distinct = Array.from(all).filter((id) => profileByIdRaw.has(id));
+      if (distinct.length < 2) return null;
+      return {
+        kind: "energie" as const,
+        ref_id: e.id,
+        owner_svlbh_id: e.created_by_svlbh_id,
+        title: e.source_description,
+        relation_type: null,
+        relation_state: null,
+        source_description: e.source_description,
+        intensity: e.intensity,
+        contributors: distinct.map((id) => ({ svlbh_id: id, ...profileByIdRaw.get(id)! })),
+      };
+    })
+    .filter(Boolean) as SoinCommun[];
+
+  const soinsCommuns: SoinCommun[] = [...soinsFromRels, ...soinsFromEnes]
     .sort((a, b) => b.contributors.length - a.contributors.length);
 
   // 3. Compteurs felt (ST1 / ST2 actives)

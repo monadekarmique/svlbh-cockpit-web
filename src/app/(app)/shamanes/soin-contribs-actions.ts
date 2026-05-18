@@ -9,12 +9,15 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export async function addContributorsToSoin(formData: FormData) {
-  const relationId = String(formData.get("relation_id") ?? "");
+  // refId + kind = ressource cible (relation OU energie_offensive)
+  const refId = String(formData.get("ref_id") ?? formData.get("relation_id") ?? "");
+  const kind = String(formData.get("kind") ?? "relation");
+  const resourceType = kind === "energie" ? "energie_offensive" : "relation";
   const contribs = formData
     .getAll("contributor_svlbh_id")
     .map((v) => String(v).trim())
     .filter((v) => v.length > 0);
-  if (!relationId) throw new Error("relation_id requis");
+  if (!refId) throw new Error("ref_id requis");
   if (contribs.length === 0) throw new Error("Au moins 1 ST4+ requise");
 
   const sb = await createClient();
@@ -28,8 +31,8 @@ export async function addContributorsToSoin(formData: FormData) {
   if (!me?.svlbh_id) throw new Error("Praticienne_profile introuvable");
 
   const rows = contribs.map((praticienne_svlbh_id) => ({
-    resource_type: "relation",
-    resource_id: relationId,
+    resource_type: resourceType,
+    resource_id: refId,
     praticienne_svlbh_id,
     attributed_by_svlbh_id: me.svlbh_id,
   }));

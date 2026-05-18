@@ -7,11 +7,14 @@ import { useState } from "react";
 import { addContributorsToSoin } from "./soin-contribs-actions";
 
 export type SoinCommun = {
-  relation_id: string;
+  kind: "relation" | "energie";
+  ref_id: string;                  // relation_id ou energie_offensive_tiers.id
   owner_svlbh_id: string;
   title: string;
-  relation_type: string | null;
-  relation_state: string | null;
+  relation_type: string | null;    // pour kind=relation
+  relation_state: string | null;   // pour kind=relation
+  source_description?: string | null;  // pour kind=energie
+  intensity?: number | null;            // pour kind=energie
   contributors: Array<{ svlbh_id: string; first_name: string | null; last_name: string | null; code_praticien: number | null }>;
 };
 
@@ -33,7 +36,7 @@ export function SoinsCommunsList({
     <ul className="space-y-1.5">
       {items.map((s) => (
         <SoinItem
-          key={s.relation_id}
+          key={`${s.kind}-${s.ref_id}`}
           item={s}
           available={allTherapeutes.filter((t) => !s.contributors.some((c) => c.svlbh_id === t.svlbh_id))}
           canEdit={canEdit}
@@ -54,10 +57,17 @@ function SoinItem({
   return (
     <li className="space-y-1 rounded-lg border border-emerald-100 bg-white px-3 py-2 text-sm shadow-sm">
       <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
-        <span className="font-semibold text-neutral-900">{item.title}</span>
-        {item.relation_state ? (
+        <span className="font-semibold text-neutral-900">
+          {item.kind === "energie" ? "⚡ " : "🪢 "}{item.title}
+        </span>
+        {item.kind === "relation" && item.relation_state ? (
           <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700">
             {item.relation_state}
+          </span>
+        ) : null}
+        {item.kind === "energie" && item.intensity != null ? (
+          <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+            intensité {item.intensity}/100
           </span>
         ) : null}
         <span className="ml-auto flex flex-wrap items-center gap-1">
@@ -98,7 +108,8 @@ function SoinItem({
           }}
           className="flex flex-wrap items-end gap-2 rounded-md border border-emerald-200 bg-emerald-50/30 p-2"
         >
-          <input type="hidden" name="relation_id" value={item.relation_id} />
+          <input type="hidden" name="ref_id" value={item.ref_id} />
+          <input type="hidden" name="kind" value={item.kind} />
           <label className="flex flex-col gap-1 text-[10px] font-semibold text-emerald-900">
             ST4+ à ajouter (Cmd/Ctrl-clic pour multi)
             <select
