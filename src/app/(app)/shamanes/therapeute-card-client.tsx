@@ -106,11 +106,14 @@ export function TherapeuteCardClient({
         ) : null}
       </div>
 
+      {/* Bouton toggle "Me cacher / Redevenir active" — stopPropagation pour
+          que le drag listener parent ne mange pas le clic. DEC Patrick 2026-05-18. */}
       {isMe ? (
-        <form action={setMyDailyStatus}>
+        <form action={setMyDailyStatus} onPointerDown={(e) => e.stopPropagation()}>
           <input type="hidden" name="status" value={targetStatusOnToggle} />
           <button
             type="submit"
+            onPointerDown={(e) => e.stopPropagation()}
             className={
               "w-full rounded-md px-2 py-1 text-[11px] font-semibold transition " +
               (targetStatusOnToggle === "hidden"
@@ -124,14 +127,22 @@ export function TherapeuteCardClient({
       ) : null}
 
       {isOwner && !isMe ? (
-        <form action={setAttentionSticker} className="flex items-center gap-1.5 border-t border-neutral-100 pt-2">
+        <form
+          action={setAttentionSticker}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="flex items-center gap-1.5 border-t border-neutral-100 pt-2"
+        >
           <input type="hidden" name="target_svlbh_id" value={t.svlbh_id} />
-          <label className="flex items-center gap-1 text-[10px] text-neutral-600">
+          <label
+            className="flex items-center gap-1 text-[10px] text-neutral-600"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             🎨
             <input
               name="attention_color"
               type="color"
               defaultValue={t.attention_color ?? "#ef4444"}
+              onPointerDown={(e) => e.stopPropagation()}
               className="h-6 w-8 cursor-pointer rounded border border-neutral-300 bg-white"
               title="Couleur du sticker"
             />
@@ -143,11 +154,13 @@ export function TherapeuteCardClient({
             max={9999}
             defaultValue={t.attention_steps ?? ""}
             placeholder="N"
+            onPointerDown={(e) => e.stopPropagation()}
             className="h-6 w-14 rounded border border-neutral-300 px-1 text-center font-mono text-[11px]"
             title="Nombre d'étapes à libérer"
           />
           <button
             type="submit"
+            onPointerDown={(e) => e.stopPropagation()}
             className="h-6 rounded bg-neutral-900 px-2 text-[10px] font-semibold text-white hover:bg-neutral-700"
           >
             Poser
@@ -156,6 +169,7 @@ export function TherapeuteCardClient({
             <button
               type="submit"
               formAction={clearAttentionSticker}
+              onPointerDown={(e) => e.stopPropagation()}
               className="h-6 rounded border border-neutral-300 bg-white px-2 text-[10px] text-neutral-700 hover:bg-neutral-50"
               title="Retirer le sticker"
             >

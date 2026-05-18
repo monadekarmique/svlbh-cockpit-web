@@ -9,11 +9,14 @@
 // DEC Patrick 2026-05-18 : source = DB (plus de fetchShamanesPending Make).
 
 import Link from "next/link";
-import { APPRENANTES, TIER_LABEL, TIER_COLOR, SUPERVISORS_VIRTUAL } from "@/lib/cercle/shamanes";
-import type { ParticipantTier } from "@/lib/cercle/shamanes";
-import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
-import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
+import { APPRENANTES, SUPERVISORS_VIRTUAL } from "@/lib/cercle/shamanes";
 import { TherapeutesDnDZonesWrapper } from "./therapeutes-dnd-wrapper";
+import { ApprenantesDnD } from "./apprenantes-dnd";
+import type { DnDApprenante } from "./apprenantes-dnd";
+import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
+
+// Patrick svlbh_id pour mapper la carte virtuelle 754545 → ses cercles
+const PATRICK_SVLBH_ID = "52adbc98-d2b0-4444-b89c-b1311a02a983";
 import { createClient } from "@/lib/supabase/server";
 import { setFeltCount, toggleFeltLike } from "./felt-actions";
 
@@ -214,7 +217,15 @@ export default async function ShamanesPage() {
         </div>
       </header>
 
-      {/* Cartes virtuelles Patrick × 2 (superviseurs) — toujours en tête actives */}
+      {/* Sections 1 & 2 : Thérapeutes actives / cachées avec drag-and-drop */}
+      <TherapeutesDnDZonesWrapper
+        therapeutes={therapeutes}
+        mySvlbhId={mySvlbhId}
+        isOwner={isOwner}
+      />
+
+      {/* Cartes virtuelles Patrick × 2 (superviseurs) — sous les thérapeutes
+          actives, DEC Patrick 2026-05-18 */}
       <section className="space-y-2">
         <h2 className="text-base font-semibold text-blue-900">
           🔵 Superviseurs ({SUPERVISORS_VIRTUAL.length})
@@ -250,79 +261,48 @@ export default async function ShamanesPage() {
                 <p className="mt-0.5 text-[9px] italic text-neutral-500">
                   Reconnaissance Shamane Cercle de Lumière SR · certifié T3
                 </p>
+                {s.code === "754545" ? (
+                  <CerclesAkashiquesChipsServer svlbhKey={PATRICK_SVLBH_ID} />
+                ) : null}
               </div>
             </li>
           ))}
         </ul>
       </section>
 
-      {/* Sections 1 & 2 : Thérapeutes actives / cachées avec drag-and-drop */}
-      <TherapeutesDnDZonesWrapper
-        therapeutes={therapeutes}
-        mySvlbhId={mySvlbhId}
-        isOwner={isOwner}
-      />
-
-      {/* Apprenantes — 3 sous-sections (visibles Owner uniquement) */}
-      {isOwner ? (
-        <ApprentantesGroupedSection />
-      ) : null}
+      {/* Apprenantes — 3 sous-sections avec DnD (Owner uniquement).
+          Tier persisté en DB (table apprenante_tier), source remplace
+          le tier statique du const APPRENANTES. */}
+      {isOwner ? <ApprenantesDnDSection /> : null}
     </div>
   );
 }
 
-function ApprentantesGroupedSection() {
-  const groups: Array<{ tier: ParticipantTier; emoji: string; title: string }> = [
-    { tier: "formation", emoji: "🌱", title: "Apprenantes en formation" },
-    { tier: "parcours-passif", emoji: "💤", title: "Shamanes passives de Cercles akashiques actifs" },
-    { tier: "cercle-akashique", emoji: "🌌", title: "Shamanes du Cercle akashiques" },
-  ];
-  return (
-    <div className="space-y-5 pt-2">
-      <p className="text-[10px] font-normal text-neutral-500">
-        🔒 Vue Owner — non visible aux thérapeutes
-      </p>
-      {groups.map((g) => {
-        const items = APPRENANTES.filter((a) => a.tier === g.tier);
-        if (items.length === 0) return null;
-        const c = TIER_COLOR[g.tier];
-        return (
-          <section key={g.tier} className="space-y-2">
-            <h2 className="text-base font-semibold" style={{ color: c }}>
-              {g.emoji} {g.title} ({items.length})
-            </h2>
-            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {items.map((a) => {
-                const memb = lookupMembership(a.name);
-                return (
-                  <li
-                    key={a.name}
-                    className="flex items-start gap-3 rounded-xl border bg-white p-4 shadow-sm"
-                    style={{ borderLeftColor: c, borderLeftWidth: 4 }}
-                  >
-                    <span className="text-2xl">{a.emoji ?? "·"}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-neutral-900">{a.name}</p>
-                      <p className="mt-0.5 text-[11px] font-semibold" style={{ color: c }}>
-                        {TIER_LABEL[a.tier]}
-                      </p>
-                      <CerclesAkashiquesChips membership={memb} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
-      })}
-    </div>
+async function ApprenantesDnDSection() {
+  const sb = await createClient();
+  const { data } = await sb
+    .from("apprenante_tier")
+    .select("name, tier");
+  const tierByName = new Map(
+    ((data ?? []) as Array<{ name: string; tier: string }>).map((r) => [r.name, r.tier]),
   );
+  const items: DnDApprenante[] = APPRENANTES.map((a) => {
+    const dbTier = tierByName.get(a.name);
+    const effectiveTier = (dbTier === "formation" || dbTier === "parcours-passif" || dbTier === "cercle-akashique")
+      ? dbTier
+      : (a.tier === "formation" || a.tier === "parcours-passif" || a.tier === "cercle-akashique")
+      ? a.tier
+      : "formation";
+    return { name: a.name, tier: effectiveTier, emoji: a.emoji };
+  });
+  return <ApprenantesDnD initial={items} />;
 }
 
-/** Chips des cercles akashiques d'une personne (membres + formation).
- * Compact, 1 chip par cercle, emoji+label, couleur du dhātu principal.
+/** Chips des cercles akashiques d'une personne pour la section
+ * Superviseurs (réutilisable ici car ApprenantesDnD a sa version client).
  * DEC Patrick 2026-05-18. */
-function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembership | null }) {
+function CerclesAkashiquesChipsServer({ svlbhKey }: { svlbhKey: string }) {
+  const membership = lookupMembership(svlbhKey);
   if (!membership) return null;
   const all = [
     ...membership.membres.map((c) => ({ c, isFormation: false })),
@@ -345,11 +325,7 @@ function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembershi
               opacity: isFormation ? 0.7 : 1,
               borderStyle: isFormation ? "dashed" : "solid",
             }}
-            title={
-              isFormation
-                ? `Cercle ${c.name} — en formation (lignée actuelle)`
-                : `Cercle ${c.name} — membre (incarnations passées)`
-            }
+            title={isFormation ? `Cercle ${c.name} — en formation` : `Cercle ${c.name} — membre`}
           >
             {c.dhatus.map((d) => DHATU_META[d].emoji).join("")} {c.name}
           </span>
