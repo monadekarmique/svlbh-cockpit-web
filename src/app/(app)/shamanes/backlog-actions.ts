@@ -26,6 +26,11 @@ export async function addBacklogFromRelation(formData: FormData) {
   const relationId = String(formData.get("relation_id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  // ST4+ supplémentaires à attribuer comme co-contributors (multi-select)
+  const contribsToAdd = formData
+    .getAll("contributor_svlbh_id")
+    .map((v) => String(v).trim())
+    .filter((v) => v.length > 0);
   if (!relationId) throw new Error("relation_id requis");
   if (!title) throw new Error("Titre requis");
 
@@ -37,6 +42,22 @@ export async function addBacklogFromRelation(formData: FormData) {
     created_by_svlbh_id: svlbhId,
   });
   if (error) throw new Error(`Backlog (relation) : ${error.message}`);
+
+  // Attribution des ST4+ supplémentaires sur la même relation (idempotent
+  // grâce à uniq_attribution_resource_praticienne).
+  if (contribsToAdd.length > 0) {
+    const rows = contribsToAdd.map((praticienne_svlbh_id) => ({
+      resource_type: "relation",
+      resource_id: relationId,
+      praticienne_svlbh_id,
+      attributed_by_svlbh_id: svlbhId,
+    }));
+    const { error: e2 } = await sb
+      .from("consultante_attribution")
+      .upsert(rows, { onConflict: "resource_type,resource_id,praticienne_svlbh_id", ignoreDuplicates: true });
+    if (e2) throw new Error(`Attribution ST4+ : ${e2.message}`);
+  }
+
   revalidatePath("/shamanes");
 }
 

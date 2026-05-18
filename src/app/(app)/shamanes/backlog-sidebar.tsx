@@ -91,6 +91,19 @@ export function BacklogSidebar({
               <option key={r.relation_id} value={r.relation_id}>{r.label}</option>
             ))}
           </select>
+          <label className="block text-[10px] font-semibold text-neutral-700">
+            ST4+ co-contributors à attribuer (Cmd/Ctrl-clic) :
+          </label>
+          <select
+            name="contributor_svlbh_id"
+            multiple
+            size={Math.min(6, Math.max(3, praticiennesForPicker.length))}
+            className="w-full rounded border border-neutral-300 bg-white px-1 py-1 text-xs"
+          >
+            {praticiennesForPicker.map((p) => (
+              <option key={p.svlbh_id} value={p.svlbh_id}>{p.label}</option>
+            ))}
+          </select>
           <textarea name="notes" rows={2} placeholder="Notes (optionnel)" className="w-full rounded border border-neutral-300 px-2 py-1 text-xs" />
           <button type="submit" className="w-full rounded bg-amber-700 px-2 py-1 text-[11px] font-semibold text-white hover:bg-amber-800">Ajouter</button>
         </form>
