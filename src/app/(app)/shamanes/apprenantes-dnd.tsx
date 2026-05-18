@@ -36,7 +36,7 @@ type ZoneKey = "formation" | "parcours-passif" | "cercle-akashique";
 const ZONES: Array<{ key: ZoneKey; emoji: string; title: string }> = [
   { key: "formation", emoji: "🌱", title: "Apprenantes en formation" },
   { key: "parcours-passif", emoji: "💤", title: "Shamanes passives de Cercles akashiques actifs" },
-  { key: "cercle-akashique", emoji: "🌌", title: "Shamanes du Cercle akashiques" },
+  { key: "cercle-akashique", emoji: "🌌", title: "Shamanes du Cercle akashique ex-Shamanes passives" },
 ];
 
 function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembership | null }) {
