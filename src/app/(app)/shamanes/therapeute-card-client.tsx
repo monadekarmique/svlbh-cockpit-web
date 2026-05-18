@@ -95,6 +95,14 @@ export function TherapeuteCardClient({
           </div>
         </div>
 
+        {t.attention_steps != null ? (
+          <span
+            className="flex-shrink-0 rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-mono text-[11px] font-bold text-rose-900"
+            title="NSB — Niveaux Shamaniques Bloqués (somme des relations bloquées ou override apprenante_tier)"
+          >
+            NSB {t.attention_steps}
+          </span>
+        ) : null}
       </div>
 
       {isMe ? (
