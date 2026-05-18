@@ -180,7 +180,7 @@ export default async function ShamanesPage() {
   // DEC Patrick 2026-05-18 (option 2) : inclus aussi energie_offensive_tiers.
   const { data: relsRaw } = await sb
     .from("relation")
-    .select("relation_id, praticienne_svlbh_id, slideshow_title, relation_type, relation_state");
+    .select("relation_id, praticienne_svlbh_id, slideshow_title, relation_type, relation_state, purpose");
   const { data: enesRaw } = await sb
     .from("energie_offensive_tiers")
     .select("id, source_description, intensity, created_by_svlbh_id")
@@ -217,7 +217,7 @@ export default async function ShamanesPage() {
 
   const soinsFromRels: SoinCommun[] = ((relsRaw ?? []) as Array<{
     relation_id: string; praticienne_svlbh_id: string; slideshow_title: string | null;
-    relation_type: string | null; relation_state: string | null;
+    relation_type: string | null; relation_state: string | null; purpose: string | null;
   }>)
     .map((r) => {
       const all = new Set<string>(contribsByRef.get(`relation:${r.relation_id}`) ?? []);
@@ -227,6 +227,7 @@ export default async function ShamanesPage() {
       return {
         kind: "relation" as const,
         ref_id: r.relation_id,
+        purpose: (r.purpose === "soul_mission" ? "soul_mission" : "relation") as "relation" | "soul_mission",
         owner_svlbh_id: r.praticienne_svlbh_id,
         title: r.slideshow_title?.trim() || r.relation_type || "(sans titre)",
         relation_type: r.relation_type,

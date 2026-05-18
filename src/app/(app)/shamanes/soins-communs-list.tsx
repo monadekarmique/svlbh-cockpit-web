@@ -9,6 +9,7 @@ import { addContributorsToSoin } from "./soin-contribs-actions";
 export type SoinCommun = {
   kind: "relation" | "energie";
   ref_id: string;                  // relation_id ou energie_offensive_tiers.id
+  purpose?: "relation" | "soul_mission";  // pour kind=relation
   owner_svlbh_id: string;
   title: string;
   relation_type: string | null;    // pour kind=relation
@@ -17,6 +18,14 @@ export type SoinCommun = {
   intensity?: number | null;            // pour kind=energie
   contributors: Array<{ svlbh_id: string; first_name: string | null; last_name: string | null; code_praticien: number | null }>;
 };
+
+const PWA_PRO_URL = "https://pwa.app.svlbh.com";
+
+function relationDetailLink(item: SoinCommun): string | null {
+  if (item.kind !== "relation") return null;
+  const path = item.purpose === "soul_mission" ? "/soul-mission" : "/relations";
+  return `${PWA_PRO_URL}${path}#rel-${item.ref_id}`;
+}
 
 export function SoinsCommunsList({
   items, allTherapeutes, dissipationMap, canEdit,
@@ -66,9 +75,27 @@ function SoinItem({
   return (
     <li className="space-y-1 rounded-lg border border-emerald-100 bg-white px-3 py-2 text-sm shadow-sm">
       <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
-        <span className="font-semibold text-neutral-900">
-          {item.kind === "energie" ? "⚡ " : "🪢 "}{item.title}
-        </span>
+        {(() => {
+          const href = relationDetailLink(item);
+          if (href) {
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-neutral-900 hover:text-emerald-700 hover:underline"
+                title="Ouvrir le lien entre les thérapeutes (PWA pro-web)"
+              >
+                {item.kind === "energie" ? "⚡ " : "🪢 "}{item.title}
+              </a>
+            );
+          }
+          return (
+            <span className="font-semibold text-neutral-900">
+              {item.kind === "energie" ? "⚡ " : "🪢 "}{item.title}
+            </span>
+          );
+        })()}
         {item.kind === "relation" && item.relation_state ? (
           <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700">
             {item.relation_state}
