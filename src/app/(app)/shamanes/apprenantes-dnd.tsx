@@ -13,6 +13,7 @@ import {
   PointerSensor,
   TouchSensor,
   KeyboardSensor,
+  closestCorners,
   useDroppable,
   useDraggable,
   useSensor,
@@ -92,8 +93,21 @@ export function ApprenantesDnD({ initial }: { initial: DnDApprenante[] }) {
     setDraggingName(null);
     if (!over) return;
     const name = String(active.id);
-    const targetZone = String(over.id).replace("zone-", "") as ZoneKey;
-    if (!ZONES.some((z) => z.key === targetZone)) return;
+    const overId = String(over.id);
+
+    // Résolution : drop sur background zone OU sur une carte voisine
+    // (auquel cas on prend la zone de cette carte).
+    let targetZone: ZoneKey;
+    if (overId.startsWith("zone-")) {
+      const z = overId.replace("zone-", "") as ZoneKey;
+      if (!ZONES.some((zone) => zone.key === z)) return;
+      targetZone = z;
+    } else {
+      const overCard = items.find((t) => t.name === overId);
+      if (!overCard) return;
+      targetZone = overCard.tier as ZoneKey;
+    }
+
     const current = items.find((t) => t.name === name);
     if (!current || current.tier === targetZone) return;
 
@@ -113,7 +127,7 @@ export function ApprenantesDnD({ initial }: { initial: DnDApprenante[] }) {
   const dragging = draggingName ? items.find((t) => t.name === draggingName) : null;
 
   return (
-    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className="space-y-5 pt-2">
         <p className="text-[10px] font-normal text-neutral-500">
           🔒 Vue Owner — non visible aux thérapeutes · Glisse les cartes
@@ -177,7 +191,12 @@ function DropZone({
 }
 
 function DraggableCard({ name, children }: { name: string; children: React.ReactNode }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: name });
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: name });
+  // Carte aussi droppable → drop sur le bord d'une autre carte vise la zone
+  // de cette carte voisine. Match l'attente Patrick : « toucher le bord =
+  // prendre sa place ».
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: name });
+  const setNodeRef = (el: HTMLLIElement | null) => { setDragRef(el); setDropRef(el); };
   return (
     <li
       ref={setNodeRef}
@@ -185,7 +204,8 @@ function DraggableCard({ name, children }: { name: string; children: React.React
       {...listeners}
       className={
         "cursor-grab touch-none active:cursor-grabbing " +
-        (isDragging ? "opacity-30 " : "")
+        (isDragging ? "opacity-30 " : "") +
+        (isOver ? "ring-2 ring-blue-400 rounded-xl " : "")
       }
       title="Glisse pour changer de catégorie"
     >

@@ -16,6 +16,7 @@ import {
   PointerSensor,
   TouchSensor,
   KeyboardSensor,
+  closestCorners,
   useDroppable,
   useDraggable,
   useSensor,
@@ -80,7 +81,21 @@ export function TherapeutesDnDZones({
     setDraggingId(null);
     if (!over) return;
     const id = String(active.id);
-    const target = (String(over.id) === "zone-hidden" ? "hidden" : "active") as ZoneKey;
+    const overId = String(over.id);
+
+    // Résolution de la zone cible : drop sur background OU sur une autre carte
+    // (auquel cas on prend la zone de cette carte → permet "prendre la place
+    // de" en touchant juste le bord de la carte voisine).
+    let target: ZoneKey;
+    if (overId === "zone-active" || overId === "zone-hidden") {
+      target = overId.replace("zone-", "") as ZoneKey;
+    } else {
+      const overCard = items.find((t) => t.svlbh_id === overId);
+      if (!overCard) return;
+      if (overCard.status !== "active" && overCard.status !== "hidden") return;
+      target = overCard.status as ZoneKey;
+    }
+
     const current = items.find((t) => t.svlbh_id === id);
     if (!current || current.status === target) return;
     if (!canMove(id)) return;
@@ -105,7 +120,7 @@ export function TherapeutesDnDZones({
   const draggingItem = draggingId ? items.find((t) => t.svlbh_id === draggingId) : null;
 
   return (
-    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <DropZone
         id="zone-active"
         title={`✨ Thérapeutes actives (${actives.length})`}
@@ -187,10 +202,14 @@ function DraggableCard({
   canMove: boolean;
   children: React.ReactNode;
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
     id,
     disabled: !canMove,
   });
+  // Chaque carte est aussi droppable → dropper sur le bord d'une autre carte
+  // déclenche un changement de zone vers la zone de cette carte.
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id });
+  const setNodeRef = (el: HTMLLIElement | null) => { setDragRef(el); setDropRef(el); };
   return (
     <li
       ref={setNodeRef}
@@ -198,7 +217,8 @@ function DraggableCard({
       {...(canMove ? listeners : {})}
       className={
         (canMove ? "cursor-grab touch-none active:cursor-grabbing " : "") +
-        (isDragging ? "opacity-30 " : "")
+        (isDragging ? "opacity-30 " : "") +
+        (isOver ? "ring-2 ring-blue-400 rounded-xl " : "")
       }
       title={canMove ? "Glisse pour changer de zone" : "Drag réservé à toi ou à l'Owner"}
     >
