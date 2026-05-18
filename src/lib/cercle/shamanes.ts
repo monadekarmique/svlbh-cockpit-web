@@ -9,38 +9,82 @@ export type ShamaneRole =
   | "t3-en-attente" // T3 en cours de certification
   | "superviseur"; // Patrick/Patrick P. — non visibles aux participantes
 
-/** Apprenantes en parcours sans code praticien actif (T0/T2/T3 attente). */
-export type ParticipantTier = "t0" | "t2" | "t3-en-attente";
+/** Apprenantes en parcours sans code praticien actif. DEC Patrick 2026-05-18 :
+ * 4 catégories distinctes selon le mouvement de la praticienne dans le parcours.
+ * - formation : en apprentissage actif (Irène, Véronique)
+ * - parcours-passif : ST2 en parcours mais sans engagement actif (Paola)
+ * - cercle-akashique : ST2 reconnue Shamane du Cercle akashiques (Béatrice)
+ * - t3-en-attente : ST3 en cours de certification (legacy, conservé pour compat)
+ */
+export type ParticipantTier =
+  | "formation"
+  | "parcours-passif"
+  | "cercle-akashique"
+  | "t3-en-attente"
+  | "t0"
+  | "t2";
 
 export type Participant = {
   name: string;
   tier: ParticipantTier;
   emoji?: string;
-  /** Code praticien actif si la personne en a un (Véronique 200) — pour
-   * récupérer son badge sessions pending dans le webhook SHAMANES-PENDING. */
+  /** Code praticien actif si la personne en a un. */
   code?: string;
 };
 
-/** Apprenantes en parcours — visibles uniquement aux superviseurs T4/T5
- * (cachées aux participantes T2/T3). */
+/** Apprenantes en parcours — visibles uniquement aux Owners. */
 export const APPRENANTES: Participant[] = [
-  { name: "Véronique", tier: "t3-en-attente", emoji: "🔮", code: "200" },
-  // Daphné Friederich promue ST4 MYSHAMANFAMILY le 2026-05-13 (code 305) — déplacée vers SHAMANES_ALL
-  { name: "Paola", tier: "t2", emoji: "🌺" },
-  { name: "Béatrice Pathey", tier: "t0", emoji: "🌱" },
+  { name: "Irène", tier: "formation", emoji: "🌿" },
+  { name: "Véronique", tier: "formation", emoji: "🔮", code: "200" },
+  { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
+  { name: "Béatrice Pathey", tier: "cercle-akashique", emoji: "🌌" },
 ];
 
 export const TIER_LABEL: Record<ParticipantTier, string> = {
+  formation: "Apprenante en formation",
+  "parcours-passif": "ST2 · parcours passif",
+  "cercle-akashique": "Shamane du Cercle akashiques",
+  "t3-en-attente": "ST3 en attente",
   t0: "ST0 · Lead",
   t2: "ST2 · MyShaman (Formation)",
-  "t3-en-attente": "ST3 en attente",
 };
 
 export const TIER_COLOR: Record<ParticipantTier, string> = {
+  formation: "#10b981", // emerald — en mouvement
+  "parcours-passif": "#94a3b8", // slate — en pause
+  "cercle-akashique": "#7c3aed", // violet — akashique
+  "t3-en-attente": "#C28D43",
   t0: "#6B7280",
   t2: "#7C3AED",
-  "t3-en-attente": "#C28D43",
 };
+
+/** Cartes virtuelles Patrick — 2 rôles superviseurs ajoutés en tête des
+ * Thérapeutes actives. Indépendantes du système DB praticienne_profile
+ * (Patrick a 1 svlbh_id mais 2 fonctions de supervision). */
+export type SupervisorVirtual = {
+  cercle_number: number | null;
+  code: string;
+  role_label: string;
+  emoji: string;
+  color: string;
+};
+
+export const SUPERVISORS_VIRTUAL: SupervisorVirtual[] = [
+  {
+    cercle_number: 1,
+    code: "455000",
+    role_label: "Superviseur méthodologique",
+    emoji: "🔬",
+    color: "#1d4ed8", // bleu (n°1 bleu)
+  },
+  {
+    cercle_number: null,
+    code: "754545",
+    role_label: "Superviseur protection méthodologique",
+    emoji: "🛡",
+    color: "#1d4ed8",
+  },
+];
 
 export type ShamaneRef = {
   code: string;

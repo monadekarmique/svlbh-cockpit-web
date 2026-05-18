@@ -9,7 +9,8 @@
 // DEC Patrick 2026-05-18 : source = DB (plus de fetchShamanesPending Make).
 
 import Link from "next/link";
-import { APPRENANTES, TIER_LABEL, TIER_COLOR } from "@/lib/cercle/shamanes";
+import { APPRENANTES, TIER_LABEL, TIER_COLOR, SUPERVISORS_VIRTUAL } from "@/lib/cercle/shamanes";
+import type { ParticipantTier } from "@/lib/cercle/shamanes";
 import { createClient } from "@/lib/supabase/server";
 import { setFeltCount, toggleFeltLike } from "./felt-actions";
 import { setMyDailyStatus, setAttentionSticker, clearAttentionSticker } from "./daily-status-actions";
@@ -211,6 +212,48 @@ export default async function ShamanesPage() {
         </div>
       </header>
 
+      {/* Cartes virtuelles Patrick × 2 (superviseurs) — toujours en tête actives */}
+      <section className="space-y-2">
+        <h2 className="text-base font-semibold text-blue-900">
+          🔵 Superviseurs ({SUPERVISORS_VIRTUAL.length})
+        </h2>
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {SUPERVISORS_VIRTUAL.map((s) => (
+            <li
+              key={s.code}
+              className="flex items-center gap-3 rounded-xl border bg-white p-4 shadow-sm"
+              style={{ borderLeftColor: s.color, borderLeftWidth: 4 }}
+            >
+              {s.cercle_number != null ? (
+                <span
+                  className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-sm font-extrabold text-white"
+                  style={{ backgroundColor: s.color }}
+                  title={`n°${s.cercle_number} du Cercle`}
+                >
+                  {s.cercle_number}
+                </span>
+              ) : (
+                <span className="text-xl">{s.emoji}</span>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-neutral-900">
+                  Patrick Bays{" "}
+                  <span className="font-mono text-[10px] text-neutral-500">
+                    #{s.code}
+                  </span>
+                </p>
+                <p className="mt-0.5 text-[11px] font-semibold" style={{ color: s.color }}>
+                  {s.role_label}
+                </p>
+                <p className="mt-0.5 text-[9px] italic text-neutral-500">
+                  Reconnaissance Shamane Cercle de Lumière SR · certifié T3
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {/* Section 1 : Thérapeutes actives */}
       <SectionTherapeutes
         title={`✨ Thérapeutes actives (${activesTherapeutes.length})`}
@@ -232,21 +275,36 @@ export default async function ShamanesPage() {
         emptyHint="Aucune cachée aujourd'hui."
       />
 
-      {/* Section 3 : Apprenantes en parcours (statique, visible Owner uniquement) */}
+      {/* Apprenantes — 3 sous-sections (visibles Owner uniquement) */}
       {isOwner ? (
-        <section className="space-y-3 pt-2">
-          <header>
-            <h2 className="text-lg font-bold tracking-tight text-blue-950">
-              🌱 Apprenantes en parcours ({APPRENANTES.length})
-              <span className="ml-2 text-[10px] font-normal text-neutral-500">
-                🔒 Vue Owner — non visible aux thérapeutes
-              </span>
+        <ApprentantesGroupedSection />
+      ) : null}
+    </div>
+  );
+}
+
+function ApprentantesGroupedSection() {
+  const groups: Array<{ tier: ParticipantTier; emoji: string; title: string }> = [
+    { tier: "formation", emoji: "🌱", title: "Apprenantes en formation" },
+    { tier: "parcours-passif", emoji: "💤", title: "Apprenantes en parcours passives" },
+    { tier: "cercle-akashique", emoji: "🌌", title: "Shamanes du Cercle akashiques" },
+  ];
+  return (
+    <div className="space-y-5 pt-2">
+      <p className="text-[10px] font-normal text-neutral-500">
+        🔒 Vue Owner — non visible aux thérapeutes
+      </p>
+      {groups.map((g) => {
+        const items = APPRENANTES.filter((a) => a.tier === g.tier);
+        if (items.length === 0) return null;
+        const c = TIER_COLOR[g.tier];
+        return (
+          <section key={g.tier} className="space-y-2">
+            <h2 className="text-base font-semibold" style={{ color: c }}>
+              {g.emoji} {g.title} ({items.length})
             </h2>
-          </header>
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {APPRENANTES.map((a) => {
-              const c = TIER_COLOR[a.tier];
-              return (
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {items.map((a) => (
                 <li
                   key={a.name}
                   className="flex items-center gap-3 rounded-xl border bg-white p-4 shadow-sm"
@@ -260,11 +318,11 @@ export default async function ShamanesPage() {
                     </p>
                   </div>
                 </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
+              ))}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }
