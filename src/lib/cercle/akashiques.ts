@@ -78,8 +78,15 @@ export const MEMBERSHIPS: Record<string, AkashiqueMembership> = {
     membres: [CERCLE_RAKTA],
     formation: [],
   },
-  // Irène — apprenante en formation
+  // Irène — apprenante en formation (clé legacy = name, conservé au cas où)
   "Irène": {
+    membres: [],
+    formation: [CERCLE_RASA, CERCLE_RAKTA, CERCLE_MAMSA],
+  },
+  // Irène — promue ST4 le 2026-05-18 (svlbh_id 9746f232, code 304).
+  // Ses cercles akashiques en formation sont conservés sous sa svlbh_id
+  // pour que le lookup via TherapeuteCardClient les affiche. DEC Patrick.
+  "9746f232-77ed-4086-ad64-1bde5805ed83": {
     membres: [],
     formation: [CERCLE_RASA, CERCLE_RAKTA, CERCLE_MAMSA],
   },

@@ -24,9 +24,13 @@ async function getMe() {
   };
 }
 
+const VALID_DAILY_STATUS = new Set([
+  "active", "hidden", "formation", "parcours-passif", "cercle-akashique",
+]);
+
 export async function setMyDailyStatus(formData: FormData) {
   const status = String(formData.get("status") ?? "");
-  if (status !== "active" && status !== "hidden") throw new Error("status invalide");
+  if (!VALID_DAILY_STATUS.has(status)) throw new Error("status invalide");
   const { sb, svlbhId, stx } = await getMe();
   if (!["ST4", "ST5", "ST6"].includes(stx ?? "")) {
     throw new Error("Réservé aux thérapeutes ST4+");

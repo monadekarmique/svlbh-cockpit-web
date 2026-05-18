@@ -32,7 +32,7 @@ export type DnDTherapeute = {
   tx: string | null;
   capacity_anchor: string | null;
   cercle_lumiere_sr: boolean | null;
-  status: "active" | "hidden";
+  status: "active" | "hidden" | "formation" | "parcours-passif" | "cercle-akashique";
   attention_color: string | null;
   attention_steps: number | null;
 };

@@ -34,17 +34,19 @@ type Therapeute = {
   tx: string | null;
   capacity_anchor: string | null;
   cercle_lumiere_sr: boolean | null;
-  status: "active" | "hidden"; // résolu pour aujourd'hui (default active)
+  status: DailyStatus; // 5 valeurs : active/hidden/formation/parcours-passif/cercle-akashique
   attention_color: string | null;
   attention_steps: number | null;
 };
 
 // Si updated_at < today (Europe/Zurich), on considère un reset implicite
 // vers 'active'. Le serveur calcule ça au render.
-function statusEffective(rawStatus: string | null, updatedAt: string | null): "active" | "hidden" {
-  if (rawStatus !== "active" && rawStatus !== "hidden") return "active";
-  if (!updatedAt) return rawStatus;
-  // Compare en date Europe/Zurich
+type DailyStatus = "active" | "hidden" | "formation" | "parcours-passif" | "cercle-akashique";
+
+function statusEffective(rawStatus: string | null, updatedAt: string | null): DailyStatus {
+  const valid = new Set<DailyStatus>(["active", "hidden", "formation", "parcours-passif", "cercle-akashique"]);
+  if (!rawStatus || !valid.has(rawStatus as DailyStatus)) return "active";
+  if (!updatedAt) return rawStatus as DailyStatus;
   const fmt = new Intl.DateTimeFormat("fr-CH", {
     timeZone: "Europe/Zurich",
     year: "numeric", month: "2-digit", day: "2-digit",
@@ -52,7 +54,7 @@ function statusEffective(rawStatus: string | null, updatedAt: string | null): "a
   const todayZurich = fmt.format(new Date());
   const updatedZurich = fmt.format(new Date(updatedAt));
   if (updatedZurich !== todayZurich) return "active";
-  return rawStatus;
+  return rawStatus as DailyStatus;
 }
 
 export default async function ShamanesPage() {
