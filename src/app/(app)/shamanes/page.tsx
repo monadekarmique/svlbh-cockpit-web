@@ -151,6 +151,68 @@ export default async function ShamanesPage() {
   const activesTherapeutes = therapeutes.filter((t) => t.status === "active");
   const hiddenTherapeutes = therapeutes.filter((t) => t.status === "hidden");
 
+  // 3bis. Soins en commun — healing_paths multi-praticiennes (≥ 2 ST4+).
+  // 1) charger toutes les relations (owner) + 2) attribution panel +
+  // 3) healing_path_share. Filtre côté Node : contributors distincts ≥ 2.
+  // DEC Patrick 2026-05-18 : section au-dessus de Thérapeutes actives.
+  const { data: relsRaw } = await sb
+    .from("relation")
+    .select("relation_id, praticienne_svlbh_id, slideshow_title, relation_type, relation_state");
+  const { data: attrsRaw } = await sb
+    .from("consultante_attribution")
+    .select("resource_id, praticienne_svlbh_id")
+    .in("resource_type", ["relation", "soul_mission", "healing_path"]);
+  const { data: sharesRaw } = await sb
+    .from("healing_path_share")
+    .select("source_relation_id, sender_svlbh_id, recipient_svlbh_id");
+
+  const profileByIdRaw = new Map<string, { first_name: string | null; last_name: string | null; code_praticien: number | null }>(
+    ((therapeutesRaw ?? []) as Array<{ svlbh_id: string; first_name: string | null; last_name: string | null; code_praticien: number | null }>)
+      .map((p) => [p.svlbh_id, { first_name: p.first_name, last_name: p.last_name, code_praticien: p.code_praticien }]),
+  );
+
+  type SoinCommun = {
+    relation_id: string;
+    owner_svlbh_id: string;
+    title: string;
+    relation_type: string | null;
+    relation_state: string | null;
+    contributors: Array<{ svlbh_id: string; first_name: string | null; last_name: string | null; code_praticien: number | null }>;
+  };
+  const contribsByRel = new Map<string, Set<string>>();
+  for (const a of (attrsRaw ?? []) as Array<{ resource_id: string; praticienne_svlbh_id: string }>) {
+    if (!contribsByRel.has(a.resource_id)) contribsByRel.set(a.resource_id, new Set());
+    contribsByRel.get(a.resource_id)!.add(a.praticienne_svlbh_id);
+  }
+  for (const s of (sharesRaw ?? []) as Array<{ source_relation_id: string; sender_svlbh_id: string; recipient_svlbh_id: string }>) {
+    if (!contribsByRel.has(s.source_relation_id)) contribsByRel.set(s.source_relation_id, new Set());
+    contribsByRel.get(s.source_relation_id)!.add(s.sender_svlbh_id);
+    contribsByRel.get(s.source_relation_id)!.add(s.recipient_svlbh_id);
+  }
+  const soinsCommuns: SoinCommun[] = ((relsRaw ?? []) as Array<{
+    relation_id: string; praticienne_svlbh_id: string; slideshow_title: string | null;
+    relation_type: string | null; relation_state: string | null;
+  }>)
+    .map((r) => {
+      const all = new Set<string>(contribsByRel.get(r.relation_id) ?? []);
+      all.add(r.praticienne_svlbh_id);
+      const distinct = Array.from(all).filter((id) => profileByIdRaw.has(id));
+      if (distinct.length < 2) return null;
+      return {
+        relation_id: r.relation_id,
+        owner_svlbh_id: r.praticienne_svlbh_id,
+        title: r.slideshow_title?.trim() || r.relation_type || "(sans titre)",
+        relation_type: r.relation_type,
+        relation_state: r.relation_state,
+        contributors: distinct.map((id) => ({
+          svlbh_id: id,
+          ...profileByIdRaw.get(id)!,
+        })),
+      };
+    })
+    .filter((x): x is SoinCommun => x !== null)
+    .sort((a, b) => b.contributors.length - a.contributors.length);
+
   // 3. Compteurs felt (ST1 / ST2 actives)
   const { data: feltRows } = await sb
     .from("cercle_felt_count")
@@ -252,6 +314,53 @@ export default async function ShamanesPage() {
           })}
         </div>
       </header>
+
+      {/* Section 0 : Soins en commun ST4+ du Cercle SR (≥ 2 contributeurs) */}
+      <section className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+        <h2 className="text-base font-semibold text-emerald-900">
+          🌿 Soins en commun des thérapeutes SVLBH ST4+ du Cercle SR ({soinsCommuns.length})
+        </h2>
+        {soinsCommuns.length === 0 ? (
+          <p className="px-2 py-3 text-center text-xs italic text-neutral-500">
+            Aucun soin partagé entre 2 thérapeutes ou plus actuellement.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {soinsCommuns.map((s) => (
+              <li
+                key={s.relation_id}
+                className="flex flex-wrap items-start gap-x-3 gap-y-1 rounded-lg border border-emerald-100 bg-white px-3 py-2 text-sm shadow-sm"
+              >
+                <span className="font-semibold text-neutral-900">{s.title}</span>
+                {s.relation_state ? (
+                  <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700">
+                    {s.relation_state}
+                  </span>
+                ) : null}
+                <span className="ml-auto flex flex-wrap items-center gap-1">
+                  {s.contributors.map((c) => (
+                    <span
+                      key={c.svlbh_id}
+                      className={
+                        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium " +
+                        (c.svlbh_id === s.owner_svlbh_id
+                          ? "border-emerald-300 bg-emerald-100 text-emerald-900"
+                          : "border-neutral-300 bg-neutral-50 text-neutral-700")
+                      }
+                      title={c.svlbh_id === s.owner_svlbh_id ? "Créatrice du soin" : "Co-contributrice"}
+                    >
+                      {c.first_name ?? "?"} {c.last_name ?? ""}
+                      {c.code_praticien != null ? (
+                        <span className="font-mono opacity-60">#{String(c.code_praticien).padStart(5, "0")}</span>
+                      ) : null}
+                    </span>
+                  ))}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Sections 1 & 2 : Thérapeutes actives / cachées avec drag-and-drop */}
       <TherapeutesDnDZonesWrapper
