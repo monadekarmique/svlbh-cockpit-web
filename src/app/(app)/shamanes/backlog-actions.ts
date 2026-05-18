@@ -110,6 +110,20 @@ export async function setBacklogAutonomy(formData: FormData) {
   revalidatePath("/shamanes");
 }
 
+const SATURATION = new Set(["trois_plus", "deux", "un"]);
+
+export async function setBacklogSaturation(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const level = String(formData.get("saturation_level") ?? "");
+  if (!id) throw new Error("id requis");
+  if (!SATURATION.has(level)) throw new Error("saturation_level invalide");
+
+  const { sb } = await getMySvlbhId();
+  const { error } = await sb.from("cockpit_backlog_item").update({ saturation_level: level }).eq("id", id);
+  if (error) throw new Error(`Update saturation : ${error.message}`);
+  revalidatePath("/shamanes");
+}
+
 export async function archiveBacklog(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("id requis");

@@ -15,7 +15,6 @@ import { ApprenantesDnD } from "./apprenantes-dnd";
 import type { DnDApprenante } from "./apprenantes-dnd";
 import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
 import { BacklogSidebar } from "./backlog-sidebar";
-import type { BacklogItem } from "./backlog-sidebar";
 import { SoinsCommunsList } from "./soins-communs-list";
 import type { SoinCommun } from "./soins-communs-list";
 
@@ -160,66 +159,17 @@ export default async function ShamanesPage() {
   const activesTherapeutes = therapeutes.filter((t) => t.status === "active");
   const hiddenTherapeutes = therapeutes.filter((t) => t.status === "hidden");
 
-  // 3ter. Backlog Cercle SR — items (relations + énergies offensives)
-  const { data: backlogRaw } = await sb
-    .from("cockpit_backlog_item")
-    .select(
-      "id, title, notes, autonomy_level, ref_relation_id, ref_energie_id, created_at, " +
-      "rel:ref_relation_id(relation_type, end_a_label, end_a_cons:end_a_consultante_id(first_name,last_name), end_a_prat:end_a_praticienne_svlbh_id(first_name,last_name)), " +
-      "ene:ref_energie_id(source_description, intensity, t_prat:target_praticienne_svlbh_id(first_name,last_name), t_cons:target_consultante_id(first_name,last_name))"
-    )
-    .is("archived_at", null)
-    .order("created_at", { ascending: false });
-
-  type BLRow = {
-    id: string; title: string; notes: string | null; autonomy_level: string;
-    ref_relation_id: string | null; ref_energie_id: string | null; created_at: string;
-    rel: { relation_type: string | null; end_a_label: string | null;
-           end_a_cons: { first_name: string | null; last_name: string | null } | null;
-           end_a_prat: { first_name: string | null; last_name: string | null } | null } | null;
-    ene: { source_description: string; intensity: number | null;
-           t_prat: { first_name: string | null; last_name: string | null } | null;
-           t_cons: { first_name: string | null; last_name: string | null } | null } | null;
-  };
-  const backlogItems: BacklogItem[] = ((backlogRaw ?? []) as unknown as BLRow[]).map((r) => {
-    const cons = Array.isArray(r.rel?.end_a_cons) ? r.rel?.end_a_cons[0] : r.rel?.end_a_cons;
-    const prat = Array.isArray(r.rel?.end_a_prat) ? r.rel?.end_a_prat[0] : r.rel?.end_a_prat;
-    const ea = cons ?? prat;
-    const tprat = Array.isArray(r.ene?.t_prat) ? r.ene?.t_prat[0] : r.ene?.t_prat;
-    const tcons = Array.isArray(r.ene?.t_cons) ? r.ene?.t_cons[0] : r.ene?.t_cons;
-    const tgt = tprat ?? tcons;
-    return {
-      id: r.id, title: r.title, notes: r.notes, autonomy_level: r.autonomy_level,
-      ref_relation_id: r.ref_relation_id, ref_energie_id: r.ref_energie_id,
-      created_at: r.created_at,
-      relation: r.rel ? {
-        relation_type: r.rel.relation_type,
-        target_name: ea ? `${ea.first_name ?? ""} ${ea.last_name ?? ""}`.trim() : r.rel.end_a_label,
-      } : null,
-      energie: r.ene ? {
-        source_description: r.ene.source_description,
-        intensity: r.ene.intensity,
-        target_name: tgt ? `${tgt.first_name ?? ""} ${tgt.last_name ?? ""}`.trim() : null,
-      } : null,
-    };
-  });
-
-  // Picker relations pour le form backlog (relations de la praticienne courante)
-  const { data: relsForPicker } = await sb
-    .from("relation")
-    .select("relation_id, relation_type, end_a_label, end_a_cons:end_a_consultante_id(first_name,last_name), end_a_prat:end_a_praticienne_svlbh_id(first_name,last_name)")
-    .order("created_at", { ascending: false })
-    .limit(50);
-  type RPickerRow = { relation_id: string; relation_type: string | null; end_a_label: string | null;
-    end_a_cons: { first_name: string | null; last_name: string | null } | { first_name: string | null; last_name: string | null }[] | null;
-    end_a_prat: { first_name: string | null; last_name: string | null } | { first_name: string | null; last_name: string | null }[] | null; };
-  const relationsForPicker = ((relsForPicker ?? []) as unknown as RPickerRow[]).map((r) => {
-    const cons = Array.isArray(r.end_a_cons) ? r.end_a_cons[0] : r.end_a_cons;
-    const prat = Array.isArray(r.end_a_prat) ? r.end_a_prat[0] : r.end_a_prat;
-    const name = (cons ?? prat) ? `${(cons ?? prat)?.first_name ?? ""} ${(cons ?? prat)?.last_name ?? ""}`.trim() : r.end_a_label ?? "?";
-    return { relation_id: r.relation_id, label: `${r.relation_type ?? "?"} · ${name}` };
-  });
-
+  // 3ter. Backlog Cercle SR — vue de tri/saturation des Soins en commun.
+  // Map saturation par soin commun. Items proviennent automatiquement des
+  // soinsCommuns (calculé plus bas). Pas de saisie manuelle.
+  const { data: saturationRaw } = await sb
+    .from("cercle_sr_saturation")
+    .select("ref_type, ref_id, saturation_level");
+  const saturationMap: Record<string, "trois_plus" | "deux" | "un"> = {};
+  for (const r of (saturationRaw ?? []) as Array<{ ref_type: string; ref_id: string; saturation_level: "trois_plus" | "deux" | "un" }>) {
+    const kind = r.ref_type === "energie_offensive" ? "energie" : "relation";
+    saturationMap[`${kind}:${r.ref_id}`] = r.saturation_level;
+  }
   const canEditBacklog = isOwner || myStx === "ST5";
 
   // 3bis. Soins en commun — relations + énergies offensives multi-praticiennes.
@@ -427,16 +377,11 @@ export default async function ShamanesPage() {
         />
       </section>
 
-      {/* Section 0bis : Backlog Cercle SR — sous Soins en commun */}
+      {/* Section 0bis : Backlog Cercle SR — vue 3 buckets DnD saturation */}
       <BacklogSidebar
-        items={backlogItems}
+        soins={soinsCommuns}
+        saturationMap={saturationMap}
         canEdit={canEditBacklog}
-        relationsForPicker={relationsForPicker}
-        praticiennesForPicker={therapeutes.map((t) => ({
-          svlbh_id: t.svlbh_id,
-          label: `${t.first_name ?? ""} ${t.last_name ?? ""}`.trim(),
-        }))}
-        consultantesForPicker={[]}
       />
 
       {/* Sections 1 & 2 : Thérapeutes actives / cachées avec drag-and-drop */}
