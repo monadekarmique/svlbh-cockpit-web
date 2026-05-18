@@ -93,20 +93,25 @@ export default async function ShamanesPage() {
     ((dailyRaw ?? []) as DailyRow[]).map((r) => [r.svlbh_id, r]),
   );
 
-  // Agrégat niveau_shamanique_bloques par praticienne (somme des relations
-  // bloquées). DEC Patrick 2026-05-18 : variable « à secrets » visible
-  // côté praticienne sur /relations, lue ici en somme.
+  // Agrégat niveau_shamanique_bloques par praticienne. DEC Patrick 2026-05-18 :
+  // 2 sources cumulées :
+  //   (a) praticienne_svlbh_id = X (relations qu'elle possède côté praticienne)
+  //   (b) end_a_praticienne_svlbh_id = X (soins reçus par X comme cible
+  //       — ex : Patrick crée une relation vers Anne avec NSB 57)
   const { data: niveauxRaw } = await sb
     .from("relation")
-    .select("praticienne_svlbh_id, niveau_shamanique_bloques")
+    .select("praticienne_svlbh_id, end_a_praticienne_svlbh_id, niveau_shamanique_bloques")
     .eq("relation_state", "bloquée")
     .not("niveau_shamanique_bloques", "is", null);
   const niveauxSomme = new Map<string, number>();
-  for (const r of (niveauxRaw ?? []) as Array<{ praticienne_svlbh_id: string; niveau_shamanique_bloques: number }>) {
-    niveauxSomme.set(
-      r.praticienne_svlbh_id,
-      (niveauxSomme.get(r.praticienne_svlbh_id) ?? 0) + (r.niveau_shamanique_bloques ?? 0),
-    );
+  for (const r of (niveauxRaw ?? []) as Array<{ praticienne_svlbh_id: string | null; end_a_praticienne_svlbh_id: string | null; niveau_shamanique_bloques: number }>) {
+    const v = r.niveau_shamanique_bloques ?? 0;
+    if (r.praticienne_svlbh_id) {
+      niveauxSomme.set(r.praticienne_svlbh_id, (niveauxSomme.get(r.praticienne_svlbh_id) ?? 0) + v);
+    }
+    if (r.end_a_praticienne_svlbh_id) {
+      niveauxSomme.set(r.end_a_praticienne_svlbh_id, (niveauxSomme.get(r.end_a_praticienne_svlbh_id) ?? 0) + v);
+    }
   }
   // En plus : niveaux_bloques de l'override apprenante_tier (déclassement
   // temporaire ST4+ comme Cornelia 15). Lookup par svlbh_id. DEC Patrick.
