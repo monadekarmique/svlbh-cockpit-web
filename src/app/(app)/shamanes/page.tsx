@@ -94,29 +94,39 @@ export default async function ShamanesPage() {
 
   return (
     <div className="space-y-5">
-      <Link
-        href="/dashboard"
-        className="text-sm text-neutral-500 hover:text-neutral-900"
-      >
-        ← Cockpit
-      </Link>
+      {/* Nav haut : ← Cockpit à gauche, lien WhatsApp Cercle centré */}
+      <nav className="relative flex items-center">
+        <Link
+          href="/dashboard"
+          className="text-sm text-neutral-500 hover:text-neutral-900"
+        >
+          ← Cockpit
+        </Link>
+        <a
+          href={WHATSAPP_CERCLE_HREF}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline"
+          title="WhatsApp Cercle de Lumière SVLBH (z3 · +41 79 930 28 00)"
+        >
+          💬 WhatsApp · Cercle de Lumière
+        </a>
+      </nav>
 
-      <header className="space-y-3">
-        <div className="flex items-baseline justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-blue-950">
-              👥 Thérapeutes SVLBH du Cercle
-            </h1>
-            <p className="mt-1 text-sm text-neutral-700">
-              {isSuperviseur
-                ? `Vue superviseur · ${badges.length} actives + ${APPRENANTES.length} apprenantes`
-                : `Cercle de Lumière · ${badges.length} thérapeutes actives`}
-            </p>
-          </div>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold tracking-tight text-blue-950">
+            👥 Thérapeutes SVLBH du Cercle
+          </h1>
+          <p className="mt-1 text-sm text-neutral-700">
+            {isSuperviseur
+              ? `Vue superviseur · ${badges.length} actives + ${APPRENANTES.length} apprenantes`
+              : `Cercle de Lumière · ${badges.length} thérapeutes actives`}
+          </p>
         </div>
 
-        {/* Compteurs ressentis ST1 + ST2 actives — éditables par membres du Cercle */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        {/* Compteurs ressentis ST1 + ST2 actives — à droite du titre sur iPad+ */}
+        <div className="grid grid-cols-2 gap-2 sm:w-[22rem] sm:flex-shrink-0 sm:gap-3">
           {(["ST1", "ST2"] as const).map((type) => {
             const f = felt[type];
             const val = f?.felt_value ?? 0;
@@ -178,17 +188,6 @@ export default async function ShamanesPage() {
             );
           })}
         </div>
-
-        {/* Lien WhatsApp Cercle de Lumière (z3) */}
-        <a
-          href={WHATSAPP_CERCLE_HREF}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-xl border-2 border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900 transition-colors hover:bg-emerald-100"
-        >
-          💬 WhatsApp · Cercle de Lumière SVLBH
-          <span className="font-mono text-xs text-emerald-700">+41 79 930 28 00</span>
-        </a>
       </header>
 
       {/* Thérapeutes SVLBH du Cercle actives */}
