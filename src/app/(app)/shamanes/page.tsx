@@ -318,9 +318,9 @@ async function ApprenantesDnDSection() {
   const sb = await createClient();
   const { data } = await sb
     .from("apprenante_tier")
-    .select("name, tier, description");
+    .select("name, tier, description, niveaux_bloques");
   const dbByName = new Map(
-    ((data ?? []) as Array<{ name: string; tier: string; description: string | null }>).map((r) => [r.name, r]),
+    ((data ?? []) as Array<{ name: string; tier: string; description: string | null; niveaux_bloques: number | null }>).map((r) => [r.name, r]),
   );
   const items: DnDApprenante[] = APPRENANTES.map((a) => {
     const db = dbByName.get(a.name);
@@ -330,7 +330,13 @@ async function ApprenantesDnDSection() {
       : (a.tier === "formation" || a.tier === "parcours-passif" || a.tier === "cercle-akashique")
       ? a.tier
       : "formation";
-    return { name: a.name, tier: effectiveTier, emoji: a.emoji, description: db?.description ?? null };
+    return {
+      name: a.name,
+      tier: effectiveTier,
+      emoji: a.emoji,
+      description: db?.description ?? null,
+      niveaux_bloques: db?.niveaux_bloques ?? null,
+    };
   });
   return <ApprenantesDnD initial={items} />;
 }

@@ -29,6 +29,7 @@ export type DnDApprenante = {
   tier: "formation" | "parcours-passif" | "cercle-akashique";
   emoji?: string;
   description?: string | null;
+  niveaux_bloques?: number | null;
 };
 
 type ZoneKey = "formation" | "parcours-passif" | "cercle-akashique";
@@ -202,7 +203,17 @@ function ApprenanteCardInner({ a, color }: { a: DnDApprenante; color: string }) 
     >
       <span className="text-2xl">{a.emoji ?? "·"}</span>
       <div className="min-w-0 flex-1">
-        <p className="font-semibold text-neutral-900">{a.name}</p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-semibold text-neutral-900">{a.name}</p>
+          {a.niveaux_bloques != null ? (
+            <span
+              className="flex-shrink-0 rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-mono text-[11px] font-bold text-rose-900"
+              title="NSB — Niveaux Shamaniques Bloqués (apprenante_tier.niveaux_bloques)"
+            >
+              NSB {a.niveaux_bloques}
+            </span>
+          ) : null}
+        </div>
         <p className="mt-0.5 text-[11px] font-semibold" style={{ color }}>
           {TIER_LABEL[a.tier as ParticipantTier]}
         </p>
