@@ -33,14 +33,13 @@ export type Participant = {
 };
 
 /** Apprenantes en parcours — visibles uniquement aux Owners.
- * NOTE : Irène (svlbh_id 9746f232, code 304) ET Véronique (svlbh_id
- * f73d2429, code 200) ont été promues ST4 temporaires le 2026-05-18 ;
- * elles sont désormais dans praticienne_profile et ne doivent plus figurer
- * ici pour éviter le doublon. Leurs cercles akashiques sont déplacés dans
- * MEMBERSHIPS sous leur svlbh_id (cf akashiques.ts). */
+ * NOTE : Irène (svlbh_id 9746f232, code 304) est ST4 mais DEC Patrick
+ * 2026-05-18 demande son affichage AUSSI dans cette section, à côté de
+ * Béatrice Pathey (doublon UI volontaire). Véronique reste hors d'ici. */
 export const APPRENANTES: Participant[] = [
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
   { name: "Béatrice Pathey", tier: "cercle-akashique", emoji: "🌌" },
+  { name: "Irène", tier: "cercle-akashique", emoji: "🌿" },
 ];
 
 export const TIER_LABEL: Record<ParticipantTier, string> = {
