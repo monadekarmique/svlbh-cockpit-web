@@ -90,6 +90,12 @@ export const MEMBERSHIPS: Record<string, AkashiqueMembership> = {
     membres: [],
     formation: [CERCLE_RASA, CERCLE_RAKTA, CERCLE_MAMSA],
   },
+  // Véronique — promue ST4 le 2026-05-18 (svlbh_id f73d2429, code 200).
+  // Membre du Cercle Rakta. DEC Patrick 2026-05-18.
+  "f73d2429-871f-4641-8bd4-ca6a0fe9e34b": {
+    membres: [CERCLE_RAKTA],
+    formation: [],
+  },
 };
 
 export function lookupMembership(key: string | null | undefined): AkashiqueMembership | null {

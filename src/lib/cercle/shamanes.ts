@@ -33,12 +33,12 @@ export type Participant = {
 };
 
 /** Apprenantes en parcours — visibles uniquement aux Owners.
- * NOTE : Irène a été promue ST4 (code 304, svlbh_id 9746f232) le 2026-05-18 ;
- * elle est désormais dans praticienne_profile et ne doit plus figurer ici
- * pour éviter le doublon de carte. Ses cercles akashiques sont déplacés
- * dans MEMBERSHIPS sous sa svlbh_id (cf akashiques.ts). */
+ * NOTE : Irène (svlbh_id 9746f232, code 304) ET Véronique (svlbh_id
+ * f73d2429, code 200) ont été promues ST4 temporaires le 2026-05-18 ;
+ * elles sont désormais dans praticienne_profile et ne doivent plus figurer
+ * ici pour éviter le doublon. Leurs cercles akashiques sont déplacés dans
+ * MEMBERSHIPS sous leur svlbh_id (cf akashiques.ts). */
 export const APPRENANTES: Participant[] = [
-  { name: "Véronique", tier: "formation", emoji: "🔮", code: "200" },
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
   { name: "Béatrice Pathey", tier: "cercle-akashique", emoji: "🌌" },
 ];
