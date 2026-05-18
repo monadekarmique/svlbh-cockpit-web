@@ -28,6 +28,7 @@ export type DnDApprenante = {
   name: string;
   tier: "formation" | "parcours-passif" | "cercle-akashique";
   emoji?: string;
+  description?: string | null;
 };
 
 type ZoneKey = "formation" | "parcours-passif" | "cercle-akashique";
@@ -206,6 +207,9 @@ function ApprenanteCardInner({ a, color }: { a: DnDApprenante; color: string }) 
           {TIER_LABEL[a.tier as ParticipantTier]}
         </p>
         <CerclesAkashiquesChips membership={memb} />
+        {a.description ? (
+          <p className="mt-1.5 text-[10px] italic text-neutral-600">{a.description}</p>
+        ) : null}
       </div>
     </div>
   );
