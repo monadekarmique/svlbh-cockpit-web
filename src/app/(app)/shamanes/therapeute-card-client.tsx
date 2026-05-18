@@ -3,7 +3,7 @@
 // Carte thérapeute (extraite de page.tsx en client component pour le DnD).
 // DEC Patrick 2026-05-18.
 
-import { setMyDailyStatus, setAttentionSticker, clearAttentionSticker } from "./daily-status-actions";
+import { setMyDailyStatus } from "./daily-status-actions";
 import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
 import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
@@ -56,9 +56,9 @@ export function TherapeuteCardClient({
   const targetStatusOnToggle = t.status === "active" ? "hidden" : "active";
   const toggleLabel = t.status === "active" ? "Me cacher aujourd'hui" : "Redevenir active";
 
-  const stickerStyle: React.CSSProperties = t.attention_color
-    ? { borderLeftColor: t.attention_color, borderLeftWidth: 6 }
-    : { borderLeftColor: "#cbd5e1", borderLeftWidth: 4 };
+  const stickerStyle: React.CSSProperties = {
+    borderLeftColor: "#cbd5e1", borderLeftWidth: 4,
+  };
 
   const displayName = `${t.first_name ?? ""} ${t.last_name ?? ""}`.trim() || "—";
 
@@ -74,7 +74,7 @@ export function TherapeuteCardClient({
               {t.tx ?? "T?"}
             </span>
             <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-900" title="Cx — capacité à transmettre">
-              {t.capacity_anchor ?? "C?"}
+              {t.capacity_anchor ? t.capacity_anchor.replace(/^T/, "C") : "C?"}
             </span>
             <span className="rounded bg-violet-100 px-1.5 py-0.5 text-violet-900" title="ST — parcours / rôle">
               {t.stx ?? "ST?"}
@@ -95,19 +95,8 @@ export function TherapeuteCardClient({
           </div>
         </div>
 
-        {t.attention_steps != null ? (
-          <span
-            className="inline-flex h-8 min-w-[32px] items-center justify-center rounded-full px-2 text-sm font-extrabold text-white shadow-sm"
-            style={{ backgroundColor: t.attention_color ?? "#64748b" }}
-            title={`${t.attention_steps} étape${t.attention_steps > 1 ? "s" : ""} en attente de libération`}
-          >
-            {t.attention_steps}
-          </span>
-        ) : null}
       </div>
 
-      {/* Bouton toggle "Me cacher / Redevenir active" — stopPropagation pour
-          que le drag listener parent ne mange pas le clic. DEC Patrick 2026-05-18. */}
       {isMe ? (
         <form action={setMyDailyStatus} onPointerDown={(e) => e.stopPropagation()}>
           <input type="hidden" name="status" value={targetStatusOnToggle} />
@@ -123,59 +112,6 @@ export function TherapeuteCardClient({
           >
             {toggleLabel}
           </button>
-        </form>
-      ) : null}
-
-      {isOwner && !isMe ? (
-        <form
-          action={setAttentionSticker}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="flex items-center gap-1.5 border-t border-neutral-100 pt-2"
-        >
-          <input type="hidden" name="target_svlbh_id" value={t.svlbh_id} />
-          <label
-            className="flex items-center gap-1 text-[10px] text-neutral-600"
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            🎨
-            <input
-              name="attention_color"
-              type="color"
-              defaultValue={t.attention_color ?? "#ef4444"}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="h-6 w-8 cursor-pointer rounded border border-neutral-300 bg-white"
-              title="Couleur du sticker"
-            />
-          </label>
-          <input
-            name="attention_steps"
-            type="number"
-            min={0}
-            max={9999}
-            defaultValue={t.attention_steps ?? ""}
-            placeholder="N"
-            onPointerDown={(e) => e.stopPropagation()}
-            className="h-6 w-14 rounded border border-neutral-300 px-1 text-center font-mono text-[11px]"
-            title="Nombre d'étapes à libérer"
-          />
-          <button
-            type="submit"
-            onPointerDown={(e) => e.stopPropagation()}
-            className="h-6 rounded bg-neutral-900 px-2 text-[10px] font-semibold text-white hover:bg-neutral-700"
-          >
-            Poser
-          </button>
-          {t.attention_color || t.attention_steps != null ? (
-            <button
-              type="submit"
-              formAction={clearAttentionSticker}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="h-6 rounded border border-neutral-300 bg-white px-2 text-[10px] text-neutral-700 hover:bg-neutral-50"
-              title="Retirer le sticker"
-            >
-              ✕
-            </button>
-          ) : null}
         </form>
       ) : null}
     </div>
