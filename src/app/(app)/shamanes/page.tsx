@@ -379,9 +379,6 @@ export default async function ShamanesPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-5 min-w-0">
-
       {/* Section 0 : Soins en commun ST4+ du Cercle SR (≥ 2 contributeurs) */}
       <section className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
         <h2 className="text-base font-semibold text-emerald-900">
@@ -398,6 +395,18 @@ export default async function ShamanesPage() {
           canEdit={canEditBacklog}
         />
       </section>
+
+      {/* Section 0bis : Backlog Cercle SR — sous Soins en commun */}
+      <BacklogSidebar
+        items={backlogItems}
+        canEdit={canEditBacklog}
+        relationsForPicker={relationsForPicker}
+        praticiennesForPicker={therapeutes.map((t) => ({
+          svlbh_id: t.svlbh_id,
+          label: `${t.first_name ?? ""} ${t.last_name ?? ""}`.trim(),
+        }))}
+        consultantesForPicker={[]}
+      />
 
       {/* Sections 1 & 2 : Thérapeutes actives / cachées avec drag-and-drop */}
       <TherapeutesDnDZonesWrapper
@@ -456,21 +465,6 @@ export default async function ShamanesPage() {
           Tier persisté en DB (table apprenante_tier), source remplace
           le tier statique du const APPRENANTES. */}
       {isOwner ? <ApprenantesDnDSection /> : null}
-
-        </div>
-
-        {/* Sidebar : Backlog Cercle SR */}
-        <BacklogSidebar
-          items={backlogItems}
-          canEdit={canEditBacklog}
-          relationsForPicker={relationsForPicker}
-          praticiennesForPicker={therapeutes.map((t) => ({
-            svlbh_id: t.svlbh_id,
-            label: `${t.first_name ?? ""} ${t.last_name ?? ""}`.trim(),
-          }))}
-          consultantesForPicker={[]}
-        />
-      </div>
     </div>
   );
 }
