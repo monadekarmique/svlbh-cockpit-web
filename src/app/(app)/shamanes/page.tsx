@@ -108,6 +108,17 @@ export default async function ShamanesPage() {
       (niveauxSomme.get(r.praticienne_svlbh_id) ?? 0) + (r.niveau_shamanique_bloques ?? 0),
     );
   }
+  // En plus : niveaux_bloques de l'override apprenante_tier (déclassement
+  // temporaire ST4+ comme Cornelia 15). Lookup par svlbh_id. DEC Patrick.
+  const { data: overrideNiveaux } = await sb
+    .from("apprenante_tier")
+    .select("svlbh_id, niveaux_bloques")
+    .not("svlbh_id", "is", null)
+    .not("niveaux_bloques", "is", null);
+  const overrideMap = new Map<string, number>();
+  for (const r of (overrideNiveaux ?? []) as Array<{ svlbh_id: string; niveaux_bloques: number }>) {
+    overrideMap.set(r.svlbh_id, r.niveaux_bloques);
+  }
 
   const therapeutes: Therapeute[] = ((therapeutesRaw ?? []) as Array<{
     svlbh_id: string; first_name: string | null; last_name: string | null;
@@ -116,6 +127,12 @@ export default async function ShamanesPage() {
   }>).map((p) => {
     const d = dailyMap.get(p.svlbh_id);
     const somme = niveauxSomme.get(p.svlbh_id) ?? 0;
+    const overrideNiv = overrideMap.get(p.svlbh_id);
+    // Priorité : attention_steps manuel > override apprenante_tier > somme relations
+    const niveauAffiche =
+      d?.attention_steps != null ? d.attention_steps :
+      overrideNiv != null ? overrideNiv :
+      somme > 0 ? somme : null;
     return {
       svlbh_id: p.svlbh_id,
       first_name: p.first_name,
@@ -126,9 +143,8 @@ export default async function ShamanesPage() {
       capacity_anchor: p.capacity_anchor,
       cercle_lumiere_sr: p.cercle_lumiere_sr,
       status: statusEffective(d?.status ?? null, d?.updated_at ?? null),
-      // attention_steps prioritaire ; sinon somme des niveaux shamaniques bloqués
       attention_color: d?.attention_color ?? null,
-      attention_steps: d?.attention_steps ?? (somme > 0 ? somme : null),
+      attention_steps: niveauAffiche,
     };
   });
 
