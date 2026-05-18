@@ -16,6 +16,8 @@ import type { DnDApprenante } from "./apprenantes-dnd";
 import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
 import { BacklogSidebar } from "./backlog-sidebar";
 import type { BacklogItem } from "./backlog-sidebar";
+import { SoinsCommunsList } from "./soins-communs-list";
+import type { SoinCommun } from "./soins-communs-list";
 
 // Patrick svlbh_id pour mapper la carte virtuelle 754545 → ses cercles
 const PATRICK_SVLBH_ID = "52adbc98-d2b0-4444-b89c-b1311a02a983";
@@ -240,14 +242,7 @@ export default async function ShamanesPage() {
       .map((p) => [p.svlbh_id, { first_name: p.first_name, last_name: p.last_name, code_praticien: p.code_praticien }]),
   );
 
-  type SoinCommun = {
-    relation_id: string;
-    owner_svlbh_id: string;
-    title: string;
-    relation_type: string | null;
-    relation_state: string | null;
-    contributors: Array<{ svlbh_id: string; first_name: string | null; last_name: string | null; code_praticien: number | null }>;
-  };
+  // (SoinCommun importé depuis ./soins-communs-list)
   const contribsByRel = new Map<string, Set<string>>();
   for (const a of (attrsRaw ?? []) as Array<{ resource_id: string; praticienne_svlbh_id: string }>) {
     if (!contribsByRel.has(a.resource_id)) contribsByRel.set(a.resource_id, new Set());
@@ -392,46 +387,16 @@ export default async function ShamanesPage() {
         <h2 className="text-base font-semibold text-emerald-900">
           🌿 Soins en commun des thérapeutes SVLBH ST4+ du Cercle SR ({soinsCommuns.length})
         </h2>
-        {soinsCommuns.length === 0 ? (
-          <p className="px-2 py-3 text-center text-xs italic text-neutral-500">
-            Aucun soin partagé entre 2 thérapeutes ou plus actuellement.
-          </p>
-        ) : (
-          <ul className="space-y-1.5">
-            {soinsCommuns.map((s) => (
-              <li
-                key={s.relation_id}
-                className="flex flex-wrap items-start gap-x-3 gap-y-1 rounded-lg border border-emerald-100 bg-white px-3 py-2 text-sm shadow-sm"
-              >
-                <span className="font-semibold text-neutral-900">{s.title}</span>
-                {s.relation_state ? (
-                  <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700">
-                    {s.relation_state}
-                  </span>
-                ) : null}
-                <span className="ml-auto flex flex-wrap items-center gap-1">
-                  {s.contributors.map((c) => (
-                    <span
-                      key={c.svlbh_id}
-                      className={
-                        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium " +
-                        (c.svlbh_id === s.owner_svlbh_id
-                          ? "border-emerald-300 bg-emerald-100 text-emerald-900"
-                          : "border-neutral-300 bg-neutral-50 text-neutral-700")
-                      }
-                      title={c.svlbh_id === s.owner_svlbh_id ? "Créatrice du soin" : "Co-contributrice"}
-                    >
-                      {c.first_name ?? "?"} {c.last_name ?? ""}
-                      {c.code_praticien != null ? (
-                        <span className="font-mono opacity-60">#{String(c.code_praticien).padStart(5, "0")}</span>
-                      ) : null}
-                    </span>
-                  ))}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <SoinsCommunsList
+          items={soinsCommuns as SoinCommun[]}
+          allTherapeutes={therapeutes.map((t) => ({
+            svlbh_id: t.svlbh_id,
+            first_name: t.first_name,
+            last_name: t.last_name,
+            code_praticien: t.code_praticien,
+          }))}
+          canEdit={canEditBacklog}
+        />
       </section>
 
       {/* Sections 1 & 2 : Thérapeutes actives / cachées avec drag-and-drop */}
