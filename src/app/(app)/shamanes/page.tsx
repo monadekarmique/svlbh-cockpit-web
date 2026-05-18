@@ -93,12 +93,29 @@ export default async function ShamanesPage() {
     ((dailyRaw ?? []) as DailyRow[]).map((r) => [r.svlbh_id, r]),
   );
 
+  // Agrégat niveau_shamanique_bloques par praticienne (somme des relations
+  // bloquées). DEC Patrick 2026-05-18 : variable « à secrets » visible
+  // côté praticienne sur /relations, lue ici en somme.
+  const { data: niveauxRaw } = await sb
+    .from("relation")
+    .select("praticienne_svlbh_id, niveau_shamanique_bloques")
+    .eq("relation_state", "bloquée")
+    .not("niveau_shamanique_bloques", "is", null);
+  const niveauxSomme = new Map<string, number>();
+  for (const r of (niveauxRaw ?? []) as Array<{ praticienne_svlbh_id: string; niveau_shamanique_bloques: number }>) {
+    niveauxSomme.set(
+      r.praticienne_svlbh_id,
+      (niveauxSomme.get(r.praticienne_svlbh_id) ?? 0) + (r.niveau_shamanique_bloques ?? 0),
+    );
+  }
+
   const therapeutes: Therapeute[] = ((therapeutesRaw ?? []) as Array<{
     svlbh_id: string; first_name: string | null; last_name: string | null;
     code_praticien: number | null; stx: string | null; tx: string | null;
     capacity_anchor: string | null; cercle_lumiere_sr: boolean | null;
   }>).map((p) => {
     const d = dailyMap.get(p.svlbh_id);
+    const somme = niveauxSomme.get(p.svlbh_id) ?? 0;
     return {
       svlbh_id: p.svlbh_id,
       first_name: p.first_name,
@@ -109,8 +126,9 @@ export default async function ShamanesPage() {
       capacity_anchor: p.capacity_anchor,
       cercle_lumiere_sr: p.cercle_lumiere_sr,
       status: statusEffective(d?.status ?? null, d?.updated_at ?? null),
+      // attention_steps prioritaire ; sinon somme des niveaux shamaniques bloqués
       attention_color: d?.attention_color ?? null,
-      attention_steps: d?.attention_steps ?? null,
+      attention_steps: d?.attention_steps ?? (somme > 0 ? somme : null),
     };
   });
 
