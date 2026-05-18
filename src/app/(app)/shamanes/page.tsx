@@ -59,7 +59,8 @@ export default async function ShamanesPage() {
         .maybeSingle()
     : { data: null };
   const mySvlbhId = me?.svlbh_id as string | undefined;
-  const canEditFelt = (me?.cercle_lumiere_sr === true) || me?.stx === "ST6";
+  // DEC Patrick 2026-05-18 : édition felt_count étendue à toutes les ST4+
+  const canEditFelt = me?.stx === "ST4" || me?.stx === "ST5" || me?.stx === "ST6";
 
   const { data: feltRows } = await sb
     .from("cercle_felt_count")
