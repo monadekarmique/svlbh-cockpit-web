@@ -41,6 +41,33 @@ export async function setMyDailyStatus(formData: FormData) {
   revalidatePath("/shamanes");
 }
 
+/** Bouger une thérapeute via drag-and-drop entre Actives et Cachées.
+ * - Si target = soi : ST4+ autorisée
+ * - Si target ≠ soi : ST6 (Owner) uniquement
+ * DEC Patrick 2026-05-18. */
+export async function setTherapeuteDailyStatus(formData: FormData) {
+  const targetSvlbhId = String(formData.get("target_svlbh_id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  if (!targetSvlbhId) throw new Error("target_svlbh_id requis");
+  if (status !== "active" && status !== "hidden") throw new Error("status invalide");
+
+  const { sb, svlbhId, stx, isOwner } = await getMe();
+  const isSelf = targetSvlbhId === svlbhId;
+  if (!isSelf && !isOwner) throw new Error("Réservé à l'Owner pour déplacer une autre thérapeute");
+  if (isSelf && !["ST4", "ST5", "ST6"].includes(stx ?? "")) {
+    throw new Error("Réservé aux thérapeutes ST4+");
+  }
+
+  const { error } = await sb
+    .from("praticienne_daily_status")
+    .upsert(
+      { svlbh_id: targetSvlbhId, status, updated_at: new Date().toISOString() },
+      { onConflict: "svlbh_id" },
+    );
+  if (error) throw new Error(`DnD statut : ${error.message}`);
+  revalidatePath("/shamanes");
+}
+
 // Patrick (ST6) seul peut poser ou retirer un sticker d'attention sur
 // une thérapeute. nb_steps = nombre d'étapes nécessitant encore une
 // libération (saisie manuelle pour l'instant).

@@ -13,9 +13,9 @@ import { APPRENANTES, TIER_LABEL, TIER_COLOR, SUPERVISORS_VIRTUAL } from "@/lib/
 import type { ParticipantTier } from "@/lib/cercle/shamanes";
 import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
 import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
+import { TherapeutesDnDZonesWrapper } from "./therapeutes-dnd-wrapper";
 import { createClient } from "@/lib/supabase/server";
 import { setFeltCount, toggleFeltLike } from "./felt-actions";
-import { setMyDailyStatus, setAttentionSticker, clearAttentionSticker } from "./daily-status-actions";
 
 const WHATSAPP_CERCLE_HREF = "https://wa.me/41799302800";
 
@@ -256,25 +256,11 @@ export default async function ShamanesPage() {
         </ul>
       </section>
 
-      {/* Section 1 : Thérapeutes actives */}
-      <SectionTherapeutes
-        title={`✨ Thérapeutes actives (${activesTherapeutes.length})`}
-        therapeutes={activesTherapeutes}
+      {/* Sections 1 & 2 : Thérapeutes actives / cachées avec drag-and-drop */}
+      <TherapeutesDnDZonesWrapper
+        therapeutes={therapeutes}
         mySvlbhId={mySvlbhId}
         isOwner={isOwner}
-        targetStatus="hidden"
-        toggleLabel="Me cacher aujourd'hui"
-      />
-
-      {/* Section 2 : Thérapeutes cachées */}
-      <SectionTherapeutes
-        title={`🌙 Thérapeutes cachées (${hiddenTherapeutes.length})`}
-        therapeutes={hiddenTherapeutes}
-        mySvlbhId={mySvlbhId}
-        isOwner={isOwner}
-        targetStatus="active"
-        toggleLabel="Redevenir active"
-        emptyHint="Aucune cachée aujourd'hui."
       />
 
       {/* Apprenantes — 3 sous-sections (visibles Owner uniquement) */}
@@ -333,40 +319,6 @@ function ApprentantesGroupedSection() {
   );
 }
 
-function SectionTherapeutes({
-  title, therapeutes, mySvlbhId, isOwner, targetStatus, toggleLabel, emptyHint,
-}: {
-  title: string;
-  therapeutes: Therapeute[];
-  mySvlbhId: string | undefined;
-  isOwner: boolean;
-  targetStatus: "active" | "hidden";
-  toggleLabel: string;
-  emptyHint?: string;
-}) {
-  return (
-    <section className="space-y-2">
-      <h2 className="text-base font-semibold text-blue-900">{title}</h2>
-      {therapeutes.length === 0 ? (
-        <p className="text-xs italic text-neutral-500">{emptyHint ?? "—"}</p>
-      ) : (
-        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {therapeutes.map((t) => (
-            <TherapeuteCard
-              key={t.svlbh_id}
-              t={t}
-              isMe={mySvlbhId === t.svlbh_id}
-              isOwner={isOwner}
-              targetStatusOnToggle={targetStatus}
-              toggleLabel={toggleLabel}
-            />
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
 /** Chips des cercles akashiques d'une personne (membres + formation).
  * Compact, 1 chip par cercle, emoji+label, couleur du dhātu principal.
  * DEC Patrick 2026-05-18. */
@@ -407,133 +359,3 @@ function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembershi
   );
 }
 
-function TherapeuteCard({
-  t, isMe, isOwner, targetStatusOnToggle, toggleLabel,
-}: {
-  t: Therapeute;
-  isMe: boolean;
-  isOwner: boolean;
-  targetStatusOnToggle: "active" | "hidden";
-  toggleLabel: string;
-}) {
-  const membership = lookupMembership(t.svlbh_id);
-  const stickerStyle: React.CSSProperties = t.attention_color
-    ? { borderLeftColor: t.attention_color, borderLeftWidth: 6 }
-    : { borderLeftColor: "#cbd5e1", borderLeftWidth: 4 };
-
-  const displayName = `${t.first_name ?? ""} ${t.last_name ?? ""}`.trim() || "—";
-
-  return (
-    <li
-      className="flex flex-col gap-2 rounded-xl border bg-white p-4 shadow-sm"
-      style={stickerStyle}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-start gap-2">
-          {/* Badges Tx · Cx · ST à gauche du nom */}
-          <div className="flex flex-col gap-0.5 font-mono text-[9px] font-bold">
-            <span className="rounded bg-rose-100 px-1.5 py-0.5 text-rose-900" title="Tx — capacité à recevoir / risque">
-              {t.tx ?? "T?"}
-            </span>
-            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-900" title="Cx — capacité à transmettre">
-              {t.capacity_anchor ?? "C?"}
-            </span>
-            <span className="rounded bg-violet-100 px-1.5 py-0.5 text-violet-900" title="ST — parcours / rôle">
-              {t.stx ?? "ST?"}
-            </span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-neutral-900">
-              {displayName}
-              {isMe ? <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-900">moi</span> : null}
-              {t.cercle_lumiere_sr ? <span className="ml-1 text-[10px]" title="Cercle SR">◉</span> : null}
-            </p>
-            {t.code_praticien != null ? (
-              <p className="font-mono text-[10px] text-neutral-400">
-                #{String(t.code_praticien).padStart(5, "0")}
-              </p>
-            ) : null}
-            <CerclesAkashiquesChips membership={membership} />
-          </div>
-        </div>
-
-        {/* Sticker attention — N étapes à libérer */}
-        {t.attention_steps != null ? (
-          <span
-            className="inline-flex h-8 min-w-[32px] items-center justify-center rounded-full px-2 text-sm font-extrabold text-white shadow-sm"
-            style={{ backgroundColor: t.attention_color ?? "#64748b" }}
-            title={`${t.attention_steps} étape${t.attention_steps > 1 ? "s" : ""} en attente de libération`}
-          >
-            {t.attention_steps}
-          </span>
-        ) : null}
-      </div>
-
-      {/* Toggle quotidien : visible uniquement à la praticienne elle-même OU à Patrick */}
-      {(isMe || isOwner) ? (
-        <form action={setMyDailyStatus}>
-          <input type="hidden" name="status" value={targetStatusOnToggle} />
-          {/* Si ST6 et c'est PAS soi, il faut un autre payload mais notre policy
-              upsert_own gère ST6 → on triche pas, le form pose le status pour MOI
-              uniquement. Patrick utilise le toggle dans son propre profil. */}
-          {isMe ? (
-            <button
-              type="submit"
-              className={
-                "w-full rounded-md px-2 py-1 text-[11px] font-semibold transition " +
-                (targetStatusOnToggle === "hidden"
-                  ? "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
-                  : "bg-emerald-100 text-emerald-900 hover:bg-emerald-200")
-              }
-            >
-              {toggleLabel}
-            </button>
-          ) : null}
-        </form>
-      ) : null}
-
-      {/* Sticker color picker : visible uniquement à Patrick (ST6) */}
-      {isOwner && !isMe ? (
-        <form action={setAttentionSticker} className="flex items-center gap-1.5 border-t border-neutral-100 pt-2">
-          <input type="hidden" name="target_svlbh_id" value={t.svlbh_id} />
-          <label className="flex items-center gap-1 text-[10px] text-neutral-600">
-            🎨
-            <input
-              name="attention_color"
-              type="color"
-              defaultValue={t.attention_color ?? "#ef4444"}
-              className="h-6 w-8 cursor-pointer rounded border border-neutral-300 bg-white"
-              title="Couleur du sticker"
-            />
-          </label>
-          <input
-            name="attention_steps"
-            type="number"
-            min={0}
-            max={9999}
-            defaultValue={t.attention_steps ?? ""}
-            placeholder="N"
-            className="h-6 w-14 rounded border border-neutral-300 px-1 text-center font-mono text-[11px]"
-            title="Nombre d'étapes à libérer"
-          />
-          <button
-            type="submit"
-            className="h-6 rounded bg-neutral-900 px-2 text-[10px] font-semibold text-white hover:bg-neutral-700"
-          >
-            Poser
-          </button>
-          {t.attention_color || t.attention_steps != null ? (
-            <button
-              type="submit"
-              formAction={clearAttentionSticker}
-              className="h-6 rounded border border-neutral-300 bg-white px-2 text-[10px] text-neutral-700 hover:bg-neutral-50"
-              title="Retirer le sticker"
-            >
-              ✕
-            </button>
-          ) : null}
-        </form>
-      ) : null}
-    </li>
-  );
-}
