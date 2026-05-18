@@ -21,8 +21,14 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { setSoinSaturation } from "./saturation-action";
+import { setSoinSaturation, setDissipationMode } from "./saturation-action";
 import type { SoinCommun } from "./soins-communs-list";
+
+const DISSIPATION_MODES: Array<{ key: "massif" | "moyen" | "minimal"; n: 3 | 2 | 1; label: string; color: string }> = [
+  { key: "massif",  n: 3, label: "Massif",  color: "#dc2626" },
+  { key: "moyen",   n: 2, label: "Moyen",   color: "#ea580c" },
+  { key: "minimal", n: 1, label: "Minimal", color: "#ca8a04" },
+];
 
 type Bucket = "trois_plus" | "deux" | "un";
 
@@ -35,10 +41,11 @@ const BUCKETS: Array<{ key: Bucket; label: string; emoji: string; color: string 
 export type BacklogProps = {
   soins: SoinCommun[];                      // Liste des soins en commun (relation + energie)
   saturationMap: Record<string, Bucket>;    // key = `${kind}:${ref_id}` → bucket
+  dissipationMap: Record<string, "massif" | "moyen" | "minimal" | null>;
   canEdit: boolean;
 };
 
-export function BacklogSidebar({ soins, saturationMap, canEdit }: BacklogProps) {
+export function BacklogSidebar({ soins, saturationMap, dissipationMap, canEdit }: BacklogProps) {
   const [open, setOpen] = useState(false);
   // Map locale optimiste : key = `${kind}:${ref_id}` → bucket
   const initialMap = (): Record<string, Bucket> => {
@@ -144,7 +151,7 @@ export function BacklogSidebar({ soins, saturationMap, canEdit }: BacklogProps) 
                       <ul className="space-y-1">
                         {items.map((s) => (
                           <DraggableSoin key={`${s.kind}:${s.ref_id}`} id={`${s.kind}:${s.ref_id}`} canMove={canEdit}>
-                            <SoinMini item={s} />
+                            <SoinMini item={s} dissipation={dissipationMap[`${s.kind}:${s.ref_id}`] ?? null} canEdit={canEdit} />
                           </DraggableSoin>
                         ))}
                       </ul>
@@ -203,15 +210,57 @@ function DraggableSoin({
   );
 }
 
-function SoinMini({ item }: { item: SoinCommun }) {
+function SoinMini({
+  item, dissipation, canEdit,
+}: { item: SoinCommun; dissipation: "massif" | "moyen" | "minimal" | null; canEdit: boolean }) {
+  const refType = item.kind === "energie" ? "energie_offensive" : "relation";
   return (
-    <div className="rounded border border-neutral-200 bg-white p-1.5 text-[11px] shadow-sm">
+    <div className="space-y-1 rounded border border-neutral-200 bg-white p-1.5 text-[11px] shadow-sm">
       <p className="font-semibold text-neutral-900 truncate">
         {item.kind === "energie" ? "⚡ " : "🪢 "}{item.title}
       </p>
       <p className="text-[9px] text-neutral-600">
         {item.contributors.length} ST4+ · {item.kind === "relation" ? (item.relation_state ?? "—") : `int. ${item.intensity ?? "?"}/100`}
       </p>
+      {canEdit ? (
+        <div
+          className="flex items-center gap-0.5 pt-0.5"
+          onPointerDown={(e) => e.stopPropagation()}
+          title="Mode de dissipation observable (3 massif / 2 moyen / 1 minimal). Clic sur le mode actif pour effacer."
+        >
+          <span className="mr-0.5 text-[9px] text-neutral-500">Dissip.</span>
+          {DISSIPATION_MODES.map((m) => {
+            const isActive = dissipation === m.key;
+            return (
+              <form key={m.key} action={setDissipationMode} className="inline-flex">
+                <input type="hidden" name="ref_type" value={refType} />
+                <input type="hidden" name="ref_id" value={item.ref_id} />
+                <input type="hidden" name="dissipation_mode" value={isActive ? "" : m.key} />
+                <button
+                  type="submit"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="h-5 w-5 rounded-full border text-[10px] font-bold transition"
+                  style={{
+                    borderColor: m.color,
+                    backgroundColor: isActive ? m.color : "white",
+                    color: isActive ? "white" : m.color,
+                  }}
+                  title={`${m.n} · ${m.label}${isActive ? " (clic pour effacer)" : ""}`}
+                >
+                  {m.n}
+                </button>
+              </form>
+            );
+          })}
+        </div>
+      ) : dissipation ? (
+        <span
+          className="inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white"
+          style={{ backgroundColor: DISSIPATION_MODES.find((m) => m.key === dissipation)!.color }}
+        >
+          Dissip. {DISSIPATION_MODES.find((m) => m.key === dissipation)!.n} · {DISSIPATION_MODES.find((m) => m.key === dissipation)!.label}
+        </span>
+      ) : null}
     </div>
   );
 }

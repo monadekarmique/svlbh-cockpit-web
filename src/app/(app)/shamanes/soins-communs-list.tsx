@@ -19,10 +19,11 @@ export type SoinCommun = {
 };
 
 export function SoinsCommunsList({
-  items, allTherapeutes, canEdit,
+  items, allTherapeutes, dissipationMap, canEdit,
 }: {
   items: SoinCommun[];
   allTherapeutes: Array<{ svlbh_id: string; first_name: string | null; last_name: string | null; code_praticien: number | null }>;
+  dissipationMap?: Record<string, "massif" | "moyen" | "minimal" | null>;
   canEdit: boolean;
 }) {
   if (items.length === 0) {
@@ -39,6 +40,7 @@ export function SoinsCommunsList({
           key={`${s.kind}-${s.ref_id}`}
           item={s}
           available={allTherapeutes.filter((t) => !s.contributors.some((c) => c.svlbh_id === t.svlbh_id))}
+          dissipation={dissipationMap?.[`${s.kind}:${s.ref_id}`] ?? null}
           canEdit={canEdit}
         />
       ))}
@@ -46,11 +48,18 @@ export function SoinsCommunsList({
   );
 }
 
+const DISSIP_BADGE: Record<"massif" | "moyen" | "minimal", { n: number; label: string; color: string }> = {
+  massif:  { n: 3, label: "Massif",  color: "#dc2626" },
+  moyen:   { n: 2, label: "Moyen",   color: "#ea580c" },
+  minimal: { n: 1, label: "Minimal", color: "#ca8a04" },
+};
+
 function SoinItem({
-  item, available, canEdit,
+  item, available, dissipation, canEdit,
 }: {
   item: SoinCommun;
   available: Array<{ svlbh_id: string; first_name: string | null; last_name: string | null; code_praticien: number | null }>;
+  dissipation: "massif" | "moyen" | "minimal" | null;
   canEdit: boolean;
 }) {
   const [adding, setAdding] = useState(false);
@@ -68,6 +77,15 @@ function SoinItem({
         {item.kind === "energie" && item.intensity != null ? (
           <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
             intensité {item.intensity}/100
+          </span>
+        ) : null}
+        {dissipation ? (
+          <span
+            className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
+            style={{ backgroundColor: DISSIP_BADGE[dissipation].color }}
+            title="Mode de dissipation à observer (réglable depuis le Backlog)"
+          >
+            Dissip. {DISSIP_BADGE[dissipation].n} · {DISSIP_BADGE[dissipation].label}
           </span>
         ) : null}
         <span className="ml-auto flex flex-wrap items-center gap-1">

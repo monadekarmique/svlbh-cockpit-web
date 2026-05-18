@@ -164,11 +164,14 @@ export default async function ShamanesPage() {
   // soinsCommuns (calculé plus bas). Pas de saisie manuelle.
   const { data: saturationRaw } = await sb
     .from("cercle_sr_saturation")
-    .select("ref_type, ref_id, saturation_level");
+    .select("ref_type, ref_id, saturation_level, dissipation_mode");
   const saturationMap: Record<string, "trois_plus" | "deux" | "un"> = {};
-  for (const r of (saturationRaw ?? []) as Array<{ ref_type: string; ref_id: string; saturation_level: "trois_plus" | "deux" | "un" }>) {
+  const dissipationMap: Record<string, "massif" | "moyen" | "minimal" | null> = {};
+  for (const r of (saturationRaw ?? []) as Array<{ ref_type: string; ref_id: string; saturation_level: "trois_plus" | "deux" | "un"; dissipation_mode: "massif" | "moyen" | "minimal" | null }>) {
     const kind = r.ref_type === "energie_offensive" ? "energie" : "relation";
-    saturationMap[`${kind}:${r.ref_id}`] = r.saturation_level;
+    const key = `${kind}:${r.ref_id}`;
+    saturationMap[key] = r.saturation_level;
+    dissipationMap[key] = r.dissipation_mode;
   }
   const canEditBacklog = isOwner || myStx === "ST5";
 
@@ -373,6 +376,7 @@ export default async function ShamanesPage() {
             last_name: t.last_name,
             code_praticien: t.code_praticien,
           }))}
+          dissipationMap={dissipationMap}
           canEdit={canEditBacklog}
         />
       </section>
@@ -381,6 +385,7 @@ export default async function ShamanesPage() {
       <BacklogSidebar
         soins={soinsCommuns}
         saturationMap={saturationMap}
+        dissipationMap={dissipationMap}
         canEdit={canEditBacklog}
       />
 
