@@ -402,7 +402,9 @@ function TherapeuteCard({
               {t.cercle_lumiere_sr ? <span className="ml-1 text-[10px]" title="Cercle SR">◉</span> : null}
             </p>
             {t.code_praticien != null ? (
-              <p className="font-mono text-[10px] text-neutral-400">#{t.code_praticien}</p>
+              <p className="font-mono text-[10px] text-neutral-400">
+                #{String(t.code_praticien).padStart(5, "0")}
+              </p>
             ) : null}
           </div>
         </div>
