@@ -11,6 +11,8 @@
 import Link from "next/link";
 import { APPRENANTES, TIER_LABEL, TIER_COLOR, SUPERVISORS_VIRTUAL } from "@/lib/cercle/shamanes";
 import type { ParticipantTier } from "@/lib/cercle/shamanes";
+import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
+import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
 import { createClient } from "@/lib/supabase/server";
 import { setFeltCount, toggleFeltLike } from "./felt-actions";
 import { setMyDailyStatus, setAttentionSticker, clearAttentionSticker } from "./daily-status-actions";
@@ -286,7 +288,7 @@ export default async function ShamanesPage() {
 function ApprentantesGroupedSection() {
   const groups: Array<{ tier: ParticipantTier; emoji: string; title: string }> = [
     { tier: "formation", emoji: "🌱", title: "Apprenantes en formation" },
-    { tier: "parcours-passif", emoji: "💤", title: "Apprenantes en parcours passives" },
+    { tier: "parcours-passif", emoji: "💤", title: "Shamanes passives de Cercles akashiques actifs" },
     { tier: "cercle-akashique", emoji: "🌌", title: "Shamanes du Cercle akashiques" },
   ];
   return (
@@ -304,21 +306,25 @@ function ApprentantesGroupedSection() {
               {g.emoji} {g.title} ({items.length})
             </h2>
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {items.map((a) => (
-                <li
-                  key={a.name}
-                  className="flex items-center gap-3 rounded-xl border bg-white p-4 shadow-sm"
-                  style={{ borderLeftColor: c, borderLeftWidth: 4 }}
-                >
-                  <span className="text-2xl">{a.emoji ?? "·"}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-neutral-900">{a.name}</p>
-                    <p className="mt-0.5 text-[11px] font-semibold" style={{ color: c }}>
-                      {TIER_LABEL[a.tier]}
-                    </p>
-                  </div>
-                </li>
-              ))}
+              {items.map((a) => {
+                const memb = lookupMembership(a.name);
+                return (
+                  <li
+                    key={a.name}
+                    className="flex items-start gap-3 rounded-xl border bg-white p-4 shadow-sm"
+                    style={{ borderLeftColor: c, borderLeftWidth: 4 }}
+                  >
+                    <span className="text-2xl">{a.emoji ?? "·"}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-neutral-900">{a.name}</p>
+                      <p className="mt-0.5 text-[11px] font-semibold" style={{ color: c }}>
+                        {TIER_LABEL[a.tier]}
+                      </p>
+                      <CerclesAkashiquesChips membership={memb} />
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         );
@@ -361,6 +367,46 @@ function SectionTherapeutes({
   );
 }
 
+/** Chips des cercles akashiques d'une personne (membres + formation).
+ * Compact, 1 chip par cercle, emoji+label, couleur du dhātu principal.
+ * DEC Patrick 2026-05-18. */
+function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembership | null }) {
+  if (!membership) return null;
+  const all = [
+    ...membership.membres.map((c) => ({ c, isFormation: false })),
+    ...membership.formation.map((c) => ({ c, isFormation: true })),
+  ];
+  if (all.length === 0) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {all.map(({ c, isFormation }) => {
+        const primary = c.dhatus[0];
+        const meta = DHATU_META[primary];
+        return (
+          <span
+            key={c.name}
+            className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-medium"
+            style={{
+              borderColor: meta.color,
+              color: meta.color,
+              backgroundColor: isFormation ? "transparent" : `${meta.color}10`,
+              opacity: isFormation ? 0.7 : 1,
+              borderStyle: isFormation ? "dashed" : "solid",
+            }}
+            title={
+              isFormation
+                ? `Cercle ${c.name} — en formation (lignée actuelle)`
+                : `Cercle ${c.name} — membre (incarnations passées)`
+            }
+          >
+            {c.dhatus.map((d) => DHATU_META[d].emoji).join("")} {c.name}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function TherapeuteCard({
   t, isMe, isOwner, targetStatusOnToggle, toggleLabel,
 }: {
@@ -370,6 +416,7 @@ function TherapeuteCard({
   targetStatusOnToggle: "active" | "hidden";
   toggleLabel: string;
 }) {
+  const membership = lookupMembership(t.svlbh_id);
   const stickerStyle: React.CSSProperties = t.attention_color
     ? { borderLeftColor: t.attention_color, borderLeftWidth: 6 }
     : { borderLeftColor: "#cbd5e1", borderLeftWidth: 4 };
@@ -406,6 +453,7 @@ function TherapeuteCard({
                 #{String(t.code_praticien).padStart(5, "0")}
               </p>
             ) : null}
+            <CerclesAkashiquesChips membership={membership} />
           </div>
         </div>
 
