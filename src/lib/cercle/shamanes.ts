@@ -48,7 +48,7 @@ export const TIER_LABEL: Record<ParticipantTier, string> = {
   "cercle-akashique": "Shamane du Cercle akashique (ex-passive)",
   "t3-en-attente": "ST3 en attente",
   t0: "ST0 · Lead",
-  t2: "ST2 · MyShaman (Formation)",
+  t2: "ST2 · myShaman (Formation)",
 };
 
 export const TIER_COLOR: Record<ParticipantTier, string> = {
