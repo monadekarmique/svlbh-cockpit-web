@@ -5,6 +5,7 @@ import { groupedNav } from "@/lib/cockpit-nav";
 import { CockpitNav } from "@/components/cockpit-nav";
 import { autoRelinkProfile } from "@/lib/auto-relink-profile";
 import { ExternalAppLink } from "@/components/external-app-link";
+import { version as appVersion } from "../../../package.json";
 
 // DEC Patrick 2026-05-12 — doctrine ST. Cockpit accessible à ST3+ (Certifiée
 // Priv, Thérapeute PRO, Superviseur, Owner). Les modules Admin / Compliance /
@@ -113,7 +114,7 @@ export default async function CockpitLayout({
               className="hidden font-mono text-[10px] text-neutral-400 sm:inline"
               title={`build ${process.env.NEXT_PUBLIC_BUILD_TIME ?? "n/a"}`}
             >
-              build {process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}
+              build {appVersion}
             </span>
             <span className="hidden text-neutral-500 sm:inline">{displayEmail}</span>
             <form action="/auth/signout" method="post">
