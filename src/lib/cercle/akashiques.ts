@@ -83,12 +83,12 @@ export const MEMBERSHIPS: Record<string, AkashiqueMembership> = {
     membres: [],
     formation: [CERCLE_RASA, CERCLE_RAKTA, CERCLE_MAMSA],
   },
-  // Irène — promue ST4 le 2026-05-18 (svlbh_id 9746f232, code 304).
-  // Ses cercles akashiques en formation sont conservés sous sa svlbh_id
-  // pour que le lookup via TherapeuteCardClient les affiche. DEC Patrick.
+  // Irène #304 — promue ST4 le 2026-05-18 (svlbh_id 9746f232).
+  // DEC Patrick 2026-05-20 — Rakta + Māṁsa passent en membre active
+  // (comme Cornelia), Rasa reste en formation.
   "9746f232-77ed-4086-ad64-1bde5805ed83": {
-    membres: [],
-    formation: [CERCLE_RASA, CERCLE_RAKTA, CERCLE_MAMSA],
+    membres: [CERCLE_RAKTA, CERCLE_MAMSA],
+    formation: [CERCLE_RASA],
   },
   // Véronique — promue ST4 le 2026-05-18 (svlbh_id f73d2429, code 200).
   // Membre du Cercle Rakta. DEC Patrick 2026-05-18.
@@ -107,12 +107,6 @@ export const MEMBERSHIPS: Record<string, AkashiqueMembership> = {
       CERCLE_RAKTA,
       CERCLE_MAMSA,
     ],
-    formation: [],
-  },
-  // Irène #304 — ST4. Membre active des cercles Rakta + Māṁsa
-  // (comme Cornelia). DEC Patrick 2026-05-20.
-  "9746f232-77ed-4086-ad64-1bde5805ed83": {
-    membres: [CERCLE_RAKTA, CERCLE_MAMSA],
     formation: [],
   },
 };
