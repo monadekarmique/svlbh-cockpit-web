@@ -14,6 +14,7 @@ import { TherapeutesDnDZonesWrapper } from "./therapeutes-dnd-wrapper";
 import { ApprenantesDnD } from "./apprenantes-dnd";
 import type { DnDApprenante } from "./apprenantes-dnd";
 import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
+import { fetchDynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
 import { BacklogSidebar } from "./backlog-sidebar";
 import { SoinsCommunsList } from "./soins-communs-list";
 import type { SoinCommun } from "./soins-communs-list";
@@ -83,6 +84,9 @@ export default async function ShamanesPage() {
     .eq("pro_status", "ACTIVE")
     .in("stx", ["ST4", "ST5", "ST6"])
     .order("code_praticien", { ascending: true, nullsFirst: false });
+
+  // 1bis. Dynamiques SVLBH attribuées à chaque praticienne (DEC Patrick 2026-05-20)
+  const dynamiquesByPraticienne = await fetchDynamiquesByPraticienne(sb);
 
   // 2. Daily status pour chaque
   const { data: dailyRaw } = await sb
@@ -395,6 +399,7 @@ export default async function ShamanesPage() {
         therapeutes={therapeutes}
         mySvlbhId={mySvlbhId}
         isOwner={isOwner}
+        dynamiquesByPraticienne={dynamiquesByPraticienne}
       />
 
       {/* Cartes virtuelles Patrick × 2 (superviseurs) — sous les thérapeutes

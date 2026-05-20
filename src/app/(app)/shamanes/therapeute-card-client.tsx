@@ -7,6 +7,7 @@ import { setMyDailyStatus } from "./daily-status-actions";
 import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
 import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
+import { DYNAMIQUE_AXIS_TONE, type DynamiqueChip } from "@/lib/cercle/dynamiques";
 
 function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembership | null }) {
   if (!membership) return null;
@@ -45,12 +46,36 @@ function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembershi
   );
 }
 
+function DynamiquesChips({ dynamiques }: { dynamiques: DynamiqueChip[] }) {
+  if (!dynamiques || dynamiques.length === 0) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {dynamiques.map((d) => {
+        const tone = d.axis_mtc
+          ? DYNAMIQUE_AXIS_TONE[d.axis_mtc]
+          : DYNAMIQUE_AXIS_TONE.MULTI;
+        return (
+          <span
+            key={d.id}
+            className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ring-1 ${tone.bg} ${tone.text} ${tone.ring}`}
+            title={`Dynamique : ${d.name}`}
+          >
+            {d.icon ? <span aria-hidden>{d.icon}</span> : null}
+            <span>{d.short_code}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export function TherapeuteCardClient({
-  t, isMe, isOwner,
+  t, isMe, isOwner, dynamiques = [],
 }: {
   t: DnDTherapeute;
   isMe: boolean;
   isOwner: boolean;
+  dynamiques?: DynamiqueChip[];
 }) {
   const membership = lookupMembership(t.svlbh_id);
   const targetStatusOnToggle = t.status === "active" ? "hidden" : "active";
@@ -92,6 +117,7 @@ export function TherapeuteCardClient({
               </p>
             ) : null}
             <CerclesAkashiquesChips membership={membership} />
+            <DynamiquesChips dynamiques={dynamiques} />
           </div>
         </div>
 
