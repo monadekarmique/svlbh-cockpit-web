@@ -117,6 +117,15 @@ export default async function CockpitLayout({
               build {appVersion}
             </span>
             <span className="hidden text-neutral-500 sm:inline">{displayEmail}</span>
+            {/* Commit court (à droite de l'email) — pour vérifier la version
+                déployée. RENDER_GIT_COMMIT est injecté par Render au build. */}
+            <span className="hidden text-neutral-400 sm:inline">·</span>
+            <span
+              className="hidden font-mono text-[10px] text-neutral-400 sm:inline"
+              title={`commit ${process.env.RENDER_GIT_COMMIT ?? "n/a"} · v${appVersion}`}
+            >
+              {process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? "dev"}
+            </span>
             <form action="/auth/signout" method="post">
               <button
                 type="submit"
