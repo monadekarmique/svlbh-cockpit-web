@@ -81,8 +81,19 @@ export default async function RegistreLpdPage() {
           pierres, healing-path) ne sont pas des données de santé au sens de
           l&apos;Art. 5 let. c LPD ni Art. 9 §1 RGPD : ce sont des lectures
           radiesthésiques de mémoires ancestrales, sans diagnostic médical ni
-          recommandation thérapeutique. Cadre documenté dans l&apos;ADR
-          SVLBH-XX et confirmé par audit interne 2026-05-19.
+          recommandation thérapeutique. Cadre documenté dans l&apos;
+          <strong>ADR-01</strong> « Données hDOM hors Art. 9 RGPD » (arbitrage
+          Patrick 2026-04-15, Asana{" "}
+          <a
+            href="https://app.asana.com/0/0/1214055788220527"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-violet-700"
+          >
+            1214055788220527
+          </a>
+          ) et le feedback Patrick 2026-05-19 (vibrations radiesthésiques ≠
+          données patient).
         </p>
       </section>
 
