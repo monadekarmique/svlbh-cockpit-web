@@ -56,11 +56,12 @@ export function SiZhuValidationSection() {
         </p>
       </div>
 
-      {/* Prochaines fenêtres efficaces — accordéon (DEC Patrick 2026-05-20) */}
-      <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-800">
-          ⏳ Prochaines fenêtres efficaces (vrai temps solaire local)
-        </p>
+      {/* Prochaines fenêtres efficaces — accordéon (DEC Patrick 2026-05-20).
+          Bloc entier collapsable avec triangle, comme les autres sections. */}
+      <details open className="group rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
+        <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.18em] text-amber-800">
+          ⏳ Prochaines fenêtres efficaces ({upcoming.length}) — vrai temps solaire local
+        </summary>
         <ul className="mt-3 space-y-2">
           {upcoming.map(({ point, date, daysUntil }) => {
             const tone = AXIS_TONE[point.axis];
@@ -101,7 +102,7 @@ export function SiZhuValidationSection() {
             );
           })}
         </ul>
-      </div>
+      </details>
 
       {/* Liste complète des 10 cas parfaits — collapsible */}
       <details className="group rounded-xl border border-violet-200 bg-white/70 p-4">
