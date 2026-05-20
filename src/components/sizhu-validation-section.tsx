@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   SIZHU_PERFECT,
   SIZHU_IMPOSSIBLE,
@@ -25,8 +25,6 @@ function formatDateFr(iso: string): string {
 }
 
 export function SiZhuValidationSection() {
-  const [openPoint, setOpenPoint] = useState<string | null>(null);
-
   const upcoming = useMemo(() => upcomingReleaseDates(new Date(), 12), []);
 
   return (
@@ -58,51 +56,51 @@ export function SiZhuValidationSection() {
         </p>
       </div>
 
-      {/* Prochaines dates — mise en évidence */}
+      {/* Prochaines fenêtres efficaces — accordéon (DEC Patrick 2026-05-20) */}
       <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-800">
           ⏳ Prochaines fenêtres efficaces (vrai temps solaire local)
         </p>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-3 space-y-2">
           {upcoming.map(({ point, date, daysUntil }) => {
             const tone = AXIS_TONE[point.axis];
             const tens = TENSION_TONE[point.tension];
             const yrs = Math.floor(daysUntil / 365);
             return (
-              <button
-                key={`${point.ganZhi}-${date}`}
-                type="button"
-                onClick={() =>
-                  setOpenPoint(openPoint === point.ganZhi ? null : point.ganZhi)
-                }
-                className={`group rounded-lg border-2 ${tone.border} ${tone.bg} p-3 text-left transition hover:shadow-md`}
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className={`font-bold ${tone.text}`}>
-                    {point.ganZhi}
-                  </span>
-                  <span className="text-[10px] font-semibold text-neutral-600">
-                    {tone.label}
-                  </span>
-                </div>
-                <p className={`mt-1 font-mono text-sm font-bold ${tone.text}`}>
-                  {formatDateFr(date)}
-                </p>
-                <p className="mt-0.5 text-[11px] font-medium text-neutral-700">
-                  {point.hourSlot} · {point.meridianCode} {point.meridian}
-                </p>
-                <div className="mt-1.5 flex items-center justify-between">
-                  <span className={`text-[10px] font-semibold ${tens.color}`}>
-                    {tens.symbol} {tens.label.split(" ")[0]}
-                  </span>
-                  <span className="text-[10px] font-semibold text-neutral-600">
-                    dans {yrs > 0 ? `${yrs} an${yrs > 1 ? "s" : ""}` : `${daysUntil} j`}
-                  </span>
-                </div>
-              </button>
+              <li key={`${point.ganZhi}-${date}`}>
+                <details
+                  className={`group rounded-lg border-2 ${tone.border} ${tone.bg} transition`}
+                >
+                  <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-3 gap-y-1 p-3 hover:brightness-95">
+                    <span className={`font-bold ${tone.text}`}>{point.ganZhi}</span>
+                    <span className="font-mono text-sm font-bold text-neutral-800">
+                      {formatDateFr(date)}
+                    </span>
+                    <span className="text-[11px] font-medium text-neutral-700">
+                      {point.hourSlot} · {point.meridianCode} {point.meridian}
+                    </span>
+                    <span className={`text-[10px] font-semibold ${tens.color}`}>
+                      {tens.symbol} {tens.label.split(" ")[0]}
+                    </span>
+                    <span className="ml-auto text-[10px] font-semibold text-neutral-600">
+                      {tone.label} · dans{" "}
+                      {yrs > 0 ? `${yrs} an${yrs > 1 ? "s" : ""}` : `${daysUntil} j`}
+                    </span>
+                  </summary>
+                  <div className="space-y-2 border-t border-amber-200 bg-white/40 px-3 py-3 text-xs leading-relaxed">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+                      {point.pinyin} · tension {tens.label}
+                    </p>
+                    <p className="font-semibold text-neutral-800">
+                      {point.tensionDescription}
+                    </p>
+                    <p className="text-neutral-700">{point.clinicalReading}</p>
+                  </div>
+                </details>
+              </li>
             );
           })}
-        </div>
+        </ul>
       </div>
 
       {/* Liste complète des 10 cas parfaits — collapsible */}
