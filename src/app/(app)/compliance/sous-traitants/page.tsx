@@ -123,6 +123,15 @@ const SUB_PROCESSORS: SubProcessor[] = [
     note: "Connecté via Make.com pour les flux ST1.",
     doc: "https://stripe.com/legal/dpa",
   },
+  {
+    name: "PostFinance",
+    finalite: "Solution bancaire — paiements factures consultantes (PostFinance Checkout)",
+    donnees: "Données paiement (PCI-DSS gérées par PostFinance, jamais côté SVLBH), références factures",
+    region: "CH",
+    dpa: "signed",
+    note: "Infra suisse 100% — aucun transfert hors CH/UE. Banque postale officielle suisse, régulée FINMA.",
+    doc: "https://www.postfinance.ch/fr/clients-commerciaux/produits-services-numeriques/protection-des-donnees.html",
+  },
 ];
 
 const DPA_TONE: Record<DpaStatus, { label: string; bg: string }> = {

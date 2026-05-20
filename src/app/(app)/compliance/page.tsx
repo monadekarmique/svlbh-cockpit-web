@@ -37,10 +37,10 @@ const MODULES: Module[] = [
   },
   {
     href: "/compliance/registre",
-    label: "Registre Art. 30 RGPD",
+    label: "Registre LPD (Art. 31)",
     icon: "📑",
-    status: "todo",
-    desc: "Registre des traitements par finalité (auth, soins vibratoires, facturation, pédagogie ST4) + bases légales + durée + flux.",
+    status: "ready",
+    desc: "Registre des activités de traitement (Loi suisse LPD Art. 31, aligné RGPD UE). 8 finalités SVLBH : Auth, Soins vibratoires, Facturation, WhatsApp, Pédagogie ST4, Cercles, Compliance, Marketing.",
   },
 ];
 
