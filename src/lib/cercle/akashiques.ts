@@ -109,6 +109,12 @@ export const MEMBERSHIPS: Record<string, AkashiqueMembership> = {
     ],
     formation: [],
   },
+  // Irène #304 — ST4. Membre active des cercles Rakta + Māṁsa
+  // (comme Cornelia). DEC Patrick 2026-05-20.
+  "9746f232-77ed-4086-ad64-1bde5805ed83": {
+    membres: [CERCLE_RAKTA, CERCLE_MAMSA],
+    formation: [],
+  },
 };
 
 export function lookupMembership(key: string | null | undefined): AkashiqueMembership | null {
