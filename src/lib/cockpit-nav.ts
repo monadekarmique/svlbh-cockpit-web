@@ -4,7 +4,7 @@
 //   - src/app/(app)/layout.tsx (NAV header avec juste label)
 // Modifier l'ordre/ajouter/retirer un module ici met à jour les 2.
 
-export type CockpitNavGroup = "shamanes" | "routines" | "chakras" | "autonome" | "owner";
+export type CockpitNavGroup = "shamanes" | "routines" | "chakras" | "owner";
 
 export type CockpitNavItem = {
   href: string;
@@ -66,6 +66,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     color: "#0E7490",
     group: "routines",
   },
+  {
+    href: "/demandes",
+    label: "Fenêtres efficaces",
+    navLabel: "Fenêtres",
+    icon: "⏳",
+    desc: "Cas parfaits Si Zhu 四柱 · prochaines fenêtres temporelles (Zi Wu Liu Zhu)",
+    color: "#1D9E75",
+    group: "routines",
+  },
 
   // ── Bloc Chakras (MTC) ──
   {
@@ -102,16 +111,6 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     desc: "8 pierres de protection — Tourmaline, Obsidienne, Nuummite…",
     color: "#1E3A8A",
     group: "chakras",
-  },
-
-  // ── Autonome ──
-  {
-    href: "/demandes",
-    label: "Demandes",
-    icon: "📥",
-    desc: "Factures + sessions via vlbh-energy-mcp",
-    color: "#1D9E75",
-    group: "autonome",
   },
 
   // ── Owner (ST6 only — gate côté layout via requireOwner) ──
@@ -154,7 +153,6 @@ export const GROUP_LABELS: Record<CockpitNavGroup, string> = {
   shamanes: "Shamanes",
   routines: "Routines",
   chakras: "Chakras MTC",
-  autonome: "Demandes",
   owner: "Owner",
 };
 
@@ -170,8 +168,8 @@ export type CockpitNavGroupRendered = {
 export function groupedNav(options?: { includeOwner?: boolean }): CockpitNavGroupRendered[] {
   const includeOwner = options?.includeOwner ?? false;
   const order: CockpitNavGroup[] = includeOwner
-    ? ["shamanes", "routines", "chakras", "autonome", "owner"]
-    : ["shamanes", "routines", "chakras", "autonome"];
+    ? ["shamanes", "routines", "chakras", "owner"]
+    : ["shamanes", "routines", "chakras"];
   return order
     .map((id) => ({
       id,

@@ -61,11 +61,12 @@ export default function DemandesPage() {
 
       <header>
         <h1 className="text-2xl font-bold tracking-tight text-blue-950">
-          📥 Demandes
+          ⏳ Fenêtres efficaces
         </h1>
         <p className="mt-1 text-sm text-neutral-700">
-          Concept de validation Si Zhu + dates de libération efficaces, puis
-          factures live via API vlbh-energy-mcp.
+          Cas parfaits Si Zhu 四柱 · prochaines fenêtres temporelles de
+          libération chromathique (Zi Wu Liu Zhu) — puis factures live via API
+          vlbh-energy-mcp.
         </p>
       </header>
 
