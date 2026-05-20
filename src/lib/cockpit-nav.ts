@@ -138,6 +138,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     color: "#15803D",
     group: "owner",
   },
+  {
+    href: "/statutspostfinance",
+    label: "Statut PostFinance",
+    navLabel: "PostFinance",
+    icon: "🏦",
+    desc: "Santé de la solution bancaire suisse — encaissements, échecs, rapprochement",
+    color: "#FFCC00",
+    group: "owner",
+  },
 ];
 
 /** Items du NAV header (label court, sans Dashboard car ajouté séparément). */
