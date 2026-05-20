@@ -41,7 +41,7 @@ export type Participant = {
 export const APPRENANTES: Participant[] = [
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
   { name: "Julie Bays", tier: "parcours-passif", emoji: "🌷" },
-  { name: "Camille", tier: "parcours-passif", emoji: "🌼" },
+  { name: "Camille Bays", tier: "parcours-passif", emoji: "🌼" },
   { name: "Léa Bays", tier: "parcours-passif", emoji: "🍀" },
   { name: "Sarah Bays", tier: "parcours-passif", emoji: "🌻" },
   { name: "Béatrice Pathey", tier: "cercle-akashique", emoji: "🌌" },

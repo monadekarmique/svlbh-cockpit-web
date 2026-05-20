@@ -92,10 +92,10 @@ export const MEMBERSHIPS: Record<string, AkashiqueMembership> = {
   },
   // Shamanes passives membres du cercle Māṁsa (DEC Patrick 2026-05-20).
   // Clé = name (cf ApprenantesDnD lookup par name).
-  "Julie Bays": { membres: [CERCLE_MAMSA], formation: [] },
-  "Camille":    { membres: [CERCLE_MAMSA], formation: [] },
-  "Léa Bays":   { membres: [CERCLE_MAMSA], formation: [] },
-  "Sarah Bays": { membres: [CERCLE_MAMSA], formation: [] },
+  "Julie Bays":   { membres: [CERCLE_MAMSA], formation: [] },
+  "Camille Bays": { membres: [CERCLE_MAMSA], formation: [] },
+  "Léa Bays":     { membres: [CERCLE_MAMSA], formation: [] },
+  "Sarah Bays":   { membres: [CERCLE_MAMSA], formation: [] },
   // Paola — membre du Cercle Rasa Meda (DEC Patrick 2026-05-20).
   "Paola": { membres: [CERCLE_RASA_MEDA], formation: [] },
   // Véronique — promue ST4 le 2026-05-18 (svlbh_id f73d2429, code 200).
