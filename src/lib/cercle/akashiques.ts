@@ -96,6 +96,19 @@ export const MEMBERSHIPS: Record<string, AkashiqueMembership> = {
     membres: [CERCLE_RAKTA],
     formation: [],
   },
+  // Cornelia Althaus — ST4 (basculée 2026-05-20). 6 cercles akashiques :
+  // Rasa Māṁsa, Asthi, Majjā, Śukra/Ārtava, Rakta, Māṁsa. DEC Patrick 2026-05-20.
+  "e4f77c12-aeda-4dac-b653-3d6514a6e0c0": {
+    membres: [
+      CERCLE_RASA_MAMSA,
+      CERCLE_ASTHI,
+      CERCLE_MAJJA,
+      CERCLE_SUKRA,
+      CERCLE_RAKTA,
+      CERCLE_MAMSA,
+    ],
+    formation: [],
+  },
 };
 
 export function lookupMembership(key: string | null | undefined): AkashiqueMembership | null {
