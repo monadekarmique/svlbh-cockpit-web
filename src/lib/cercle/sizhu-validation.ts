@@ -97,7 +97,9 @@ export const SIZHU_PERFECT: SiZhuPoint[] = [
     clinicalReading:
       "Drainage vers le haut : la Terre terrestre alimente le Métal céleste. Signature d'un système lymphatique monadique qui aspire au lieu de distribuer. Fenêtre matinale critique.",
     pastDates: ["1940-05-01", "2000-04-16"],
-    futureDates: [],
+    // 2300-07-18 = année hébraïque 6061-07-18 (offset 3761, Tishri 6061 débute auto 2300).
+    // Cycle sexagésimal : 1940 + 6·60 = 2300, 2000 + 5·60 = 2300. ≡ 20 mod 60 → 庚辰.
+    futureDates: ["2300-07-18"],
   },
   {
     ganZhi: "己巳",
@@ -145,7 +147,9 @@ export const SIZHU_PERFECT: SiZhuPoint[] = [
     clinicalReading:
       "Feu céleste nourrit Terre terrestre. Lecture en deux temps comme 壬寅 — source d'abord, fils ensuite.",
     pastDates: ["1907-07-21"],
-    futureDates: ["2087-08-05"],
+    // 2387-09-15 = année hébraïque 6147-09-15 (offset 3760, Elul 6147 finit auto 2387).
+    // Cycle sexagésimal : 2087 + 5·60 = 2387. ≡ 47 mod 60 → 丁未.
+    futureDates: ["2087-08-05", "2387-09-15"],
   },
   {
     ganZhi: "丙申",

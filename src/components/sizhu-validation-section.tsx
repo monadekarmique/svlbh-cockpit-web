@@ -122,7 +122,8 @@ function SiZhuTreeNodeView({ node }: { node: SizhuHierNode }) {
 }
 
 export function SiZhuValidationSection() {
-  const upcoming = useMemo(() => upcomingReleaseDates(new Date(), 12), []);
+  // limit=30 pour capturer les fenêtres lointaines hébraïques (2300, 2387).
+  const upcoming = useMemo(() => upcomingReleaseDates(new Date(), 30), []);
 
   return (
     <section className="space-y-6 rounded-2xl border-2 border-violet-300 bg-gradient-to-br from-violet-50 via-fuchsia-50 to-rose-50 p-5 shadow-sm">
@@ -159,13 +160,16 @@ export function SiZhuValidationSection() {
           minimale. Default state : tout ouvert. */}
       {(() => {
         // Hiérarchie statique (Patrick 2026-05-20)
+        // - 2300-07-18 = année hébraïque 6061 (Estomac 庚辰, 6·60 ans après 1940-05-01)
+        // - 2387-09-15 = année hébraïque 6147 (Intestin Grêle 丁未, 5·60 ans après 2087-08-05)
+        // - 7125 hébraïque abandonné (pas de cas parfait dans la lib).
         const HIERARCHY: Record<string, { level: 1 | 2 | 3; parent?: string }> = {
           "2038-07-04": { level: 1 },
           "2035-03-07": { level: 1 },
           "2049-05-18": { level: 2, parent: "2038-07-04" },
-          "6061-07-18": { level: 2, parent: "2038-07-04" },
+          "2300-07-18": { level: 2, parent: "2038-07-04" },
           "2054-10-24": { level: 3, parent: "2049-05-18" },
-          "7125-09-07": { level: 3, parent: "6061-07-18" },
+          "2387-09-15": { level: 3, parent: "2087-08-05" },
         };
 
         const byDate = new Map(upcoming.map((u) => [u.date, u]));
