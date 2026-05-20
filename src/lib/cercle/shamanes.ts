@@ -35,9 +35,15 @@ export type Participant = {
 /** Apprenantes en parcours — visibles uniquement aux Owners.
  * NOTE : Irène (svlbh_id 9746f232, code 304) est ST4 mais DEC Patrick
  * 2026-05-18 demande son affichage AUSSI dans cette section, à côté de
- * Béatrice Pathey (doublon UI volontaire). Véronique reste hors d'ici. */
+ * Béatrice Pathey (doublon UI volontaire). Véronique reste hors d'ici.
+ * DEC Patrick 2026-05-20 — 4 nouvelles Shamanes passives membres du
+ * cercle Māṁsa (consultantes liées à Patrick en DB consultante_record). */
 export const APPRENANTES: Participant[] = [
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
+  { name: "Julie Bays", tier: "parcours-passif", emoji: "🌷" },
+  { name: "Camille", tier: "parcours-passif", emoji: "🌼" },
+  { name: "Léa Bays", tier: "parcours-passif", emoji: "🍀" },
+  { name: "Sarah Bays", tier: "parcours-passif", emoji: "🌻" },
   { name: "Béatrice Pathey", tier: "cercle-akashique", emoji: "🌌" },
   { name: "Irène", tier: "cercle-akashique", emoji: "🌿" },
 ];
