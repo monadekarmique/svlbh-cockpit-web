@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { groupedNav } from "@/lib/cockpit-nav";
 import { CockpitNav } from "@/components/cockpit-nav";
@@ -54,30 +55,41 @@ export default async function CockpitLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  // Bearer reader bypass — multi-instances IA (DEC Patrick 2026-05-20).
+  // Si le middleware a validé un Bearer reader, on bypass les redirects et
+  // on rend la page sans session. Le scope est déjà filtré par allowed_paths.
+  const reqHeaders = await headers();
+  const bearerReaderSvlbhId = reqHeaders.get("x-svlbh-bearer-reader");
+
+  if (!user && !bearerReaderSvlbhId) {
     redirect("/login");
   }
 
   // Hook post-login : relink praticienne_profile par email match si nécessaire.
-  // DEC Patrick 2026-05-12.
-  await autoRelinkProfile(supabase, user);
+  // DEC Patrick 2026-05-12. Skip si Bearer reader (pas de session à relink).
+  if (user) await autoRelinkProfile(supabase, user);
 
-  const allowed = await isCockpitAllowed(supabase, user.id);
-  if (!allowed) {
-    redirect("/access-denied");
+  if (!bearerReaderSvlbhId) {
+    const allowed = await isCockpitAllowed(supabase, user!.id);
+    if (!allowed) {
+      redirect("/access-denied");
+    }
   }
 
   // Profil pour la nav : Owner (ST6) ou Cercle SR voient les modules
   // Admin / Compliance / Facturation directement dans la nav (DEC Patrick 2026-05-12).
-  const { data: navProfile } = await supabase
-    .from("praticienne_profile")
-    .select("stx, cercle_lumiere_sr, email")
-    .eq("supabase_user_id", user.id)
-    .maybeSingle();
+  // Si Bearer reader : on charge le profile via svlbh_id (pas de session user).
+  const { data: navProfile } = user
+    ? await supabase
+        .from("praticienne_profile")
+        .select("stx, cercle_lumiere_sr, email")
+        .eq("supabase_user_id", user.id)
+        .maybeSingle()
+    : { data: null as { stx: string | null; cercle_lumiere_sr: boolean | null; email: string | null } | null };
   const isOwner = navProfile?.stx === "ST6" || navProfile?.cercle_lumiere_sr === true;
   // Privilégie l'email DB praticienne_profile (vrai email) sur user.email
   // (qui peut être un alias privaterelay.appleid.com avec Hide My Email).
-  const displayEmail = navProfile?.email ?? user.email;
+  const displayEmail = navProfile?.email ?? user?.email ?? "reader";
 
   return (
     <div className="min-h-dvh bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
