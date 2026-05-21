@@ -79,6 +79,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/offline") ||
     pathname.startsWith("/claim") || // Universal Link target Pro 1 — ne pas auth-gate
     pathname.startsWith("/.well-known/") || // AASA Universal Links
+    pathname.startsWith("/api/ping") || // Diagnostic RTT (mesure pure réseau)
+    pathname.startsWith("/api/speedtest/") || // Diagnostic upload/download
     pathname === "/";
 
   if (!user && !isPublic) {

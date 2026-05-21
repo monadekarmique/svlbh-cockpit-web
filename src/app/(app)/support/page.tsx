@@ -104,6 +104,24 @@ export default async function SupportHubPage() {
         </div>
       </section>
 
+      {/* Lien diagnostic — ST5+ uniquement */}
+      {isSupporter && (
+        <section className="rounded-xl border border-sky-200 bg-sky-50/40 p-4">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h2 className="text-base font-bold text-sky-900">🩺 Diagnostic technique</h2>
+            <p className="text-xs text-sky-800">
+              5 mesures auto (RTT, upload, download, NAT, browser) avant ou pendant une session.
+            </p>
+            <Link
+              href="/support/diagnostic"
+              className="ml-auto rounded-md bg-sky-700 px-3 py-1 text-xs font-semibold text-white hover:bg-sky-800"
+            >
+              Ouvrir le diagnostic →
+            </Link>
+          </div>
+        </section>
+      )}
+
       {/* Sessions actives à rejoindre (Owner/Admin) */}
       {isSupporter && (
         <section className="rounded-xl border-2 border-emerald-300 bg-emerald-50/40 p-5">
