@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { groupedNav } from "@/lib/cockpit-nav";
 import { CockpitNav } from "@/components/cockpit-nav";
+import { SupportRealtimeNotifier } from "@/components/support-realtime-notifier";
 import { autoRelinkProfile } from "@/lib/auto-relink-profile";
 import { ExternalAppLink } from "@/components/external-app-link";
 import { version as appVersion } from "../../../package.json";
@@ -82,17 +83,22 @@ export default async function CockpitLayout({
   const { data: navProfile } = user
     ? await supabase
         .from("praticienne_profile")
-        .select("stx, cercle_lumiere_sr, email")
+        .select("svlbh_id, stx, cercle_lumiere_sr, email")
         .eq("supabase_user_id", user.id)
         .maybeSingle()
-    : { data: null as { stx: string | null; cercle_lumiere_sr: boolean | null; email: string | null } | null };
+    : { data: null as { svlbh_id: string | null; stx: string | null; cercle_lumiere_sr: boolean | null; email: string | null } | null };
   const isOwner = navProfile?.stx === "ST6" || navProfile?.cercle_lumiere_sr === true;
+  // ST5+ reçoit le toast notifier Realtime quand une praticienne démarre une session.
+  const showSupportNotifier = navProfile?.stx === "ST5" || navProfile?.stx === "ST6";
   // Privilégie l'email DB praticienne_profile (vrai email) sur user.email
   // (qui peut être un alias privaterelay.appleid.com avec Hide My Email).
   const displayEmail = navProfile?.email ?? user?.email ?? "reader";
 
   return (
     <div className="min-h-dvh bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {showSupportNotifier && (
+        <SupportRealtimeNotifier selfSvlbhId={navProfile?.svlbh_id ?? null} />
+      )}
       <header
         className="sticky top-0 z-10 border-b border-neutral-200 bg-white/90 backdrop-blur"
         style={{ paddingTop: "env(safe-area-inset-top)" }}

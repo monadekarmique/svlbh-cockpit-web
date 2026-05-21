@@ -9,6 +9,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { SupportStartButton } from "./start-button";
 import { joinSupportSession } from "./actions";
+import { takeOnCall, releaseOnCall } from "./oncall-actions";
 
 export const metadata: Metadata = { title: "Support" };
 export const dynamic = "force-dynamic";
@@ -57,6 +58,32 @@ export default async function SupportHubPage() {
 
   const isSupporter = me?.stx === "ST5" || me?.stx === "ST6";
 
+  // Astreinte courante : qui est ON_CALL (ended_at IS NULL)
+  const { data: rawOnCall } = await sb
+    .from("support_on_call")
+    .select(`
+      id, started_at, note,
+      praticienne:svlbh_id (svlbh_id, first_name, last_name, stx)
+    `)
+    .is("ended_at", null)
+    .order("started_at", { ascending: true });
+  type OnCallRow = {
+    id: string; started_at: string; note: string | null;
+    praticienne: { svlbh_id: string; first_name: string | null; last_name: string | null; stx: string | null } | { svlbh_id: string; first_name: string | null; last_name: string | null; stx: string | null }[] | null;
+  };
+  const onCallList = (rawOnCall ?? []) as unknown as OnCallRow[];
+  const onCallPeople = onCallList.map((r) => {
+    const p = Array.isArray(r.praticienne) ? r.praticienne[0] : r.praticienne;
+    return { id: r.id, started_at: r.started_at, note: r.note, ...p };
+  });
+
+  // Mon svlbh_id (si je suis ST5/ST6) pour savoir si je suis d'astreinte
+  const { data: myProfile } = user
+    ? await sb.from("praticienne_profile").select("svlbh_id").eq("supabase_user_id", user.id).maybeSingle()
+    : { data: null };
+  const mySvlbhId = myProfile?.svlbh_id ?? null;
+  const iAmOnCall = onCallPeople.some((p) => p.svlbh_id === mySvlbhId);
+
   // Sessions visibles : RLS filtre déjà — la praticienne voit les siennes,
   // Owner/Admin voient tout.
   const { data: rawSessions } = await sb
@@ -89,6 +116,98 @@ export default async function SupportHubPage() {
           100% suisses, WebRTC peer-to-peer.
         </p>
       </header>
+
+      {/* ── Astreinte courante (visible à tous) ── */}
+      <section
+        className={
+          "rounded-xl border-2 p-4 " +
+          (onCallPeople.length === 0
+            ? "border-amber-300 bg-amber-50"
+            : "border-emerald-300 bg-emerald-50/60")
+        }
+      >
+        <header className="flex flex-wrap items-baseline gap-3">
+          <h2 className="text-base font-bold tracking-tight">
+            👥 Astreinte support actuelle
+          </h2>
+          <span className="text-xs text-neutral-600">
+            {onCallPeople.length === 0
+              ? "Personne — risque de session non répondue"
+              : `${onCallPeople.length} personne${onCallPeople.length > 1 ? "s" : ""} dispo`}
+          </span>
+        </header>
+
+        {onCallPeople.length === 0 ? (
+          <p className="mt-2 text-sm leading-relaxed text-amber-900">
+            ⚠ Aucune ST5/ST6 d&apos;astreinte actuellement. Une session démarrée
+            par une praticienne restera <strong>PENDING</strong> jusqu&apos;à
+            ce que quelqu&apos;un la rejoigne manuellement.
+          </p>
+        ) : (
+          <ul className="mt-2 space-y-1.5">
+            {onCallPeople.map((p) => {
+              const isMe = p.svlbh_id === mySvlbhId;
+              return (
+                <li key={p.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+                  <span className="text-emerald-700">🟢</span>
+                  <span className="font-semibold text-emerald-900">
+                    {p.first_name} {p.last_name}
+                  </span>
+                  {p.stx && (
+                    <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-900">
+                      {p.stx}
+                    </span>
+                  )}
+                  {isMe && (
+                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-900">
+                      moi
+                    </span>
+                  )}
+                  <span className="text-[11px] text-neutral-500">
+                    depuis {fmtTime(p.started_at)}
+                  </span>
+                  {p.note && (
+                    <span className="text-[11px] italic text-neutral-500">· {p.note}</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {isSupporter && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {iAmOnCall ? (
+              <form action={releaseOnCall}>
+                <button
+                  type="submit"
+                  className="rounded-md bg-neutral-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-neutral-900"
+                >
+                  🔘 Je passe l&apos;astreinte
+                </button>
+              </form>
+            ) : (
+              <form action={takeOnCall} className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  name="note"
+                  placeholder="Note (optionnel) — ex: 9h-12h"
+                  className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs"
+                />
+                <button
+                  type="submit"
+                  className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                >
+                  🟢 Je prends l&apos;astreinte
+                </button>
+              </form>
+            )}
+            <p className="text-[10px] italic text-neutral-500">
+              Multi-personnes autorisé (toi + Anne en parallèle OK).
+            </p>
+          </div>
+        )}
+      </section>
 
       {/* Démarrer une session (toutes praticiennes) */}
       <section className="rounded-xl border-2 border-blue-200 bg-blue-50/40 p-5">
