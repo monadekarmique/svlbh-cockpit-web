@@ -14,6 +14,33 @@ import { logMaskStart, logMaskEnd } from "../../../mask-actions";
 
 type Phase = "idle" | "picking" | "connecting" | "live" | "masked" | "ended" | "error";
 
+/** Détecte si getDisplayMedia est utilisable côté browser actuel.
+ * Safari iOS/iPadOS : Apple ne supporte PAS getDisplayMedia. Le picker tab
+ * n'existe pas. La praticienne doit basculer sur Mac/PC (desktop). */
+function detectShareCapability(): { supported: boolean; reason?: string } {
+  if (typeof window === "undefined") return { supported: true };
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/i.test(ua) || (
+    // iPadOS 13+ se présente parfois comme MacIntel avec touch
+    /Macintosh/.test(ua) && (navigator as Navigator & { maxTouchPoints?: number }).maxTouchPoints! > 1
+  );
+  if (isIOS) {
+    return {
+      supported: false,
+      reason:
+        "Apple ne supporte pas le partage d'onglet sur iPad/iPhone (limitation Safari iOS/iPadOS). Bascule sur un Mac ou un PC pour démarrer le partage.",
+    };
+  }
+  if (!navigator.mediaDevices?.getDisplayMedia) {
+    return {
+      supported: false,
+      reason:
+        "Ton browser ne supporte pas getDisplayMedia. Utilise Chrome, Edge, Firefox ou Safari récent sur desktop.",
+    };
+  }
+  return { supported: true };
+}
+
 export function PraticienneSenderClient({
   sessionId,
   roomId,
@@ -25,12 +52,18 @@ export function PraticienneSenderClient({
 }) {
   const [phase, setPhase] = useState<Phase>(isEnded ? "ended" : "idle");
   const [error, setError] = useState<string | null>(null);
+  const [unsupported, setUnsupported] = useState<string | null>(null);
   const [maskedSinceMs, setMaskedSinceMs] = useState<number | null>(null);
   const [maskedElapsed, setMaskedElapsed] = useState<string>("00:00");
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const sigRef = useRef<SignalingHandle | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    const cap = detectShareCapability();
+    if (!cap.supported) setUnsupported(cap.reason ?? "Partage non disponible");
+  }, []);
 
   // Compteur de durée du masquage
   useEffect(() => {
@@ -158,6 +191,50 @@ export function PraticienneSenderClient({
     return (
       <section className="rounded-xl border-2 border-neutral-300 bg-neutral-50 p-5 text-sm text-neutral-600">
         Partage terminé.
+      </section>
+    );
+  }
+
+  if (unsupported) {
+    return (
+      <section className="space-y-3 rounded-xl border-2 border-rose-300 bg-rose-50 p-5">
+        <h3 className="text-base font-bold text-rose-900">
+          📵 Partage non disponible sur ce device
+        </h3>
+        <p className="text-sm leading-relaxed text-rose-900">{unsupported}</p>
+        <details className="rounded-lg bg-white/60 p-3 text-xs text-rose-900">
+          <summary className="cursor-pointer font-bold">
+            Pourquoi ? + Solutions
+          </summary>
+          <div className="mt-2 space-y-2 leading-relaxed">
+            <p>
+              Apple ne supporte pas <code>navigator.mediaDevices.getDisplayMedia()</code> sur
+              iOS / iPadOS. Tous les browsers iOS (Safari, Chrome iOS, Firefox iOS) utilisent
+              WebKit et héritent de cette limitation.
+            </p>
+            <p className="font-bold">Solutions pour partager ton écran avec Patrick :</p>
+            <ul className="ml-5 list-disc space-y-1">
+              <li>
+                <strong>🥇 Bascule sur un Mac ou un PC</strong> (Chrome / Edge / Firefox récents).
+                Reconnecte-toi à <code>cockpit.svlbh.com</code>, reviens dans cette session, et
+                clique « Partager mon onglet ».
+              </li>
+              <li>
+                <strong>Alternative ponctuelle</strong> : envoie un screenshot à Patrick via
+                WhatsApp pour debug rapide (pas live mais immédiat).
+              </li>
+              <li>
+                <strong>AirPlay</strong> ton iPad/iPhone vers un Mac proche, puis utilise le Mac
+                comme sender (lourd, à réserver si pas d&apos;autre option).
+              </li>
+            </ul>
+            <p className="italic">
+              La session de support reste ouverte (PENDING/ACTIVE) — Patrick peut te joindre par
+              chat dans le cockpit, ou tu peux la fermer depuis le bouton ⛔ ci-dessus et
+              redémarrer depuis ton Mac.
+            </p>
+          </div>
+        </details>
       </section>
     );
   }
