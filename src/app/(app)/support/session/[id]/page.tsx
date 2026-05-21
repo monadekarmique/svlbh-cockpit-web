@@ -8,6 +8,7 @@ import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { endSupportSession } from "../../actions";
+import { OwnerReceiverClient } from "./receiver";
 
 export const metadata: Metadata = { title: "Session support" };
 export const dynamic = "force-dynamic";
@@ -126,18 +127,11 @@ export default async function SupportSessionViewerPage({
         <p className="mt-2 italic text-neutral-700">{session.consent_text}</p>
       </details>
 
-      {/* Zone vidéo — Phase 3 WebRTC */}
-      <section className="rounded-xl border-2 border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
-        <p className="text-4xl">📺</p>
-        <p className="mt-3 font-bold text-neutral-700">
-          Zone partage d&apos;écran (Phase 3 — WebRTC à brancher)
-        </p>
-        <p className="mt-1 text-xs text-neutral-500">
-          Phase 2 : UI shell livré. Phase 3 livrera le branchement
-          <code className="mx-1">RTCPeerConnection</code>+ signaling via Supabase
-          Realtime sur le channel <code>{session.room_id}</code>.
-        </p>
-      </section>
+      {/* Phase 3 — WebRTC receiver (P2P avec signaling Realtime) */}
+      <OwnerReceiverClient
+        roomId={session.room_id}
+        isEnded={session.status === "ENDED" || session.status === "EXPIRED"}
+      />
 
       <footer className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-xs leading-relaxed text-amber-900">
         <strong>V1 Phase 2 — UI shell.</strong> La session est consignée

@@ -8,6 +8,7 @@ import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { endSupportSession } from "../../../actions";
+import { PraticienneSenderClient } from "./sender";
 
 export const metadata: Metadata = { title: "Ma session support" };
 export const dynamic = "force-dynamic";
@@ -129,19 +130,12 @@ export default async function MyPraticienneSessionPage({
         </section>
       )}
 
-      {/* Zone partage écran — Phase 3 */}
-      <section className="rounded-xl border-2 border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
-        <p className="text-4xl">🖥️</p>
-        <p className="mt-3 font-bold text-neutral-700">
-          Partage d&apos;onglet (Phase 3 — WebRTC à brancher)
-        </p>
-        <p className="mt-1 text-xs text-neutral-500">
-          Quand Phase 3 sera livrée, un bouton « Partager mon onglet »
-          ouvrira le picker natif du navigateur (Chrome / Safari / Firefox).
-          Vous choisirez quel onglet partager — le rendu sera transmis en
-          peer-to-peer (WebRTC) à Patrick / Anne.
-        </p>
-      </section>
+      {/* Phase 3 — WebRTC sender (getDisplayMedia tab + peer + mask v3) */}
+      <PraticienneSenderClient
+        sessionId={id}
+        roomId={session.room_id}
+        isEnded={isEnded}
+      />
 
       {session.note && (
         <section className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-xs italic text-amber-900">
