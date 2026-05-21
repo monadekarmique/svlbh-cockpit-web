@@ -1,13 +1,13 @@
 // Vue praticienne : sender (= elle partage son tab via getDisplayMedia).
-// Phase 2 = skeleton sans WebRTC. Phase 3 branchera getDisplayMedia +
-// RTCPeerConnection + signaling Supabase Realtime.
+// Phase 3 WebRTC + masquage v3 livrés. REFACTOR Patrick 2026-05-21 :
+// les actions Masquer + Arrêter sont dans le banner sticky du SenderClient
+// (toujours visibles en haut de la page), plus dans cette page server.
 
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { endSupportSession } from "../../../actions";
 import { PraticienneSenderClient } from "./sender";
 
 export const metadata: Metadata = { title: "Ma session support" };
@@ -110,31 +110,13 @@ export default async function MyPraticienneSessionPage({
         </section>
       )}
 
-      {/* Bouton STOP très visible */}
-      {!isEnded && (
-        <section className="flex items-center gap-3">
-          <form action={endSupportSession}>
-            <input type="hidden" name="session_id" value={id} />
-            <input type="hidden" name="ended_by" value="PRATICIENNE" />
-            <button
-              type="submit"
-              className="rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-rose-700"
-            >
-              ⛔ Arrêter le partage MAINTENANT
-            </button>
-          </form>
-          <p className="text-xs text-neutral-500">
-            Expire automatiquement à{" "}
-            {new Date(session.expires_at).toLocaleTimeString("fr-CH")}
-          </p>
-        </section>
-      )}
-
-      {/* Phase 3 — WebRTC sender (getDisplayMedia tab + peer + mask v3) */}
+      {/* Phase 3 — WebRTC sender avec banner sticky en haut
+          (statut + bouton Masquer + bouton Arrêter toujours visibles) */}
       <PraticienneSenderClient
         sessionId={id}
         roomId={session.room_id}
         isEnded={isEnded}
+        expiresAt={session.expires_at}
       />
 
       {session.note && (
