@@ -4,7 +4,7 @@
 //   - src/app/(app)/layout.tsx (NAV header avec juste label)
 // Modifier l'ordre/ajouter/retirer un module ici met à jour les 2.
 
-export type CockpitNavGroup = "shamanes" | "routines" | "chakras" | "owner";
+export type CockpitNavGroup = "shamanes" | "routines" | "chakras" | "support" | "owner";
 
 export type CockpitNavItem = {
   href: string;
@@ -147,6 +147,17 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     color: "#FFCC00",
     group: "owner",
   },
+
+  // ── Support (co-browsing) — visible à toutes les praticiennes
+  {
+    href: "/support",
+    label: "Support · Co-browsing",
+    navLabel: "Support",
+    icon: "💬",
+    desc: "Partager mon onglet navigateur avec Patrick / Anne pour accompagnement en direct (WebRTC, données CH, 60 min max, consentement explicite)",
+    color: "#2563EB",
+    group: "support",
+  },
 ];
 
 /** Items du NAV header (label court, sans Dashboard car ajouté séparément). */
@@ -162,6 +173,7 @@ export const GROUP_LABELS: Record<CockpitNavGroup, string> = {
   shamanes: "Shamanes",
   routines: "Routines",
   chakras: "Chakras MTC",
+  support: "Support",
   owner: "Owner",
 };
 
@@ -177,8 +189,8 @@ export type CockpitNavGroupRendered = {
 export function groupedNav(options?: { includeOwner?: boolean }): CockpitNavGroupRendered[] {
   const includeOwner = options?.includeOwner ?? false;
   const order: CockpitNavGroup[] = includeOwner
-    ? ["shamanes", "routines", "chakras", "owner"]
-    : ["shamanes", "routines", "chakras"];
+    ? ["shamanes", "routines", "chakras", "support", "owner"]
+    : ["shamanes", "routines", "chakras", "support"];
   return order
     .map((id) => ({
       id,
