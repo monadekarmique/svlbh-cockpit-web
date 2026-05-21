@@ -59,6 +59,7 @@ export async function pfFetch<T = unknown>(opts: PfRequestOptions): Promise<T> {
         ...headers,
         "Content-Type": "application/json;charset=utf-8",
         Accept: "application/json",
+        "User-Agent": "SVLBH-cockpit-web/1.0 (+https://cockpit.svlbh.com)",
       },
       body: body ? JSON.stringify(body) : undefined,
       signal: ctrl.signal,
@@ -70,6 +71,31 @@ export async function pfFetch<T = unknown>(opts: PfRequestOptions): Promise<T> {
 
   const text = await res.text();
   if (!res.ok) {
+    // Log détaillé pour diagnostic (visible Render logs côté server,
+    // pas exposé au client). Ne logge PAS l'authKey (secret) — juste la
+    // securedData (version|userid|timestamp|method|path) + MAC envoyé +
+    // userId. Aide à différencier bug code (signature mauvaise) vs
+    // credentials invalides (auth_key compromise / clé du wrong space).
+    const securedData = `1|${credentials.userId}|${headers["x-mac-timestamp"]}|${method.toUpperCase()}|${path}`;
+    console.error(
+      `[PostFinance API] ${method} ${path} → HTTP ${res.status}`,
+      JSON.stringify({
+        response_body: text.slice(0, 500),
+        sent_headers: {
+          "x-mac-version": headers["x-mac-version"],
+          "x-mac-userid": headers["x-mac-userid"],
+          "x-mac-timestamp": headers["x-mac-timestamp"],
+          "x-mac-value": headers["x-mac-value"].slice(0, 20) + "...",
+        },
+        securedData,
+        auth_key_length: credentials.authKeyBase64.length,
+        auth_key_first_8: credentials.authKeyBase64.slice(0, 8),
+        auth_key_last_4: credentials.authKeyBase64.slice(-4),
+        auth_key_trimmed_diff: credentials.authKeyBase64 !== credentials.authKeyBase64.trim()
+          ? "WARN: auth_key has leading/trailing whitespace"
+          : "ok",
+      }),
+    );
     throw new PfApiError(res.status, path, method, text);
   }
   if (!text) return undefined as T;

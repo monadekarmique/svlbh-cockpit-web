@@ -45,7 +45,9 @@ export async function onboardPraticienne(formData: FormData) {
   const environment = String(formData.get("pf_environment") ?? "sandbox").trim();
   const spaceId = String(formData.get("pf_space_id") ?? "").trim();
   const appUserId = String(formData.get("pf_app_user_id") ?? "").trim();
-  const authKey = String(formData.get("pf_auth_key") ?? "").trim();
+  // Trim généreux : espace, retour ligne, tab — courant lors du copy-paste
+  // de la clé depuis PF Merchant portal (qui parfois ajoute un \n trailing).
+  const authKey = String(formData.get("pf_auth_key") ?? "").replace(/\s+/g, "");
 
   if (!svlbhId) throw new Error("svlbh_id requis");
   if (!["sandbox", "production"].includes(environment)) {
@@ -54,7 +56,13 @@ export async function onboardPraticienne(formData: FormData) {
   if (!spaceId) throw new Error("pf_space_id requis");
   if (!appUserId) throw new Error("pf_app_user_id requis");
   if (!authKey || authKey.length < 20) {
-    throw new Error("pf_auth_key requis (≥ 20 chars base64)");
+    throw new Error("pf_auth_key requis (≥ 20 chars base64, après strip whitespace)");
+  }
+  // Sanity check base64 : caractères autorisés
+  if (!/^[A-Za-z0-9+/]+=*$/.test(authKey)) {
+    throw new Error(
+      `pf_auth_key invalide : caractères hors base64 détectés (longueur=${authKey.length}, échantillon=${authKey.slice(0, 8)}...${authKey.slice(-4)})`,
+    );
   }
 
   const sb = await ensureOwner();
