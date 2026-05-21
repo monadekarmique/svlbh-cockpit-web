@@ -134,22 +134,32 @@ async function detectBrowser(): Promise<BrowserInfo> {
   const ua = navigator.userAgent;
   let label = "Unknown";
   let level: Level = "AMBER";
-  if (/Chrome\/(\d+)/.test(ua)) {
-    const v = parseInt(RegExp.$1, 10);
-    label = `Chrome ${v}`;
-    level = v >= 100 ? "GREEN" : "AMBER";
-  } else if (/Edg\/(\d+)/.test(ua)) {
-    const v = parseInt(RegExp.$1, 10);
+  // Détection ordonnée : Edge avant Chrome (Edg/) ; CriOS avant Safari ; Safari après Chrome.
+  // Utiliser .match() retourne les groupes (RegExp.$1 est legacy et peu fiable).
+  let m: RegExpMatchArray | null;
+  if ((m = ua.match(/Edg\/(\d+)/))) {
+    const v = parseInt(m[1], 10);
     label = `Edge ${v}`;
     level = v >= 100 ? "GREEN" : "AMBER";
-  } else if (/Version\/(\d+).*Safari/.test(ua)) {
-    const v = parseInt(RegExp.$1, 10);
-    label = `Safari ${v}`;
-    level = v >= 15 ? "GREEN" : "AMBER";
-  } else if (/Firefox\/(\d+)/.test(ua)) {
-    const v = parseInt(RegExp.$1, 10);
-    label = `Firefox ${v}`;
+  } else if ((m = ua.match(/CriOS\/(\d+)/))) {
+    const v = parseInt(m[1], 10);
+    label = `Chrome iOS ${v}`;
+    level = v >= 100 ? "GREEN" : "AMBER";
+  } else if ((m = ua.match(/FxiOS\/(\d+)/))) {
+    label = `Firefox iOS ${m[1]}`;
     level = "AMBER";
+  } else if ((m = ua.match(/Chrome\/(\d+)/))) {
+    const v = parseInt(m[1], 10);
+    label = `Chrome ${v}`;
+    level = v >= 100 ? "GREEN" : "AMBER";
+  } else if ((m = ua.match(/Firefox\/(\d+)/))) {
+    label = `Firefox ${m[1]}`;
+    level = "AMBER";
+  } else if ((m = ua.match(/Version\/(\d+(?:\.\d+)?)[^)]*Safari/))) {
+    const v = parseFloat(m[1]);
+    const isMobile = /(iPad|iPhone|iPod|Mobile)/.test(ua);
+    label = `Safari ${v}${isMobile ? " (iOS/iPadOS)" : " (macOS)"}`;
+    level = v >= 15 ? "GREEN" : "AMBER";
   }
   // H.264 hw via RTCRtpSender.getCapabilities
   let h264Hw = false;

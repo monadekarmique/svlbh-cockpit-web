@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { requireOwner } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
+import { LocalTime } from "@/components/local-time";
 
 export const metadata: Metadata = { title: "Audit log · Compliance" };
 export const dynamic = "force-dynamic";
@@ -32,16 +33,8 @@ const ACTION_TONE: Record<string, string> = {
   REVOKE: "bg-orange-100 text-orange-800",
 };
 
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleString("fr-CH", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
+// fmtDate retiré au profit du composant <LocalTime /> qui formate dans la
+// TZ du browser de l'utilisatrice (et pas UTC du serveur Render).
 
 export default async function AuditLogPage({
   searchParams,
@@ -186,7 +179,7 @@ export default async function AuditLogPage({
               >
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="font-mono text-xs text-neutral-500">
-                    {fmtDate(r.created_at)}
+                    <LocalTime iso={r.created_at} mode="full" />
                   </span>
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${actionClass}`}
