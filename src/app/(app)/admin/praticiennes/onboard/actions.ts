@@ -24,7 +24,11 @@ import {
 const COCKPIT_BASE = process.env.NEXT_PUBLIC_COCKPIT_BASE_URL ?? "https://cockpit.svlbh.com";
 
 function generateWebhookToken(): string {
-  return randomBytes(32).toString("hex");
+  // 16 bytes (128 bits entropie) en hex = 32 chars URL.
+  // PostFinance Checkout rejette HTTP 442 les URLs > ~100 chars (validator
+  // interne sur le champ url du webhook listener). 32+51 = 83 chars OK.
+  // DEC Patrick 2026-05-21 — réduit depuis 32 bytes (64 chars).
+  return randomBytes(16).toString("hex");
 }
 
 async function ensureOwner() {
