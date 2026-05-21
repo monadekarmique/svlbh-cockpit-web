@@ -30,7 +30,6 @@ type WebhookPayload = {
 
 type AuthRow = {
   svlbh_id: string;
-  display_code: string | null;
   first_name: string | null;
   last_name: string | null;
   pf_environment: string | null;
@@ -177,7 +176,6 @@ export async function POST(
       merchant_reference: tx.merchantReference,
       service_code: cls.service_code,
       action: cls.action,
-      praticienne_display_code: auth.display_code,
       praticienne_name: `${auth.first_name ?? ""} ${auth.last_name ?? ""}`.trim(),
       invoice_updated: invoiceUpdated,
       payer_email: tx.customerEmailAddress ?? tx.billingAddress?.emailAddress ?? null,

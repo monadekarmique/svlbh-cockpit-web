@@ -18,7 +18,7 @@ type Praticienne = {
   stx: string | null;
   pf_environment: string | null;
   pf_onboarded_at: string | null;
-  display_code: string | null;
+  pf_space_id: string | null;
 };
 
 export default async function OnboardPraticiennePage() {
@@ -35,7 +35,7 @@ export default async function OnboardPraticiennePage() {
   const { data: praticiennes } = await sb
     .from("praticienne_profile")
     .select(
-      "svlbh_id, first_name, last_name, code_praticien, stx, pf_environment, pf_onboarded_at, display_code",
+      "svlbh_id, first_name, last_name, code_praticien, stx, pf_environment, pf_onboarded_at, pf_space_id",
     )
     .in("stx", ["ST3", "ST4", "ST5", "ST6"])
     .eq("pro_status", "ACTIVE")
@@ -85,7 +85,7 @@ export default async function OnboardPraticiennePage() {
               </span>
               {p.pf_onboarded_at ? (
                 <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                  ✓ {p.pf_environment} · {p.display_code ?? "—"}
+                  ✓ {p.pf_environment} · Space {p.pf_space_id ?? "—"}
                 </span>
               ) : (
                 <span className="ml-auto rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-600">
@@ -121,14 +121,6 @@ export default async function OnboardPraticiennePage() {
                 label: `${p.first_name ?? ""} ${p.last_name ?? ""} (${p.stx}${p.code_praticien ? ` · #${p.code_praticien}` : ""})${p.pf_onboarded_at ? " ✓ déjà onboardée" : ""}`,
               })),
             ]}
-          />
-
-          <Field
-            label="Display code"
-            name="display_code"
-            placeholder="ex: 003366"
-            help="Code court d'affichage côté SVLBH (≠ code_praticien)."
-            required
           />
 
           <Field

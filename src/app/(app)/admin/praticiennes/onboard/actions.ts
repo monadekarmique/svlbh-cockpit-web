@@ -42,14 +42,12 @@ async function ensureOwner() {
 
 export async function onboardPraticienne(formData: FormData) {
   const svlbhId = String(formData.get("svlbh_id") ?? "").trim();
-  const displayCode = String(formData.get("display_code") ?? "").trim();
   const environment = String(formData.get("pf_environment") ?? "sandbox").trim();
   const spaceId = String(formData.get("pf_space_id") ?? "").trim();
   const appUserId = String(formData.get("pf_app_user_id") ?? "").trim();
   const authKey = String(formData.get("pf_auth_key") ?? "").trim();
 
   if (!svlbhId) throw new Error("svlbh_id requis");
-  if (!displayCode) throw new Error("display_code requis (ex: 003366)");
   if (!["sandbox", "production"].includes(environment)) {
     throw new Error("pf_environment invalide");
   }
@@ -75,12 +73,20 @@ export async function onboardPraticienne(formData: FormData) {
   const webhookUrl = `${COCKPIT_BASE}/api/webhooks/postfinance/${webhookUrlToken}`;
 
   // 3. Crée le webhook listener côté PostFinance avec l'URL cockpit (pas Make)
+  const praticienneSlug =
+    `${prat.first_name ?? ""}-${prat.last_name ?? ""}`
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40) || "praticienne";
   let webhook: WebhookListener;
   try {
     webhook = await createWebhookListener({
       credentials: { userId: appUserId, authKeyBase64: authKey },
       spaceId,
-      name: `SVLBH-${displayCode}-${environment}`,
+      name: `SVLBH-${praticienneSlug}-${environment}`,
       url: webhookUrl,
     });
   } catch (e) {
@@ -112,7 +118,6 @@ export async function onboardPraticienne(formData: FormData) {
   const { error: updErr } = await sb
     .from("praticienne_profile")
     .update({
-      display_code: displayCode,
       pf_environment: environment,
       pf_space_id: spaceId,
       pf_app_user_id: appUserId,
@@ -134,7 +139,6 @@ export async function onboardPraticienne(formData: FormData) {
       event: "postfinance_checkout_onboarded",
       praticienne_name: `${prat.first_name ?? ""} ${prat.last_name ?? ""}`.trim(),
       praticienne_code: prat.code_praticien,
-      display_code: displayCode,
       pf_environment: environment,
       pf_space_id: spaceId,
       pf_app_user_id: appUserId,
