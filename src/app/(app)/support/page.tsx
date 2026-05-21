@@ -5,6 +5,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { SupportStartButton } from "./start-button";
 import { joinSupportSession } from "./actions";
@@ -36,14 +37,23 @@ function fmtDate(iso: string): string {
 
 export default async function SupportHubPage() {
   const sb = await createClient();
+  const reqHeaders = await headers();
+  const bearer = reqHeaders.get("x-svlbh-bearer-reader");
   const { data: { user } } = await sb.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user && !bearer) redirect("/login");
 
-  const { data: me } = await sb
-    .from("praticienne_profile")
-    .select("stx, first_name")
-    .eq("supabase_user_id", user.id)
-    .maybeSingle();
+  // Si user, charger le profil ; si Bearer, charger via svlbh_id du token.
+  const { data: me } = user
+    ? await sb
+        .from("praticienne_profile")
+        .select("stx, first_name")
+        .eq("supabase_user_id", user.id)
+        .maybeSingle()
+    : await sb
+        .from("praticienne_profile")
+        .select("stx, first_name")
+        .eq("svlbh_id", bearer!)
+        .maybeSingle();
 
   const isSupporter = me?.stx === "ST5" || me?.stx === "ST6";
 

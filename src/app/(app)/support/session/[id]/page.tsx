@@ -5,6 +5,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { endSupportSession } from "../../actions";
 
@@ -19,17 +20,21 @@ export default async function SupportSessionViewerPage({
   const { id } = await params;
 
   const sb = await createClient();
+  const reqHeaders = await headers();
+  const bearer = reqHeaders.get("x-svlbh-bearer-reader");
   const { data: { user } } = await sb.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user && !bearer) redirect("/login");
 
-  // Gate Owner/Admin
-  const { data: me } = await sb
-    .from("praticienne_profile")
-    .select("stx, svlbh_id")
-    .eq("supabase_user_id", user.id)
-    .maybeSingle();
-  if (!me || (me.stx !== "ST5" && me.stx !== "ST6")) {
-    redirect("/dashboard");
+  // Gate Owner/Admin (sauf Bearer reader — déjà validé par le middleware)
+  if (!bearer) {
+    const { data: me } = await sb
+      .from("praticienne_profile")
+      .select("stx, svlbh_id")
+      .eq("supabase_user_id", user!.id)
+      .maybeSingle();
+    if (!me || (me.stx !== "ST5" && me.stx !== "ST6")) {
+      redirect("/dashboard");
+    }
   }
 
   const { data: session } = await sb

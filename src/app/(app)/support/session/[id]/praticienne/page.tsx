@@ -5,6 +5,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { endSupportSession } from "../../../actions";
 
@@ -19,14 +20,18 @@ export default async function MyPraticienneSessionPage({
   const { id } = await params;
 
   const sb = await createClient();
+  const reqHeaders = await headers();
+  const bearer = reqHeaders.get("x-svlbh-bearer-reader");
   const { data: { user } } = await sb.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user && !bearer) redirect("/login");
 
-  const { data: me } = await sb
-    .from("praticienne_profile")
-    .select("svlbh_id, first_name")
-    .eq("supabase_user_id", user.id)
-    .maybeSingle();
+  const { data: me } = user
+    ? await sb
+        .from("praticienne_profile")
+        .select("svlbh_id, first_name")
+        .eq("supabase_user_id", user.id)
+        .maybeSingle()
+    : { data: { svlbh_id: bearer!, first_name: null as string | null } };
   if (!me) redirect("/dashboard");
 
   const { data: session } = await sb
@@ -41,7 +46,8 @@ export default async function MyPraticienneSessionPage({
 
   if (!session) notFound();
   // Garde-fou : c'est bien la session de l'utilisateur courant
-  if (session.praticienne_svlbh_id !== me.svlbh_id) {
+  // (skip si Bearer reader — déjà scopé par le middleware via allowed_paths)
+  if (!bearer && session.praticienne_svlbh_id !== me.svlbh_id) {
     redirect("/support");
   }
 
