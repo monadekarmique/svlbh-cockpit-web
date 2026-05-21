@@ -32,8 +32,8 @@ const MODULES: Module[] = [
     href: "/compliance/cadre-legal",
     label: "Cadre légal SVLBH",
     icon: "⚖️",
-    status: "todo",
-    desc: "Doctrine : vibrations transgénérationnelles ≠ données patient (hors Art. 9 RGPD), périmètre, bases légales, durée conservation, exclusion santé.",
+    status: "ready",
+    desc: "Doctrine juridique : qualification données vibratoires (hors Art. 5 let. c LPD), bases légales, articulation médical, durées conservation, périmètre opérationnel, extension RGPD UE (Flavia).",
   },
   {
     href: "/compliance/registre",
