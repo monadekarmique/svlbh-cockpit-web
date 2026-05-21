@@ -127,8 +127,9 @@ export default async function SupportSessionViewerPage({
         <p className="mt-2 italic text-neutral-700">{session.consent_text}</p>
       </details>
 
-      {/* Phase 3 — WebRTC receiver (P2P avec signaling Realtime) */}
+      {/* Phase 3 — WebRTC receiver (P2P avec signaling Realtime + sync 2 côtés) */}
       <OwnerReceiverClient
+        sessionId={id}
         roomId={session.room_id}
         isEnded={session.status === "ENDED" || session.status === "EXPIRED"}
       />

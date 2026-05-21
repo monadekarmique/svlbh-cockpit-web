@@ -10,13 +10,16 @@ import {
   createPeerConnection,
   type SignalingHandle,
 } from "@/lib/support/webrtc-signaling";
+import { useSupportSessionStatus } from "@/lib/support/use-session-realtime";
 
 type Phase = "waiting" | "connecting" | "live" | "masked-by-sender" | "ended" | "error";
 
 export function OwnerReceiverClient({
+  sessionId,
   roomId,
   isEnded,
 }: {
+  sessionId: string;
   roomId: string;
   isEnded: boolean;
 }) {
@@ -26,6 +29,21 @@ export function OwnerReceiverClient({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const sigRef = useRef<SignalingHandle | null>(null);
+
+  // Realtime : sync 2 côtés. Si la praticienne ferme, on bascule en ended.
+  const remoteStatus = useSupportSessionStatus({
+    sessionId,
+    initialStatus: isEnded ? "ENDED" : "ACTIVE",
+  });
+  useEffect(() => {
+    if ((remoteStatus === "ENDED" || remoteStatus === "EXPIRED") && phase !== "ended") {
+      pcRef.current?.close();
+      sigRef.current?.close();
+      if (videoRef.current) videoRef.current.srcObject = null;
+      setPhase("ended");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remoteStatus]);
 
   useEffect(() => {
     if (isEnded) return;

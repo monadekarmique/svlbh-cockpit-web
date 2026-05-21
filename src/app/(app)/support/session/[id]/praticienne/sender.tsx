@@ -16,6 +16,7 @@ import {
   createPeerConnection,
   type SignalingHandle,
 } from "@/lib/support/webrtc-signaling";
+import { useSupportSessionStatus } from "@/lib/support/use-session-realtime";
 import { logMaskStart, logMaskEnd } from "../../../mask-actions";
 import { endSupportSession } from "../../../actions";
 
@@ -83,6 +84,27 @@ export function PraticienneSenderClient({
   const [unsupported, setUnsupported] = useState<string | null>(null);
   const [maskedSinceMs, setMaskedSinceMs] = useState<number | null>(null);
   const [maskedElapsed, setMaskedElapsed] = useState<string>("00:00");
+
+  // Realtime : si l'autre côté (Owner) coupe la session, on bascule en ended
+  // immédiatement. Évite la désynchro state (avant : Patrick coupait, Anne
+  // restait en phase live tant qu'elle ne refresh pas la page).
+  const remoteStatus = useSupportSessionStatus({
+    sessionId,
+    initialStatus: isEnded ? "ENDED" : "PENDING",
+  });
+  useEffect(() => {
+    if ((remoteStatus === "ENDED" || remoteStatus === "EXPIRED") && phase !== "ended") {
+      // Cleanup tracks/pc/signaling si on était live
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      maskTrackRef.current?.stop();
+      maskTrackRef.current = null;
+      pcRef.current?.close();
+      sigRef.current?.close();
+      if (localVideoRef.current) localVideoRef.current.srcObject = null;
+      setPhase("ended");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remoteStatus]);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const sigRef = useRef<SignalingHandle | null>(null);
@@ -125,8 +147,11 @@ export function PraticienneSenderClient({
     setPhase("picking");
     let stream: MediaStream;
     try {
+      // displaySurface non spécifié → picker libre (Onglet / Fenêtre / Écran).
+      // Pour partager une URL visible à Patrick : choisis « Fenêtre Chrome »
+      // (la barre URL sera dans le flux vidéo). Pour privacy max : « Onglet ».
       stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: "browser" } as MediaTrackConstraints,
+        video: true,
         audio: false,
       });
     } catch (e) {
@@ -308,7 +333,21 @@ export function PraticienneSenderClient({
               </button>
             )}
 
-            <form action={endSupportSession} className={phase === "connecting" ? "ml-auto" : ""}>
+            <form
+              action={endSupportSession}
+              className={phase === "connecting" ? "ml-auto" : ""}
+              onSubmit={() => {
+                // Optimistic UI : on cleanup et passe à ended AVANT que
+                // le server action revalide la page (sinon délai 1-3s visible).
+                streamRef.current?.getTracks().forEach((t) => t.stop());
+                maskTrackRef.current?.stop();
+                maskTrackRef.current = null;
+                pcRef.current?.close();
+                sigRef.current?.close();
+                if (localVideoRef.current) localVideoRef.current.srcObject = null;
+                setPhase("ended");
+              }}
+            >
               <input type="hidden" name="session_id" value={sessionId} />
               <input type="hidden" name="ended_by" value="PRATICIENNE" />
               <button
@@ -336,16 +375,30 @@ export function PraticienneSenderClient({
         {phase === "idle" && (
           <div className="space-y-3">
             <p className="text-sm text-neutral-700">
-              Click ci-dessous pour choisir <strong>l&apos;onglet</strong> à
-              partager. Chrome/Edge/Firefox ouvriront le picker en mode
-              « Onglet » par défaut.
+              Click ci-dessous pour choisir ce que tu partages. Le picker
+              proposera 3 options :
             </p>
+            <ul className="ml-5 list-disc text-xs text-neutral-700 space-y-0.5">
+              <li>
+                <strong>Onglet</strong> — privacy max, mais Patrick ne verra
+                pas la barre URL
+              </li>
+              <li>
+                <strong>Fenêtre Chrome</strong> — Patrick voit ta barre URL
+                (utile pour PF Sandbox, sites avec navigation), mais aussi tes
+                autres onglets si tu switches
+              </li>
+              <li>
+                <strong>Écran entier</strong> — tout ce qui est sur ton écran
+                (à éviter sauf cas exceptionnel)
+              </li>
+            </ul>
             <button
               type="button"
               onClick={startSharing}
               className="rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-800"
             >
-              📤 Partager mon onglet
+              📤 Partager mon écran
             </button>
           </div>
         )}
