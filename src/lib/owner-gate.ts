@@ -2,11 +2,19 @@
 // Modules Admin / Compliance / Facturation : accès strict ST6 (Owner)
 // + Cercle SR comme back-door admin (cohérence avec layout principal).
 // À appeler en haut de chaque page sensible côté Cockpit.
+//
+// DEC Patrick 2026-05-20 — bypass Bearer reader si présent : le middleware
+// a déjà validé scope+allowed_paths, pas besoin de re-checker isOwner.
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 export async function requireOwner(): Promise<void> {
+  // Bearer reader bypass — multi-instances IA
+  const reqHeaders = await headers();
+  if (reqHeaders.get("x-svlbh-bearer-reader")) return;
+
   const supabase = await createClient();
   const {
     data: { user },
