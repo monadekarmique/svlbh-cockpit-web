@@ -12,15 +12,20 @@
 // DEC Patrick 2026-05-21 (Brief dev v1).
 
 import { revalidatePath } from "next/cache";
+import { randomBytes } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import {
   createWebhookListener,
   type WebhookListener,
 } from "@/lib/postfinance-checkout/webhook-listener";
 
-const MAKE_WEBHOOK_URL =
-  process.env.PF_MAKE_WEBHOOK_URL ??
-  "https://hook.eu2.make.com/SCENARIO_8998624_TOKEN_TO_REPLACE";
+// Option B (Patrick 2026-05-21) : URL webhook = endpoint cockpit direct,
+// pas de hop Make.com. Token random per-praticienne dans l'URL pour auth.
+const COCKPIT_BASE = process.env.NEXT_PUBLIC_COCKPIT_BASE_URL ?? "https://cockpit.svlbh.com";
+
+function generateWebhookToken(): string {
+  return randomBytes(32).toString("hex");
+}
 
 async function ensureOwner() {
   const sb = await createClient();
@@ -65,14 +70,18 @@ export async function onboardPraticienne(formData: FormData) {
   if (pratErr) throw new Error(`Read praticienne échec : ${pratErr.message}`);
   if (!prat) throw new Error("Praticienne introuvable");
 
-  // 2. Crée le webhook listener côté PostFinance
+  // 2. Génère un token unique pour l'URL webhook entrante côté cockpit
+  const webhookUrlToken = generateWebhookToken();
+  const webhookUrl = `${COCKPIT_BASE}/api/webhooks/postfinance/${webhookUrlToken}`;
+
+  // 3. Crée le webhook listener côté PostFinance avec l'URL cockpit (pas Make)
   let webhook: WebhookListener;
   try {
     webhook = await createWebhookListener({
       credentials: { userId: appUserId, authKeyBase64: authKey },
       spaceId,
       name: `SVLBH-${displayCode}-${environment}`,
-      url: MAKE_WEBHOOK_URL,
+      url: webhookUrl,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -110,6 +119,7 @@ export async function onboardPraticienne(formData: FormData) {
       pf_auth_key_encrypted: encAuthKey as string,
       pf_webhook_id: webhookId,
       pf_webhook_secret_encrypted: encWebhookSecret,
+      pf_webhook_url_token: webhookUrlToken,
       pf_onboarded_at: new Date().toISOString(),
     })
     .eq("svlbh_id", svlbhId);
@@ -129,7 +139,8 @@ export async function onboardPraticienne(formData: FormData) {
       pf_space_id: spaceId,
       pf_app_user_id: appUserId,
       pf_webhook_id: webhookId,
-      webhook_url: MAKE_WEBHOOK_URL,
+      webhook_url: webhookUrl,
+      webhook_target: "cockpit-direct",
     },
     p_via: "cockpit-admin-onboard",
   });
