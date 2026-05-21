@@ -15,22 +15,43 @@ import { logMaskStart, logMaskEnd } from "../../../mask-actions";
 type Phase = "idle" | "picking" | "connecting" | "live" | "masked" | "ended" | "error";
 
 /** Détecte si getDisplayMedia est utilisable côté browser actuel.
- * Safari iOS/iPadOS : Apple ne supporte PAS getDisplayMedia. Le picker tab
- * n'existe pas. La praticienne doit basculer sur Mac/PC (desktop). */
+ *
+ * Supportés (sender OK) :
+ *   - Chrome / Edge / Firefox / Safari récents sur desktop (Mac, Windows, Linux)
+ *   - Chrome Android, Edge Android, Samsung Internet
+ *
+ * Non supportés (limitations OS/browser) :
+ *   - Safari iOS / iPadOS (Apple WebKit ne supporte PAS getDisplayMedia)
+ *   - Chrome iOS / Edge iOS / Firefox iOS (forcés sur WebKit Apple)
+ *   - Firefox Android (Mozilla n'a pas implémenté getDisplayMedia mobile)
+ */
 function detectShareCapability(): { supported: boolean; reason?: string } {
   if (typeof window === "undefined") return { supported: true };
   const ua = navigator.userAgent;
+
+  // iOS / iPadOS — tous les browsers utilisent WebKit, pas de getDisplayMedia.
   const isIOS = /iPad|iPhone|iPod/i.test(ua) || (
-    // iPadOS 13+ se présente parfois comme MacIntel avec touch
     /Macintosh/.test(ua) && (navigator as Navigator & { maxTouchPoints?: number }).maxTouchPoints! > 1
   );
   if (isIOS) {
     return {
       supported: false,
       reason:
-        "Apple ne supporte pas le partage d'onglet sur iPad/iPhone (limitation Safari iOS/iPadOS). Bascule sur un Mac ou un PC pour démarrer le partage.",
+        "Apple ne supporte pas le partage d'onglet sur iPad / iPhone (limitation Safari iOS/iPadOS — concerne aussi Chrome iOS, Edge iOS, Firefox iOS qui utilisent tous WebKit). Bascule sur un Mac ou un PC pour démarrer le partage.",
     };
   }
+
+  // Firefox Android — Mozilla n'a pas implémenté getDisplayMedia mobile.
+  const isFirefoxAndroid = /Firefox/.test(ua) && /Android/i.test(ua);
+  if (isFirefoxAndroid) {
+    return {
+      supported: false,
+      reason:
+        "Firefox Android ne supporte pas le partage d'écran (limitation Mozilla mobile). Utilise Chrome Android, Edge Android ou Samsung Internet — ou bascule sur desktop.",
+    };
+  }
+
+  // Feature detection générique — couvre les cas restants (vieux browsers, etc.)
   if (!navigator.mediaDevices?.getDisplayMedia) {
     return {
       supported: false,
@@ -38,6 +59,7 @@ function detectShareCapability(): { supported: boolean; reason?: string } {
         "Ton browser ne supporte pas getDisplayMedia. Utilise Chrome, Edge, Firefox ou Safari récent sur desktop.",
     };
   }
+
   return { supported: true };
 }
 
