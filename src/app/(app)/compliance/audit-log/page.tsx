@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { requireOwner } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
 
@@ -54,17 +55,41 @@ export default async function AuditLogPage({
 
   const supabase = await createClient();
 
-  let query = supabase
-    .from("audit_log")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(200);
+  // Bearer reader bypass : si Bearer présent, on appelle la RPC SECURITY
+  // DEFINER get_audit_log_for_reader (RLS audit_log = ST6 only, donc le
+  // client anon ne peut pas SELECT direct). DEC Patrick 2026-05-20.
+  const reqHeaders = await headers();
+  const bearerToken = reqHeaders.get("x-svlbh-bearer-token");
 
-  if (filterAction) query = query.eq("action", filterAction);
-  if (filterTable) query = query.eq("target_table", filterTable);
+  let rows: AuditRow[] = [];
+  let error: { message: string } | null = null;
 
-  const { data, error } = await query;
-  const rows = (data ?? []) as AuditRow[];
+  if (bearerToken) {
+    const { data, error: rpcError } = await supabase.rpc(
+      "get_audit_log_for_reader",
+      {
+        p_token: bearerToken,
+        p_limit: 200,
+        p_filter_action: filterAction,
+        p_filter_table: filterTable,
+      },
+    );
+    rows = (data ?? []) as AuditRow[];
+    error = rpcError as { message: string } | null;
+  } else {
+    let query = supabase
+      .from("audit_log")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (filterAction) query = query.eq("action", filterAction);
+    if (filterTable) query = query.eq("target_table", filterTable);
+
+    const { data, error: queryError } = await query;
+    rows = (data ?? []) as AuditRow[];
+    error = queryError as { message: string } | null;
+  }
 
   // Récupère les valeurs distinctes pour les filtres (sur la fenêtre 200 lignes)
   const distinctActions = Array.from(new Set(rows.map((r) => r.action))).sort();

@@ -87,6 +87,13 @@ export async function updateSession(request: NextRequest) {
     if (readerSvlbhId) {
       const fwd = new Headers(request.headers);
       fwd.set("x-svlbh-bearer-reader", readerSvlbhId);
+      // Propage aussi le token brut dans un header interne pour que les
+      // server components puissent appeler des RPC SECURITY DEFINER
+      // bearer-aware (ex: get_audit_log_for_reader). Ce header est
+      // request-only — il n'est PAS exposé sur la response côté client.
+      const authHeader = request.headers.get("authorization") || "";
+      const tokenMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+      if (tokenMatch) fwd.set("x-svlbh-bearer-token", tokenMatch[1].trim());
       const bearerResponse = NextResponse.next({ request: { headers: fwd } });
       bearerResponse.headers.set("x-svlbh-bearer-reader", readerSvlbhId);
       return bearerResponse;
