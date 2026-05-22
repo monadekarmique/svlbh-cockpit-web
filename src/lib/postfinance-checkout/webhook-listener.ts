@@ -1,18 +1,34 @@
 // PostFinance Checkout — gestion des webhook listeners par praticienne.
 // DEC Patrick 2026-05-21. Brief v1 onboarding sandbox V3.
 //
-// On crée 1 webhook listener par praticienne, pointant vers le scenario
-// Make.com #8998624 (hook.eu2.make.com/<token>) qui traite les events
-// transactionnels (PAID, FAILED, FULFILL, etc.) côté SVLBH.
+// Architecture PF webhooks en 2 niveaux (cause du HTTP 442 corrigée
+// 2026-05-22) :
+//   1. Webhook URL  : entité référençable (POST /api/webhook-url/create)
+//                     porte la string URL et un id entier.
+//   2. Webhook Listener : référence l'URL par son id (champ `url: <int>`),
+//                         pas la string. Passer une string → HTTP 442
+//                         (« Unable to convert value to property url »).
+// On crée donc d'abord l'URL via createWebhookUrl(), puis le listener
+// via createWebhookListener({ urlId }).
 
 import { pfFetch, type PfCredentials } from "./api-client";
+
+/** Webhook URL — entité référencée par les listeners. */
+export type WebhookUrl = {
+  id: number;
+  state: "ACTIVE" | "INACTIVE";
+  name: string;
+  url: string;
+  spaceId: number;
+};
 
 /** Types pour l'API PostFinance Checkout (subset utile). */
 export type WebhookListener = {
   id: number;
   state: "ACTIVE" | "INACTIVE";
   name: string;
-  url: string;
+  /** ID entier de la WebhookUrl référencée (pas la string URL résolue). */
+  url: number;
   spaceId: number;
   entity: number;
   entityStates: string[];
@@ -37,14 +53,43 @@ export const PF_TRANSACTION_STATES = [
 ] as const;
 
 /**
+ * Crée une Webhook URL côté PostFinance — entité référençable.
+ * À appeler AVANT createWebhookListener : son id sera passé en `urlId`.
+ */
+export async function createWebhookUrl({
+  credentials,
+  spaceId,
+  name,
+  url,
+}: {
+  credentials: PfCredentials;
+  spaceId: string | number;
+  name: string;
+  url: string;
+}): Promise<WebhookUrl> {
+  return pfFetch<WebhookUrl>({
+    method: "POST",
+    path: `/api/webhook-url/create?spaceId=${spaceId}`,
+    credentials,
+    body: {
+      state: "ACTIVE",
+      name,
+      url,
+    },
+  });
+}
+
+/**
  * Crée un webhook listener pour une praticienne.
+ * `urlId` doit être l'id entier d'une WebhookUrl créée préalablement
+ * via createWebhookUrl() (PF rejette HTTP 442 si on passe une string).
  * Renvoie l'ID + le secret (à chiffrer côté DB avant stockage).
  */
 export async function createWebhookListener({
   credentials,
   spaceId,
   name,
-  url,
+  urlId,
   entityStates = [...PF_TRANSACTION_STATES],
   entity = PF_ENTITY_TRANSACTION,
   notifyEveryChange = false,
@@ -52,7 +97,7 @@ export async function createWebhookListener({
   credentials: PfCredentials;
   spaceId: string | number;
   name: string;
-  url: string;
+  urlId: number;
   entityStates?: readonly string[];
   entity?: number;
   notifyEveryChange?: boolean;
@@ -64,7 +109,7 @@ export async function createWebhookListener({
     body: {
       state: "ACTIVE",
       name,
-      url,
+      url: urlId,
       entity,
       entityStates,
       notifyEveryChange,

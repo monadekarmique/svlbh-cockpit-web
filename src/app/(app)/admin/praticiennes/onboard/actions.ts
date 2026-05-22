@@ -16,6 +16,7 @@ import { randomBytes } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import {
   createWebhookListener,
+  createWebhookUrl,
   type WebhookListener,
 } from "@/lib/postfinance-checkout/webhook-listener";
 
@@ -84,7 +85,11 @@ export async function onboardPraticienne(formData: FormData) {
   const webhookUrlToken = generateWebhookToken();
   const webhookUrl = `${COCKPIT_BASE}/api/webhooks/postfinance/${webhookUrlToken}`;
 
-  // 3. Crée le webhook listener côté PostFinance avec l'URL cockpit (pas Make)
+  // 3. Crée le webhook côté PostFinance — architecture 2-step :
+  //    3.a) POST /api/webhook-url/create     → renvoie un id entier
+  //    3.b) POST /api/webhook-listener/create avec url=<id entier>
+  //    Cause HTTP 442 corrigée 2026-05-22 : PF n'accepte pas une string
+  //    dans le champ `url` du listener (attend une référence entité).
   const praticienneSlug =
     `${prat.first_name ?? ""}-${prat.last_name ?? ""}`
       .toLowerCase()
@@ -93,13 +98,21 @@ export async function onboardPraticienne(formData: FormData) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 40) || "praticienne";
+  const pfCreds = { userId: appUserId, authKeyBase64: authKey };
+  const pfEntityName = `SVLBH-${praticienneSlug}-${environment}`;
   let webhook: WebhookListener;
   try {
-    webhook = await createWebhookListener({
-      credentials: { userId: appUserId, authKeyBase64: authKey },
+    const webhookUrlEntity = await createWebhookUrl({
+      credentials: pfCreds,
       spaceId,
-      name: `SVLBH-${praticienneSlug}-${environment}`,
+      name: pfEntityName,
       url: webhookUrl,
+    });
+    webhook = await createWebhookListener({
+      credentials: pfCreds,
+      spaceId,
+      name: pfEntityName,
+      urlId: webhookUrlEntity.id,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
