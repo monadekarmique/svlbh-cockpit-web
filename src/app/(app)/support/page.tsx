@@ -97,8 +97,27 @@ export default async function SupportHubPage() {
     .limit(30);
 
   const sessions = (rawSessions ?? []) as unknown as Session[];
-  const active = sessions.filter((s) => s.status === "PENDING" || s.status === "ACTIVE");
-  const recent = sessions.filter((s) => s.status === "ENDED" || s.status === "EXPIRED").slice(0, 10);
+  const now = new Date();
+  // Filtrage côté UI : sessions encore "actives" = PENDING/ACTIVE ET non
+  // expirées (expires_at > now). pg_cron passe les périmées en EXPIRED toutes
+  // les 5 min, mais on filtre aussi ici pour éviter le cas inter-cron.
+  // DEC Patrick 2026-05-22.
+  const active = sessions.filter(
+    (s) =>
+      (s.status === "PENDING" || s.status === "ACTIVE") &&
+      new Date(s.expires_at) > now,
+  );
+  const recent = sessions
+    .filter((s) => {
+      if (s.status === "ENDED" || s.status === "EXPIRED") return true;
+      // Sessions PENDING/ACTIVE périmées mais pas encore tagged EXPIRED
+      // par le cron : on les bascule visuellement dans historique.
+      if ((s.status === "PENDING" || s.status === "ACTIVE") && new Date(s.expires_at) <= now) {
+        return true;
+      }
+      return false;
+    })
+    .slice(0, 10);
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-4 py-6">
