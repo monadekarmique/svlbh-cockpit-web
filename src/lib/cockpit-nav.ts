@@ -47,6 +47,16 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "shamanes",
   },
 
+  {
+    href: "/audit-entites",
+    label: "Audit Entités Relationnelles",
+    navLabel: "Audit Entités",
+    icon: "🔬",
+    desc: "Big data 9D×33C — entités familiales, CBS lignées, signatures chromatiques",
+    color: "#8B3A62",
+    group: "shamanes",
+  },
+
   // ── Bloc Routines ──
   {
     href: "/routines",
