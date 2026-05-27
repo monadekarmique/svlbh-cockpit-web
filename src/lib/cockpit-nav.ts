@@ -97,6 +97,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "chakras",
   },
   {
+    href: "/benshen",
+    label: "Benshen · Chrono-Acupuncture",
+    navLabel: "Benshen",
+    icon: "🧠",
+    desc: "GB13 本神 · 4 Piliers Bazi 四柱 · acupoints chrono-optimaux + sélecteur de méridien",
+    color: "#4A7C3F",
+    group: "chakras",
+  },
+  {
     href: "/chrono-fu",
     label: "Chrono Fu",
     icon: "⏰",
@@ -111,15 +120,6 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     icon: "灵",
     desc: "8 points de confluence MTC · paire active selon Tian Gan / Di Zhi",
     color: "#C28D43",
-    group: "chakras",
-  },
-  {
-    href: "/benshen",
-    label: "Benshen · Chrono-Acupuncture",
-    navLabel: "Benshen",
-    icon: "🧠",
-    desc: "GB13 本神 · 4 Piliers Bazi 四柱 · acupoints chrono-optimaux + sélecteur de méridien",
-    color: "#4A7C3F",
     group: "chakras",
   },
   {
