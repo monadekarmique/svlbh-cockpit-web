@@ -114,6 +114,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "chakras",
   },
   {
+    href: "/benshen",
+    label: "Benshen · Chrono-Acupuncture",
+    navLabel: "Benshen",
+    icon: "🧠",
+    desc: "GB13 本神 · 4 Piliers Bazi 四柱 · acupoints chrono-optimaux + sélecteur de méridien",
+    color: "#4A7C3F",
+    group: "chakras",
+  },
+  {
     href: "/pierres",
     label: "Pierres d'enseignement",
     navLabel: "Pierres",
