@@ -163,7 +163,7 @@ export default function ScoresPage() {
           ◈ Guérison énergétique simplifiée aux Scores de Lumières
         </h1>
         <p className="mt-1 text-sm italic text-neutral-600">
-          100% compatible avec la Guérison émotionnelle et le Code du Corps de Discover Healing, une méthodologie développée par le Dr Bradley Nelson.
+          100% compatible avec Le Code d'Émotions et Le Code du Corps de Discover Healing (méthodologie du Dr Bradley Nelson) — deux applications que nous recommandons et qui nous ont permis de débuter notre cheminement il y a 7 ans.
         </p>
         <p className="mt-1 text-sm text-neutral-700">
           SLA · SLSA · SLPMO · SLM. Persistance locale (cockpit).
