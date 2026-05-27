@@ -163,7 +163,13 @@ export default function ScoresPage() {
           ◈ Guérison énergétique simplifiée aux Scores de Lumières
         </h1>
         <p className="mt-1 text-sm italic text-neutral-600">
-          100% compatible avec Le Code d'Émotions et Le Code du Corps de Discover Healing (méthodologie du Dr Bradley Nelson) — deux applications que nous recommandons et qui nous ont permis de débuter notre cheminement il y a 7 ans.
+          100% compatible avec{" "}
+          <a href="https://discoverhealing.com/the-emotion-code/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">Le Code d'Émotions</a>{" "}
+          et{" "}
+          <a href="https://discoverhealing.com/the-body-code/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">Le Code du Corps</a>{" "}
+          de{" "}
+          <a href="https://discoverhealing.com/app/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">Discover Healing</a>{" "}
+          (méthodologie du Dr Bradley Nelson) — deux applications que nous recommandons et qui nous ont permis de débuter notre cheminement il y a 7 ans.
         </p>
         <p className="mt-1 text-sm text-neutral-700">
           SLA · SLSA · SLPMO · SLM. Persistance locale (cockpit).
