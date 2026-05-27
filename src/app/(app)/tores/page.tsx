@@ -7,7 +7,6 @@ import Link from "next/link";
 export const dynamic = "force-static";
 
 const PHASES = [
-  { id: "REPOS", color: "#6B7280", label: "Repos" },
   { id: "CHARGE", color: "#C28D43", label: "Charge" },
   { id: "DECHARGE", color: "#2B5EA7", label: "Décharge" },
   { id: "EQUILIBRE", color: "#4A7C28", label: "Équilibre" },
@@ -21,7 +20,7 @@ const DIMENSIONS = [
       { name: "Intensité", range: "0–100 000" },
       { name: "Cohérence", range: "0–100 %" },
       { name: "Fréquence", range: "0,01–1000 Hz" },
-      { name: "Phase", range: "Repos / Charge / Décharge / Équilibre" },
+      { name: "Phase", range: "Charge / Décharge / Équilibre" },
     ],
   },
   {
