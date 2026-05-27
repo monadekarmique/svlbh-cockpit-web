@@ -13,7 +13,8 @@ import { APPRENANTES, SUPERVISORS_VIRTUAL } from "@/lib/cercle/shamanes";
 import { TherapeutesDnDZonesWrapper } from "./therapeutes-dnd-wrapper";
 import { ApprenantesDnD } from "./apprenantes-dnd";
 import type { DnDApprenante } from "./apprenantes-dnd";
-import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
+import { DHATU_META, fetchDhatuMemberships } from "@/lib/cercle/akashiques";
+import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
 import { fetchDynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
 import { BacklogSidebar } from "./backlog-sidebar";
 import { SoinsCommunsList } from "./soins-communs-list";
@@ -87,6 +88,10 @@ export default async function ShamanesPage() {
 
   // 1bis. Dynamiques SVLBH attribuées à chaque praticienne (DEC Patrick 2026-05-20)
   const dynamiquesByPraticienne = await fetchDynamiquesByPraticienne(sb);
+
+  // 1ter. Adhésions dhātu des praticiennes DB depuis la table dhatu_membership
+  // (DEC Patrick 2026-05-27 — remplace le statique pour les clés svlbh_id).
+  const dhatuByPraticienne = await fetchDhatuMemberships(sb);
 
   // 2. Daily status pour chaque
   const { data: dailyRaw } = await sb
@@ -400,6 +405,7 @@ export default async function ShamanesPage() {
         mySvlbhId={mySvlbhId}
         isOwner={isOwner}
         dynamiquesByPraticienne={dynamiquesByPraticienne}
+        dhatuByPraticienne={dhatuByPraticienne}
       />
 
       {/* Cartes virtuelles Patrick × 2 (superviseurs) — sous les thérapeutes
@@ -440,7 +446,10 @@ export default async function ShamanesPage() {
                   Reconnaissance Shamane Cercle de Lumière SR · certifié T3
                 </p>
                 {s.code === "754545" ? (
-                  <CerclesAkashiquesChipsServer svlbhKey={PATRICK_SVLBH_ID} />
+                  <CerclesAkashiquesChipsServer
+                    svlbhKey={PATRICK_SVLBH_ID}
+                    dhatuByPraticienne={dhatuByPraticienne}
+                  />
                 ) : null}
               </div>
             </li>
@@ -486,8 +495,14 @@ async function ApprenantesDnDSection() {
 /** Chips des cercles akashiques d'une personne pour la section
  * Superviseurs (réutilisable ici car ApprenantesDnD a sa version client).
  * DEC Patrick 2026-05-18. */
-function CerclesAkashiquesChipsServer({ svlbhKey }: { svlbhKey: string }) {
-  const membership = lookupMembership(svlbhKey);
+function CerclesAkashiquesChipsServer({
+  svlbhKey,
+  dhatuByPraticienne,
+}: {
+  svlbhKey: string;
+  dhatuByPraticienne: Record<string, AkashiqueMembership>;
+}) {
+  const membership = dhatuByPraticienne[svlbhKey] ?? null;
   if (!membership) return null;
   const all = [
     ...membership.membres.map((c) => ({ c, isFormation: false })),

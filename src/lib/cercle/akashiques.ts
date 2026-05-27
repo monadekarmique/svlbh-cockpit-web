@@ -4,6 +4,13 @@
 // Un « cercle akashique » peut être nommé par 1 dhātu (« Rakta ») ou une
 // paire (« Rasa Meda ») reflétant la combinaison de tissus mémorisée par
 // la lignée d'âmes. DEC Patrick 2026-05-18.
+//
+// DEC Patrick 2026-05-27 — les adhésions des praticiennes DB (clé = svlbh_id)
+// sont désormais lues depuis la table Supabase `dhatu_membership` via
+// fetchDhatuMemberships(). Le statique MEMBERSHIPS ne garde que les entrées
+// indexées par nom (apprenantes / shamanes hors DB).
+
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type Dhatu =
   | "rasa"      // plasma, lymphe
@@ -53,26 +60,11 @@ export const CERCLE_SUKRA = c("Śukra/Ārtava", ["sukra-artava"]);
 export const CERCLE_RASA = c("Rasa", ["rasa"]);
 export const CERCLE_MAMSA = c("Māṁsa", ["mamsa"]);
 
-/** Memberships indexés par clé. Pour praticiennes ST4+ DB → clé = svlbh_id.
- * Pour apprenantes hors DB → clé = name (Irène / Paola / Béatrice / Véronique).
- * Patrick = svlbh_id 52adbc98… (clé DB). */
+/** Memberships statiques indexés par NOM uniquement — apprenantes / shamanes
+ * hors DB (sans svlbh_id). DEC Patrick 2026-05-27 : les praticiennes DB
+ * (clé = svlbh_id) sont désormais lues depuis la table `dhatu_membership`
+ * via fetchDhatuMemberships() ; leurs entrées statiques ont été retirées. */
 export const MEMBERSHIPS: Record<string, AkashiqueMembership> = {
-  // Patrick Bays — Owner ST6
-  "52adbc98-d2b0-4444-b89c-b1311a02a983": {
-    membres: [CERCLE_RASA_MEDA, CERCLE_RAKTA],
-    formation: [],
-  },
-  // Anne Grangier Bays — ST4
-  "57bd2f8e-53c5-49f8-a778-ed8c2cd75bcc": {
-    membres: [
-      CERCLE_RASA_MEDA,
-      CERCLE_RASA_MAMSA,
-      CERCLE_ASTHI,
-      CERCLE_MAJJA,
-      CERCLE_SUKRA,
-    ],
-    formation: [],
-  },
   // Béatrice Pathey — apprenante (clé = name)
   "Béatrice Pathey": {
     membres: [CERCLE_RAKTA],
@@ -83,13 +75,6 @@ export const MEMBERSHIPS: Record<string, AkashiqueMembership> = {
     membres: [],
     formation: [CERCLE_RASA, CERCLE_RAKTA, CERCLE_MAMSA],
   },
-  // Irène #304 — promue ST4 le 2026-05-18 (svlbh_id 9746f232).
-  // DEC Patrick 2026-05-20 — Rakta + Māṁsa passent en membre active
-  // (comme Cornelia), Rasa reste en formation.
-  "9746f232-77ed-4086-ad64-1bde5805ed83": {
-    membres: [CERCLE_RAKTA, CERCLE_MAMSA],
-    formation: [CERCLE_RASA],
-  },
   // Shamanes passives membres du cercle Māṁsa (DEC Patrick 2026-05-20).
   // Clé = name (cf ApprenantesDnD lookup par name).
   "Julie Bays":   { membres: [CERCLE_MAMSA], formation: [] },
@@ -98,38 +83,74 @@ export const MEMBERSHIPS: Record<string, AkashiqueMembership> = {
   "Sarah Bays":   { membres: [CERCLE_MAMSA], formation: [] },
   // Paola — membre du Cercle Rasa Meda (DEC Patrick 2026-05-20).
   "Paola": { membres: [CERCLE_RASA_MEDA], formation: [] },
-  // Véronique — promue ST4 le 2026-05-18 (svlbh_id f73d2429, code 200).
-  // Membre du Cercle Rakta. DEC Patrick 2026-05-18.
-  "f73d2429-871f-4641-8bd4-ca6a0fe9e34b": {
-    membres: [CERCLE_RAKTA],
-    formation: [],
-  },
-  // Flavia Guift — ST4 #00301 (DEC Patrick 2026-05-27 ; miroir table dhatu_membership)
-  "420eb853-5732-420e-9257-35ad6e7f125c": {
-    membres: [CERCLE_RASA_MAMSA, CERCLE_MAJJA, CERCLE_SUKRA],
-    formation: [],
-  },
-  // Daphné Friederich — ST4 #00305 (DEC Patrick 2026-05-27 ; miroir table dhatu_membership)
-  "8f76f085-65c9-4eca-8343-b5b3b9209a2b": {
-    membres: [CERCLE_ASTHI, CERCLE_MAMSA, CERCLE_RAKTA, CERCLE_RASA_MEDA, CERCLE_RASA_MAMSA],
-    formation: [],
-  },
-  // Cornelia Althaus — ST4 (basculée 2026-05-20). 6 cercles akashiques :
-  // Rasa Māṁsa, Asthi, Majjā, Śukra/Ārtava, Rakta, Māṁsa. DEC Patrick 2026-05-20.
-  "e4f77c12-aeda-4dac-b653-3d6514a6e0c0": {
-    membres: [
-      CERCLE_RASA_MAMSA,
-      CERCLE_ASTHI,
-      CERCLE_MAJJA,
-      CERCLE_SUKRA,
-      CERCLE_RAKTA,
-      CERCLE_MAMSA,
-    ],
-    formation: [],
-  },
 };
 
 export function lookupMembership(key: string | null | undefined): AkashiqueMembership | null {
   if (!key) return null;
   return MEMBERSHIPS[key] ?? null;
+}
+
+/**
+ * Fetch toutes les adhésions dhātu des praticiennes DB depuis la table
+ * Supabase `dhatu_membership`, retourné en map indexée par svlbh_id (UUID).
+ *
+ * Une praticienne peut être membre de 0..N cercles et en formation sur
+ * 0..N autres. Le champ `dhatus` du cercle est déjà un text[] de clés Dhatu.
+ *
+ * Calque la signature/typage de fetchDynamiquesByPraticienne (lib/cercle/dynamiques).
+ */
+export async function fetchDhatuMemberships(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sb: SupabaseClient<any, any, any>,
+): Promise<Record<string, AkashiqueMembership>> {
+  const { data, error } = await sb
+    .from("dhatu_membership")
+    .select("praticienne_svlbh_id, status, dhatu_cercle:cercle_id ( name, dhatus )");
+
+  if (error || !data) return {};
+
+  // Supabase typage : l'embedded peut être inféré comme objet OU array selon
+  // la relation. On normalise via unknown puis manipulation manuelle (comme
+  // dynamiques.ts gère svlbh_dynamique array|objet).
+  type EmbeddedCercle = {
+    name: string;
+    dhatus: Dhatu[] | null;
+  };
+  type Row = {
+    praticienne_svlbh_id: string;
+    status: string;
+    dhatu_cercle: EmbeddedCercle | EmbeddedCercle[] | null;
+  };
+
+  const map: Record<string, AkashiqueMembership> = {};
+  for (const row of data as unknown as Row[]) {
+    const cercle = Array.isArray(row.dhatu_cercle)
+      ? row.dhatu_cercle[0]
+      : row.dhatu_cercle;
+    if (!cercle || !row.praticienne_svlbh_id) continue;
+
+    const entry: CercleAkashique = {
+      name: cercle.name,
+      dhatus: (cercle.dhatus ?? []) as Dhatu[],
+    };
+
+    if (!map[row.praticienne_svlbh_id]) {
+      map[row.praticienne_svlbh_id] = { membres: [], formation: [] };
+    }
+    if (row.status === "formation") {
+      map[row.praticienne_svlbh_id].formation.push(entry);
+    } else {
+      // 'membre' (et tout autre statut par défaut) → membres
+      map[row.praticienne_svlbh_id].membres.push(entry);
+    }
+  }
+
+  // Tri stable des cercles par name pour un rendu déterministe.
+  const byName = (a: CercleAkashique, b: CercleAkashique) => a.name.localeCompare(b.name);
+  for (const key of Object.keys(map)) {
+    map[key].membres.sort(byName);
+    map[key].formation.sort(byName);
+  }
+
+  return map;
 }

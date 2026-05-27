@@ -4,7 +4,7 @@
 // DEC Patrick 2026-05-18.
 
 import { setMyDailyStatus } from "./daily-status-actions";
-import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
+import { DHATU_META } from "@/lib/cercle/akashiques";
 import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { DYNAMIQUE_AXIS_TONE, type DynamiqueChip } from "@/lib/cercle/dynamiques";
@@ -70,14 +70,14 @@ function DynamiquesChips({ dynamiques }: { dynamiques: DynamiqueChip[] }) {
 }
 
 export function TherapeuteCardClient({
-  t, isMe, isOwner, dynamiques = [],
+  t, isMe, isOwner, dynamiques = [], membership = null,
 }: {
   t: DnDTherapeute;
   isMe: boolean;
   isOwner: boolean;
   dynamiques?: DynamiqueChip[];
+  membership?: AkashiqueMembership | null;
 }) {
-  const membership = lookupMembership(t.svlbh_id);
   const targetStatusOnToggle = t.status === "active" ? "hidden" : "active";
   const toggleLabel = t.status === "active" ? "Me cacher aujourd'hui" : "Redevenir active";
 
