@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { groupedNav } from "@/lib/cockpit-nav";
 import { CockpitNav } from "@/components/cockpit-nav";
+import { UserMenu } from "@/components/user-menu";
 import { SupportRealtimeNotifier } from "@/components/support-realtime-notifier";
 import { autoRelinkProfile } from "@/lib/auto-relink-profile";
 import { ExternalAppLink } from "@/components/external-app-link";
@@ -134,7 +135,6 @@ export default async function CockpitLayout({
             >
               build {appVersion}
             </span>
-            <span className="hidden text-neutral-500 sm:inline">{displayEmail}</span>
             {/* Commit court (à droite de l'email) — pour vérifier la version
                 déployée. RENDER_GIT_COMMIT est injecté par Render au build. */}
             <span className="hidden text-neutral-400 sm:inline">·</span>
@@ -144,14 +144,7 @@ export default async function CockpitLayout({
             >
               {process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? "dev"}
             </span>
-            <form action="/auth/signout" method="post">
-              <button
-                type="submit"
-                className="text-neutral-500 hover:text-neutral-900"
-              >
-                Déconnexion
-              </button>
-            </form>
+            <UserMenu email={displayEmail} />
             {/* Pro link — convention iPad boussole magenta (DEC Patrick 2026-05-12) */}
             <ExternalAppLink
               href="https://pwa.app.svlbh.com"
