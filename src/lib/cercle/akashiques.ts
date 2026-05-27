@@ -104,6 +104,16 @@ export const MEMBERSHIPS: Record<string, AkashiqueMembership> = {
     membres: [CERCLE_RAKTA],
     formation: [],
   },
+  // Flavia Guift — ST4 #00301 (DEC Patrick 2026-05-27 ; miroir table dhatu_membership)
+  "420eb853-5732-420e-9257-35ad6e7f125c": {
+    membres: [CERCLE_RASA_MAMSA, CERCLE_MAJJA, CERCLE_SUKRA],
+    formation: [],
+  },
+  // Daphné Friederich — ST4 #00305 (DEC Patrick 2026-05-27 ; miroir table dhatu_membership)
+  "8f76f085-65c9-4eca-8343-b5b3b9209a2b": {
+    membres: [CERCLE_ASTHI, CERCLE_MAMSA, CERCLE_RAKTA, CERCLE_RASA_MEDA, CERCLE_RASA_MAMSA],
+    formation: [],
+  },
   // Cornelia Althaus — ST4 (basculée 2026-05-20). 6 cercles akashiques :
   // Rasa Māṁsa, Asthi, Majjā, Śukra/Ārtava, Rakta, Māṁsa. DEC Patrick 2026-05-20.
   "e4f77c12-aeda-4dac-b653-3d6514a6e0c0": {
