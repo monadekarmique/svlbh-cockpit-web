@@ -207,14 +207,19 @@ export type CockpitNavGroupRendered = {
  * DEC Patrick 2026-05-12 — apparaît auto dans la nav pour ST6 + Cercle SR. */
 export function groupedNav(options?: { includeOwner?: boolean }): CockpitNavGroupRendered[] {
   const includeOwner = options?.includeOwner ?? false;
-  const order: CockpitNavGroup[] = includeOwner
-    ? ["shamanes", "routines", "chakras", "support", "owner"]
-    : ["shamanes", "routines", "chakras", "support"];
+  // Owner (ST6) fusionné EN TÊTE du groupe Support — gate conservé via includeOwner
+  // (les non-ST6 ne voient pas les items Owner ; les pages restent gatées par requireOwner).
+  const order: CockpitNavGroup[] = ["shamanes", "routines", "chakras", "support"];
   return order
-    .map((id) => ({
-      id,
-      label: GROUP_LABELS[id],
-      items: COCKPIT_NAV.filter((i) => i.group === id),
-    }))
+    .map((id) => {
+      let items = COCKPIT_NAV.filter((i) => i.group === id);
+      if (id === "support") {
+        const ownerItems = includeOwner
+          ? COCKPIT_NAV.filter((i) => i.group === "owner")
+          : [];
+        items = [...ownerItems, ...items];
+      }
+      return { id, label: GROUP_LABELS[id], items };
+    })
     .filter((g) => g.items.length > 0);
 }
