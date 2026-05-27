@@ -160,7 +160,7 @@ export default function ScoresPage() {
 
       <header>
         <h1 className="text-2xl font-bold tracking-tight text-blue-950">
-          ◈ Scores de Lumière
+          ◈ Guérison énergétique simplifiée aux Scores de Lumières
         </h1>
         <p className="mt-1 text-sm text-neutral-700">
           SLA · SLSA · SLPMO · SLM. Persistance locale (cockpit).
