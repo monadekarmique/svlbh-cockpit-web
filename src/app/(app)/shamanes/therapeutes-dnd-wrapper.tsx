@@ -9,7 +9,7 @@ import { TherapeutesDnDZones } from "./therapeutes-dnd-zones";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { TherapeuteCardClient } from "./therapeute-card-client";
 import type { DynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
-import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
+import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 
 export function TherapeutesDnDZonesWrapper({
   therapeutes,
@@ -17,12 +17,14 @@ export function TherapeutesDnDZonesWrapper({
   isOwner,
   dynamiquesByPraticienne,
   dhatuByPraticienne,
+  dhatuMeta,
 }: {
   therapeutes: DnDTherapeute[];
   mySvlbhId?: string;
   isOwner: boolean;
   dynamiquesByPraticienne?: DynamiquesByPraticienne;
   dhatuByPraticienne?: Record<string, AkashiqueMembership>;
+  dhatuMeta: Record<Dhatu, DhatuMeta>;
 }) {
   return (
     <TherapeutesDnDZones
@@ -36,6 +38,7 @@ export function TherapeutesDnDZonesWrapper({
           isOwner={isOwner}
           dynamiques={dynamiquesByPraticienne?.[t.svlbh_id] ?? []}
           membership={dhatuByPraticienne?.[t.svlbh_id] ?? null}
+          dhatuMeta={dhatuMeta}
         />
       )}
     />

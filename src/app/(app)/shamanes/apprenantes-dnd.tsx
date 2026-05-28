@@ -22,8 +22,8 @@ import {
 import { setApprenanteTier } from "./apprenante-tier-action";
 import { TIER_LABEL, TIER_COLOR } from "@/lib/cercle/shamanes";
 import type { ParticipantTier } from "@/lib/cercle/shamanes";
-import { lookupMembership, DHATU_META } from "@/lib/cercle/akashiques";
-import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
+import { lookupMembership } from "@/lib/cercle/akashiques";
+import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 
 export type DnDApprenante = {
   name: string;
@@ -41,7 +41,13 @@ const ZONES: Array<{ key: ZoneKey; emoji: string; title: string }> = [
   { key: "cercle-akashique", emoji: "🌌", title: "Shamanes du Cercle akashique ex-Shamanes passives" },
 ];
 
-function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembership | null }) {
+function CerclesAkashiquesChips({
+  membership,
+  dhatuMeta,
+}: {
+  membership: AkashiqueMembership | null;
+  dhatuMeta: Record<Dhatu, DhatuMeta>;
+}) {
   if (!membership) return null;
   const all = [
     ...membership.membres.map((c) => ({ c, isFormation: false })),
@@ -52,7 +58,8 @@ function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembershi
     <div className="mt-1 flex flex-wrap gap-1">
       {all.map(({ c, isFormation }) => {
         const primary = c.dhatus[0];
-        const meta = DHATU_META[primary];
+        const meta = dhatuMeta[primary];
+        if (!meta) return null;
         return (
           <span
             key={c.name}
@@ -65,7 +72,7 @@ function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembershi
               borderStyle: isFormation ? "dashed" : "solid",
             }}
           >
-            {c.dhatus.map((d) => DHATU_META[d].emoji).join("")} {c.name}
+            {c.dhatus.map((d) => dhatuMeta[d]?.emoji ?? "").join("")} {c.name}
           </span>
         );
       })}
@@ -73,7 +80,13 @@ function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembershi
   );
 }
 
-export function ApprenantesDnD({ initial }: { initial: DnDApprenante[] }) {
+export function ApprenantesDnD({
+  initial,
+  dhatuMeta,
+}: {
+  initial: DnDApprenante[];
+  dhatuMeta: Record<Dhatu, DhatuMeta>;
+}) {
   const [items, setItems] = useState<DnDApprenante[]>(initial);
   const [draggingName, setDraggingName] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -140,7 +153,7 @@ export function ApprenantesDnD({ initial }: { initial: DnDApprenante[] }) {
             <DropZone key={z.key} id={`zone-${z.key}`} title={`${z.emoji} ${z.title} (${inZone.length})`} color={c}>
               {inZone.map((a) => (
                 <DraggableCard key={a.name} name={a.name}>
-                  <ApprenanteCardInner a={a} color={c} />
+                  <ApprenanteCardInner a={a} color={c} dhatuMeta={dhatuMeta} />
                 </DraggableCard>
               ))}
             </DropZone>
@@ -151,7 +164,7 @@ export function ApprenantesDnD({ initial }: { initial: DnDApprenante[] }) {
       <DragOverlay>
         {dragging ? (
           <div className="opacity-90 shadow-2xl ring-2 ring-blue-400">
-            <ApprenanteCardInner a={dragging} color={TIER_COLOR[dragging.tier as ParticipantTier]} />
+            <ApprenanteCardInner a={dragging} color={TIER_COLOR[dragging.tier as ParticipantTier]} dhatuMeta={dhatuMeta} />
           </div>
         ) : null}
       </DragOverlay>
@@ -214,7 +227,15 @@ function DraggableCard({ name, children }: { name: string; children: React.React
   );
 }
 
-function ApprenanteCardInner({ a, color }: { a: DnDApprenante; color: string }) {
+function ApprenanteCardInner({
+  a,
+  color,
+  dhatuMeta,
+}: {
+  a: DnDApprenante;
+  color: string;
+  dhatuMeta: Record<Dhatu, DhatuMeta>;
+}) {
   const memb = lookupMembership(a.name);
   return (
     <div
@@ -237,7 +258,7 @@ function ApprenanteCardInner({ a, color }: { a: DnDApprenante; color: string }) 
         <p className="mt-0.5 text-[11px] font-semibold" style={{ color }}>
           {TIER_LABEL[a.tier as ParticipantTier]}
         </p>
-        <CerclesAkashiquesChips membership={memb} />
+        <CerclesAkashiquesChips membership={memb} dhatuMeta={dhatuMeta} />
         {a.description ? (
           <p className="mt-1.5 text-[10px] italic text-neutral-600">{a.description}</p>
         ) : null}

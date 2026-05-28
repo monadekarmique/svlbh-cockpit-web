@@ -13,7 +13,8 @@ import { APPRENANTES, SUPERVISORS_VIRTUAL } from "@/lib/cercle/shamanes";
 import { TherapeutesDnDZonesWrapper } from "./therapeutes-dnd-wrapper";
 import { ApprenantesDnD } from "./apprenantes-dnd";
 import type { DnDApprenante } from "./apprenantes-dnd";
-import { DHATU_META, fetchDhatuMemberships } from "@/lib/cercle/akashiques";
+import { getDhatuMeta, fetchDhatuMemberships } from "@/lib/cercle/akashiques";
+import type { Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
 import { fetchDynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
 import { BacklogSidebar } from "./backlog-sidebar";
@@ -92,6 +93,9 @@ export default async function ShamanesPage() {
   // 1ter. Adhésions dhātu des praticiennes DB depuis la table dhatu_membership
   // (DEC Patrick 2026-05-27 — remplace le statique pour les clés svlbh_id).
   const dhatuByPraticienne = await fetchDhatuMemberships(sb);
+  // 1quater. Métadonnées des 7 dhātu atomiques (label/emoji/couleur) depuis
+  // `dhatu_atom` — source canonique unique (Phase 2 DEC Patrick 2026-05-28).
+  const dhatuMeta = await getDhatuMeta(sb);
 
   // 2. Daily status pour chaque
   const { data: dailyRaw } = await sb
@@ -406,6 +410,7 @@ export default async function ShamanesPage() {
         isOwner={isOwner}
         dynamiquesByPraticienne={dynamiquesByPraticienne}
         dhatuByPraticienne={dhatuByPraticienne}
+        dhatuMeta={dhatuMeta}
       />
 
       {/* Cartes virtuelles Patrick × 2 (superviseurs) — sous les thérapeutes
@@ -449,6 +454,7 @@ export default async function ShamanesPage() {
                   <CerclesAkashiquesChipsServer
                     svlbhKey={PATRICK_SVLBH_ID}
                     dhatuByPraticienne={dhatuByPraticienne}
+                    dhatuMeta={dhatuMeta}
                   />
                 ) : null}
               </div>
@@ -467,6 +473,7 @@ export default async function ShamanesPage() {
 
 async function ApprenantesDnDSection() {
   const sb = await createClient();
+  const dhatuMeta = await getDhatuMeta(sb);
   const { data } = await sb
     .from("apprenante_tier")
     .select("name, tier, description, niveaux_bloques");
@@ -489,7 +496,7 @@ async function ApprenantesDnDSection() {
       niveaux_bloques: db?.niveaux_bloques ?? null,
     };
   });
-  return <ApprenantesDnD initial={items} />;
+  return <ApprenantesDnD initial={items} dhatuMeta={dhatuMeta} />;
 }
 
 /** Chips des cercles akashiques d'une personne pour la section
@@ -498,9 +505,11 @@ async function ApprenantesDnDSection() {
 function CerclesAkashiquesChipsServer({
   svlbhKey,
   dhatuByPraticienne,
+  dhatuMeta,
 }: {
   svlbhKey: string;
   dhatuByPraticienne: Record<string, AkashiqueMembership>;
+  dhatuMeta: Record<Dhatu, DhatuMeta>;
 }) {
   const membership = dhatuByPraticienne[svlbhKey] ?? null;
   if (!membership) return null;
@@ -513,7 +522,8 @@ function CerclesAkashiquesChipsServer({
     <div className="mt-1 flex flex-wrap gap-1">
       {all.map(({ c, isFormation }) => {
         const primary = c.dhatus[0];
-        const meta = DHATU_META[primary];
+        const meta = dhatuMeta[primary];
+        if (!meta) return null;
         return (
           <span
             key={c.name}
@@ -527,7 +537,7 @@ function CerclesAkashiquesChipsServer({
             }}
             title={isFormation ? `Cercle ${c.name} — en formation` : `Cercle ${c.name} — membre`}
           >
-            {c.dhatus.map((d) => DHATU_META[d].emoji).join("")} {c.name}
+            {c.dhatus.map((d) => dhatuMeta[d]?.emoji ?? "").join("")} {c.name}
           </span>
         );
       })}

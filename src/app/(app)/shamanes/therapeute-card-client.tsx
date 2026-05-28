@@ -4,12 +4,17 @@
 // DEC Patrick 2026-05-18.
 
 import { setMyDailyStatus } from "./daily-status-actions";
-import { DHATU_META } from "@/lib/cercle/akashiques";
-import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
+import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { DYNAMIQUE_AXIS_TONE, type DynamiqueChip } from "@/lib/cercle/dynamiques";
 
-function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembership | null }) {
+function CerclesAkashiquesChips({
+  membership,
+  dhatuMeta,
+}: {
+  membership: AkashiqueMembership | null;
+  dhatuMeta: Record<Dhatu, DhatuMeta>;
+}) {
   if (!membership) return null;
   const all = [
     ...membership.membres.map((c) => ({ c, isFormation: false })),
@@ -20,7 +25,8 @@ function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembershi
     <div className="mt-1 flex flex-wrap gap-1">
       {all.map(({ c, isFormation }) => {
         const primary = c.dhatus[0];
-        const meta = DHATU_META[primary];
+        const meta = dhatuMeta[primary];
+        if (!meta) return null;
         return (
           <span
             key={c.name}
@@ -38,7 +44,7 @@ function CerclesAkashiquesChips({ membership }: { membership: AkashiqueMembershi
                 : `Cercle ${c.name} — membre (incarnations passées)`
             }
           >
-            {c.dhatus.map((d) => DHATU_META[d].emoji).join("")} {c.name}
+            {c.dhatus.map((d) => dhatuMeta[d]?.emoji ?? "").join("")} {c.name}
           </span>
         );
       })}
@@ -70,13 +76,14 @@ function DynamiquesChips({ dynamiques }: { dynamiques: DynamiqueChip[] }) {
 }
 
 export function TherapeuteCardClient({
-  t, isMe, isOwner, dynamiques = [], membership = null,
+  t, isMe, isOwner, dynamiques = [], membership = null, dhatuMeta,
 }: {
   t: DnDTherapeute;
   isMe: boolean;
   isOwner: boolean;
   dynamiques?: DynamiqueChip[];
   membership?: AkashiqueMembership | null;
+  dhatuMeta: Record<Dhatu, DhatuMeta>;
 }) {
   const targetStatusOnToggle = t.status === "active" ? "hidden" : "active";
   const toggleLabel = t.status === "active" ? "Me cacher aujourd'hui" : "Redevenir active";
@@ -116,7 +123,7 @@ export function TherapeuteCardClient({
                 #{String(t.code_praticien).padStart(5, "0")}
               </p>
             ) : null}
-            <CerclesAkashiquesChips membership={membership} />
+            <CerclesAkashiquesChips membership={membership} dhatuMeta={dhatuMeta} />
             <DynamiquesChips dynamiques={dynamiques} />
           </div>
         </div>

@@ -10,6 +10,7 @@
 // fetchDhatuMemberships(). Le statique MEMBERSHIPS ne garde que les entrées
 // indexées par nom (apprenantes / shamanes hors DB).
 
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type Dhatu =
@@ -21,15 +22,41 @@ export type Dhatu =
   | "majja"     // moelle, système nerveux
   | "sukra-artava"; // reproducteur (semence / ovule)
 
-export const DHATU_META: Record<Dhatu, { label: string; emoji: string; color: string }> = {
-  rasa:           { label: "Rasa",          emoji: "💧", color: "#0ea5e9" }, // plasma/lymphe = sky
-  rakta:          { label: "Rakta",         emoji: "🩸", color: "#dc2626" }, // sang = red
-  mamsa:          { label: "Māṁsa",         emoji: "💪", color: "#b91c1c" }, // muscle = darker red
-  meda:           { label: "Meda",          emoji: "🟡", color: "#eab308" }, // adipeux = amber
-  asthi:          { label: "Asthi",         emoji: "🦴", color: "#a8a29e" }, // osseux = stone
-  majja:          { label: "Majjā",         emoji: "🧠", color: "#8b5cf6" }, // moelle = violet
-  "sukra-artava": { label: "Śukra/Ārtava",  emoji: "🌸", color: "#ec4899" }, // reproducteur = pink
-};
+export type DhatuMeta = { label: string; emoji: string; color: string };
+
+/**
+ * Source canonique des métadonnées dhātu (label/emoji/couleur) : table Supabase
+ * `dhatu_atom`. Remplace le DHATU_META statique d'avant (Phase 2 DEC Patrick
+ * 2026-05-28). Dédupliqué par render via React `cache()`. Les composants
+ * serveur appellent `getDhatuMeta(sb)` une fois et passent le résultat en prop
+ * aux composants client (qui ne peuvent pas await).
+ */
+export const getDhatuMeta = cache(
+  async (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sb: SupabaseClient<any, any, any>,
+  ): Promise<Record<Dhatu, DhatuMeta>> => {
+    const { data, error } = await sb
+      .from("dhatu_atom")
+      .select("id, label, emoji, color")
+      .order("sort_order");
+    if (error || !data) return {} as Record<Dhatu, DhatuMeta>;
+    const out = {} as Record<Dhatu, DhatuMeta>;
+    for (const row of data as {
+      id: string;
+      label: string;
+      emoji: string;
+      color: string;
+    }[]) {
+      out[row.id as Dhatu] = {
+        label: row.label,
+        emoji: row.emoji,
+        color: row.color,
+      };
+    }
+    return out;
+  },
+);
 
 /** Un cercle akashique nommé. Peut référencer 1 ou plusieurs dhātu liés. */
 export type CercleAkashique = {
