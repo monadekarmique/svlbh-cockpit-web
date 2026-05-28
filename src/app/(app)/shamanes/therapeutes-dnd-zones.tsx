@@ -199,7 +199,7 @@ export function TherapeutesDnDZones({
       <DragOverlay>
         {draggingItem ? (
           <div className="opacity-90 shadow-2xl ring-2 ring-blue-400">
-            {renderCard(draggingItem, { isMe: draggingItem.svlbh_id === mySvlbhId, isDragging: true })}
+            {renderCard(draggingItem, { isMe: draggingItem.svlbh_id === mySvlbhId, isDragging: true, bumpGL })}
           </div>
         ) : null}
       </DragOverlay>
