@@ -138,6 +138,16 @@ export function TherapeutesDnDZones({
         ))}
       </DropZone>
 
+      {/* Total GL des Membres actives — recalculé sur le state DnD courant. */}
+      <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 px-5 py-3 text-center shadow-sm">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">
+          ✨ Total des Guides de Lumière 300% qui soutiennent le Cercle de Lumière Suisse Romande
+        </p>
+        <p className="mt-1 font-mono text-3xl font-bold tabular-nums text-amber-900">
+          {actives.reduce((sum, t) => sum + (t.guides_lumiere ?? 0), 0).toLocaleString("fr-CH")}
+        </p>
+      </div>
+
       <DropZone
         id="zone-hidden"
         title={`🌙 Thérapeutes cachées (${hidden.length})`}
