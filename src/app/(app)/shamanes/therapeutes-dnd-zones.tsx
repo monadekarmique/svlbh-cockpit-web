@@ -123,7 +123,7 @@ export function TherapeutesDnDZones({
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <DropZone
         id="zone-active"
-        title={`✨ Thérapeutes actives (${actives.length})`}
+        title={`✨ Thérapeutes SVLBH — Membres actives du Cercle (${actives.length})`}
         emptyHint="Aucune active aujourd'hui."
       >
         {actives.map((t) => (
