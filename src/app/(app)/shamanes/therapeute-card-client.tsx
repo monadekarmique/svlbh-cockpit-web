@@ -158,9 +158,10 @@ export function TherapeuteCardClient({
       ) : null}
 
       {/* GL — Guides de Lumière, géré collectivement par les membres du Cercle
-          (gate côté server : updateGuidesLumiere refuse si non-membre). */}
+          (gate côté server : updateGuidesLumiere refuse si non-membre).
+          Toujours rendu APRÈS Me cacher pour rester en bas de la carte. */}
       <div
-        className="mt-auto flex items-center justify-end pt-1"
+        className="flex items-center justify-end pt-1"
         onPointerDown={(e) => e.stopPropagation()}
       >
         <div
