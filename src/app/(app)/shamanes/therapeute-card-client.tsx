@@ -4,7 +4,6 @@
 // DEC Patrick 2026-05-18.
 
 import { setMyDailyStatus } from "./daily-status-actions";
-import { updateGuidesLumiere } from "./gl-action";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { DYNAMIQUE_AXIS_TONE, type DynamiqueChip } from "@/lib/cercle/dynamiques";
@@ -77,7 +76,7 @@ function DynamiquesChips({ dynamiques }: { dynamiques: DynamiqueChip[] }) {
 }
 
 export function TherapeuteCardClient({
-  t, isMe, isOwner, dynamiques = [], membership = null, dhatuMeta,
+  t, isMe, isOwner, dynamiques = [], membership = null, dhatuMeta, bumpGL,
 }: {
   t: DnDTherapeute;
   isMe: boolean;
@@ -85,6 +84,7 @@ export function TherapeuteCardClient({
   dynamiques?: DynamiqueChip[];
   membership?: AkashiqueMembership | null;
   dhatuMeta: Record<Dhatu, DhatuMeta>;
+  bumpGL?: (svlbhId: string, delta: 1 | -1) => void;
 }) {
   const targetStatusOnToggle = t.status === "active" ? "hidden" : "active";
   const toggleLabel = t.status === "active" ? "Me cacher aujourd'hui" : "Redevenir active";
@@ -163,18 +163,18 @@ export function TherapeuteCardClient({
         className="mt-auto flex items-center justify-end pt-1"
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <form
-          action={updateGuidesLumiere}
+        <div
           className="flex items-center gap-1"
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <input type="hidden" name="svlbh_id" value={t.svlbh_id} />
           <button
-            type="submit"
-            name="delta"
-            value="-1"
-            disabled={(t.guides_lumiere ?? 0) === 0}
+            type="button"
+            disabled={!bumpGL || (t.guides_lumiere ?? 0) === 0}
             onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              bumpGL?.(t.svlbh_id, -1);
+            }}
             className="flex h-5 w-5 items-center justify-center rounded border border-violet-200 bg-white text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-30"
             title="−1 GL"
           >
@@ -187,16 +187,19 @@ export function TherapeuteCardClient({
             GL {t.guides_lumiere ?? 0}
           </span>
           <button
-            type="submit"
-            name="delta"
-            value="1"
+            type="button"
+            disabled={!bumpGL}
             onPointerDown={(e) => e.stopPropagation()}
-            className="flex h-5 w-5 items-center justify-center rounded border border-violet-200 bg-white text-violet-700 transition hover:bg-violet-50"
+            onClick={(e) => {
+              e.stopPropagation();
+              bumpGL?.(t.svlbh_id, 1);
+            }}
+            className="flex h-5 w-5 items-center justify-center rounded border border-violet-200 bg-white text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-30"
             title="+1 GL"
           >
             +
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );

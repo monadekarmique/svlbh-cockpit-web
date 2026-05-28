@@ -31,7 +31,7 @@ export function TherapeutesDnDZonesWrapper({
       initial={therapeutes}
       mySvlbhId={mySvlbhId}
       isOwner={isOwner}
-      renderCard={(t, { isMe }) => (
+      renderCard={(t, { isMe, bumpGL }) => (
         <TherapeuteCardClient
           t={t}
           isMe={isMe}
@@ -39,6 +39,7 @@ export function TherapeutesDnDZonesWrapper({
           dynamiques={dynamiquesByPraticienne?.[t.svlbh_id] ?? []}
           membership={dhatuByPraticienne?.[t.svlbh_id] ?? null}
           dhatuMeta={dhatuMeta}
+          bumpGL={bumpGL}
         />
       )}
     />

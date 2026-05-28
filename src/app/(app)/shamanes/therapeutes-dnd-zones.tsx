@@ -23,6 +23,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { setTherapeuteDailyStatus } from "./daily-status-actions";
+import { updateGuidesLumiere } from "./gl-action";
 
 export type DnDTherapeute = {
   svlbh_id: string;
@@ -50,7 +51,10 @@ export function TherapeutesDnDZones({
   initial: DnDTherapeute[];
   mySvlbhId?: string;
   isOwner: boolean;
-  renderCard: (t: DnDTherapeute, ctx: { isMe: boolean; isDragging: boolean }) => React.ReactNode;
+  renderCard: (
+    t: DnDTherapeute,
+    ctx: { isMe: boolean; isDragging: boolean; bumpGL: (svlbhId: string, delta: 1 | -1) => void },
+  ) => React.ReactNode;
 }) {
   const [items, setItems] = useState<DnDTherapeute[]>(initial);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -116,6 +120,34 @@ export function TherapeutesDnDZones({
     });
   }
 
+  // bumpGL — update optimiste du compteur GL (collaboratif Cercle).
+  // Met à jour items localement → le total se recalcule instantanément.
+  // Server action en transition ; rollback sur erreur.
+  function bumpGL(svlbhId: string, delta: 1 | -1) {
+    const before = items.find((t) => t.svlbh_id === svlbhId);
+    if (!before) return;
+    const next = Math.max(0, (before.guides_lumiere ?? 0) + delta);
+    if (next === (before.guides_lumiere ?? 0)) return;
+    setItems((prev) =>
+      prev.map((t) => (t.svlbh_id === svlbhId ? { ...t, guides_lumiere: next } : t)),
+    );
+    const fd = new FormData();
+    fd.set("svlbh_id", svlbhId);
+    fd.set("delta", String(delta));
+    startTransition(() => {
+      updateGuidesLumiere(fd).catch((err) => {
+        console.error("[gl] rollback", err);
+        setItems((prev) =>
+          prev.map((t) =>
+            t.svlbh_id === svlbhId
+              ? { ...t, guides_lumiere: before.guides_lumiere ?? 0 }
+              : t,
+          ),
+        );
+      });
+    });
+  }
+
   const actives = items.filter((t) => t.status === "active");
   const hidden = items.filter((t) => t.status === "hidden");
   const draggingItem = draggingId ? items.find((t) => t.svlbh_id === draggingId) : null;
@@ -133,7 +165,7 @@ export function TherapeutesDnDZones({
             id={t.svlbh_id}
             canMove={canMove(t.svlbh_id)}
           >
-            {renderCard(t, { isMe: t.svlbh_id === mySvlbhId, isDragging: false })}
+            {renderCard(t, { isMe: t.svlbh_id === mySvlbhId, isDragging: false, bumpGL })}
           </DraggableCard>
         ))}
       </DropZone>
@@ -159,7 +191,7 @@ export function TherapeutesDnDZones({
             id={t.svlbh_id}
             canMove={canMove(t.svlbh_id)}
           >
-            {renderCard(t, { isMe: t.svlbh_id === mySvlbhId, isDragging: false })}
+            {renderCard(t, { isMe: t.svlbh_id === mySvlbhId, isDragging: false, bumpGL })}
           </DraggableCard>
         ))}
       </DropZone>
