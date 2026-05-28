@@ -36,6 +36,7 @@ export type DnDTherapeute = {
   status: "active" | "hidden" | "formation" | "parcours-passif" | "cercle-akashique";
   attention_color: string | null;
   attention_steps: number | null;
+  guides_lumiere: number;
 };
 
 type ZoneKey = "active" | "hidden";

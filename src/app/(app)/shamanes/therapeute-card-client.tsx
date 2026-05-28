@@ -4,6 +4,7 @@
 // DEC Patrick 2026-05-18.
 
 import { setMyDailyStatus } from "./daily-status-actions";
+import { updateGuidesLumiere } from "./gl-action";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { DYNAMIQUE_AXIS_TONE, type DynamiqueChip } from "@/lib/cercle/dynamiques";
@@ -155,6 +156,48 @@ export function TherapeuteCardClient({
           </button>
         </form>
       ) : null}
+
+      {/* GL — Guides de Lumière, géré collectivement par les membres du Cercle
+          (gate côté server : updateGuidesLumiere refuse si non-membre). */}
+      <div
+        className="mt-auto flex items-center justify-end pt-1"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <form
+          action={updateGuidesLumiere}
+          className="flex items-center gap-1"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <input type="hidden" name="svlbh_id" value={t.svlbh_id} />
+          <button
+            type="submit"
+            name="delta"
+            value="-1"
+            disabled={(t.guides_lumiere ?? 0) === 0}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="flex h-5 w-5 items-center justify-center rounded border border-violet-200 bg-white text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-30"
+            title="−1 GL"
+          >
+            −
+          </button>
+          <span
+            className="rounded-full bg-violet-100 px-2 py-0.5 font-mono text-[11px] font-bold text-violet-900"
+            title="Guides de Lumière — compteur collaboratif (modifiable par tout membre du Cercle)"
+          >
+            GL {t.guides_lumiere ?? 0}
+          </span>
+          <button
+            type="submit"
+            name="delta"
+            value="1"
+            onPointerDown={(e) => e.stopPropagation()}
+            className="flex h-5 w-5 items-center justify-center rounded border border-violet-200 bg-white text-violet-700 transition hover:bg-violet-50"
+            title="+1 GL"
+          >
+            +
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
