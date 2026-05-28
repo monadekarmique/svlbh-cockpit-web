@@ -32,8 +32,8 @@ export async function setMyDailyStatus(formData: FormData) {
   const status = String(formData.get("status") ?? "");
   if (!VALID_DAILY_STATUS.has(status)) throw new Error("status invalide");
   const { sb, svlbhId, stx } = await getMe();
-  if (!["ST4", "ST5", "ST6"].includes(stx ?? "")) {
-    throw new Error("Réservé aux thérapeutes ST4+");
+  if (!["ST2", "ST3", "ST4", "ST5", "ST6"].includes(stx ?? "")) {
+    throw new Error("Réservé aux membres du Cercle (ST2+)");
   }
   const { error } = await sb
     .from("praticienne_daily_status")

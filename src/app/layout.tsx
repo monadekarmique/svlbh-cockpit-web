@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "SVLBH Cockpit",
-  description: "Cockpit Routines Cercle de Lumière — praticiennes ST4+",
+  description: "Cockpit Routines Cercle de Lumière — membres du Cercle (ST2+, choisi·es par le Cercle, droit de veto Patrick)",
   appleWebApp: {
     capable: true,
     title: "SVLBH Cockpit",

@@ -79,12 +79,17 @@ export default async function ShamanesPage() {
   const isOwner = myStx === "ST6";
   const canEditFelt = myStx === "ST4" || myStx === "ST5" || myStx === "ST6";
 
-  // 1. Toutes les thérapeutes ST4+ ACTIVE depuis la DB (plus de Make)
+  // 1. Membres du Cercle de Lumière (DEC Patrick 2026-05-28) :
+  //    stx ∈ ST2..ST6 ∩ cercle_lumiere_sr=true ∩ cercle_veto=false ∩ ACTIVE.
+  //    Une thérapeute peut être membre dès ST2+, choisie par le Cercle,
+  //    avec droit de veto Patrick (colonne cercle_veto).
   const { data: therapeutesRaw } = await sb
     .from("praticienne_profile")
     .select("svlbh_id, first_name, last_name, code_praticien, stx, tx, capacity_anchor, cercle_lumiere_sr")
     .eq("pro_status", "ACTIVE")
-    .in("stx", ["ST4", "ST5", "ST6"])
+    .eq("cercle_lumiere_sr", true)
+    .eq("cercle_veto", false)
+    .in("stx", ["ST2", "ST3", "ST4", "ST5", "ST6"])
     .order("code_praticien", { ascending: true, nullsFirst: false });
 
   // 1bis. Dynamiques SVLBH attribuées à chaque praticienne (DEC Patrick 2026-05-20)
@@ -314,7 +319,7 @@ export default async function ShamanesPage() {
             👥 Thérapeutes SVLBH du Cercle
           </h1>
           <p className="mt-1 text-sm text-neutral-700">
-            {therapeutes.length} thérapeute{therapeutes.length > 1 ? "s" : ""} ST4+ ·{" "}
+            {therapeutes.length} membre{therapeutes.length > 1 ? "s" : ""} du Cercle (ST2+) ·{" "}
             {activesTherapeutes.length} active{activesTherapeutes.length > 1 ? "s" : ""},{" "}
             {hiddenTherapeutes.length} cachée{hiddenTherapeutes.length > 1 ? "s" : ""} aujourd&apos;hui
           </p>
@@ -377,10 +382,10 @@ export default async function ShamanesPage() {
         </div>
       </header>
 
-      {/* Section 0 : Soins en commun ST4+ du Cercle SR (≥ 2 contributeurs) */}
+      {/* Section 0 : Soins en commun des membres du Cercle (≥ 2 contributeurs) */}
       <section className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
         <h2 className="text-base font-semibold text-emerald-900">
-          🌿 Soins en commun des thérapeutes SVLBH ST4+ du Cercle SR ({soinsCommuns.length})
+          🌿 Soins en commun des thérapeutes du Cercle de Lumière ({soinsCommuns.length})
         </h2>
         <SoinsCommunsList
           items={soinsCommuns as SoinCommun[]}
