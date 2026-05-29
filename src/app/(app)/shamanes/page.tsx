@@ -529,10 +529,11 @@ async function ApprenantesDnDSection() {
   const items: DnDApprenante[] = APPRENANTES.map((a) => {
     const db = dbByName.get(a.name);
     const dbTier = db?.tier;
-    const effectiveTier = (dbTier === "st1-active" || dbTier === "formation" || dbTier === "parcours-passif" || dbTier === "cercle-akashique")
-      ? dbTier
-      : (a.tier === "st1-active" || a.tier === "formation" || a.tier === "parcours-passif" || a.tier === "cercle-akashique")
-      ? a.tier
+    const validTiers = new Set(["st3-active", "st1-active", "formation", "parcours-passif", "cercle-akashique"]);
+    const effectiveTier = dbTier && validTiers.has(dbTier)
+      ? (dbTier as "st3-active" | "st1-active" | "formation" | "parcours-passif" | "cercle-akashique")
+      : validTiers.has(a.tier)
+      ? (a.tier as "st3-active" | "st1-active" | "formation" | "parcours-passif" | "cercle-akashique")
       : "formation";
     // UUIDv5 déterministe pour les apprenantes statiques (pas d'svlbh_id réel
     // en DB). Permet de stocker leurs attributions DESA dans la même table

@@ -22,7 +22,7 @@ export type DnDApprenante = {
   /** UUIDv5 déterministe (cf. apprenanteSvlbhId) — clé pour les
    *  attributions DESA. Pas un vrai svlbh_id en DB. */
   svlbh_id: string;
-  tier: "st1-active" | "formation" | "parcours-passif" | "cercle-akashique";
+  tier: "st3-active" | "st1-active" | "formation" | "parcours-passif" | "cercle-akashique";
   emoji?: string;
   description?: string | null;
   niveaux_bloques?: number | null;
@@ -47,12 +47,15 @@ export type DnDApprenante = {
   nsb_familial?: { count: number; description: string };
 };
 
-type ZoneKey = "st1-active" | "formation" | "parcours-passif" | "cercle-akashique";
+type ZoneKey = "st3-active" | "st1-active" | "formation" | "parcours-passif" | "cercle-akashique";
 
+// Ordre : ST3 actives en haut, puis ST2, puis ST1, puis les shamanes
+// passives, puis ex-passives. DEC Patrick 2026-05-29.
 const ZONES: Array<{ key: ZoneKey; emoji: string; title: string }> = [
-  { key: "st1-active", emoji: "🌟", title: "Apprenantes ST1 actives" },
+  { key: "st3-active", emoji: "🌟", title: "Apprenantes ST3 actives" },
   { key: "formation", emoji: "🌱", title: "Apprenantes ST2 actives" },
-  { key: "parcours-passif", emoji: "💤", title: "Shamanes passives de Cercles akashiques actifs" },
+  { key: "st1-active", emoji: "🌱", title: "Apprenantes ST1 actives" },
+  { key: "parcours-passif", emoji: "💤", title: "Apprenantes ST2 Passives" },
   { key: "cercle-akashique", emoji: "🌌", title: "Shamanes du Cercle akashique ex-Shamanes passives" },
 ];
 

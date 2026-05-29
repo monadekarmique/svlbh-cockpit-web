@@ -7,7 +7,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-const VALID_TIERS = new Set(["st1-active", "formation", "parcours-passif", "cercle-akashique"]);
+const VALID_TIERS = new Set(["st3-active", "st1-active", "formation", "parcours-passif", "cercle-akashique"]);
 
 export async function setApprenanteTier(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();

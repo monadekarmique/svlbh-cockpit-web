@@ -17,6 +17,7 @@ export type ShamaneRole =
  * - t3-en-attente : ST3 en cours de certification (legacy, conservé pour compat)
  */
 export type ParticipantTier =
+  | "st3-active"
   | "st1-active"
   | "formation"
   | "parcours-passif"
@@ -111,9 +112,10 @@ export const APPRENANTES: Participant[] = [
 ];
 
 export const TIER_LABEL: Record<ParticipantTier, string> = {
+  "st3-active": "Apprenante ST3 active",
   "st1-active": "Apprenante ST1 active",
   formation: "Apprenante ST2 active",
-  "parcours-passif": "Shamane passive de Cercles akashiques actifs",
+  "parcours-passif": "Apprenante ST2 Passive",
   "cercle-akashique": "Shamane du Cercle akashique (ex-passive)",
   "t3-en-attente": "ST3 en attente",
   t0: "ST0 · Lead",
@@ -121,6 +123,7 @@ export const TIER_LABEL: Record<ParticipantTier, string> = {
 };
 
 export const TIER_COLOR: Record<ParticipantTier, string> = {
+  "st3-active": "#d97706", // amber — maîtrise en chemin
   "st1-active": "#0ea5e9", // sky — naissance
   formation: "#10b981", // emerald — en mouvement
   "parcours-passif": "#94a3b8", // slate — en pause
