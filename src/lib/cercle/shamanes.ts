@@ -116,7 +116,7 @@ export const TIER_LABEL: Record<ParticipantTier, string> = {
   "st1-active": "Apprenante ST1 active",
   formation: "Apprenante ST2 active",
   "parcours-passif": "Apprenante ST2 Passive",
-  "cercle-akashique": "Shamane du Cercle akashique (ex-passive)",
+  "cercle-akashique": "Apprenante ST1 Passive",
   "t3-en-attente": "ST3 en attente",
   t0: "ST0 · Lead",
   t2: "ST2 · myShaman (Formation)",

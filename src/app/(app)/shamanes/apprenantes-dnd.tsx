@@ -56,7 +56,7 @@ const ZONES: Array<{ key: ZoneKey; emoji: string; title: string }> = [
   { key: "formation", emoji: "🌱", title: "Apprenantes ST2 actives" },
   { key: "st1-active", emoji: "🌱", title: "Apprenantes ST1 actives" },
   { key: "parcours-passif", emoji: "💤", title: "Apprenantes ST2 Passives" },
-  { key: "cercle-akashique", emoji: "🌌", title: "Shamanes du Cercle akashique ex-Shamanes passives" },
+  { key: "cercle-akashique", emoji: "🌌", title: "Apprenantes ST1 Passives" },
 ];
 
 function CerclesAkashiquesChips({
