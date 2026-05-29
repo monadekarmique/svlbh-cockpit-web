@@ -104,7 +104,7 @@ export function TherapeutesDnDZones({
       </div>
 
       <Zone
-        title={`🌙 Thérapeutes cachées (${hidden.length})`}
+        title={`🌙 Apprenantes cachées (${hidden.length})`}
         emptyHint="Aucune cachée aujourd'hui. Utilise le bouton « Me cacher » sur ta carte."
       >
         {hidden.map((t) => (
