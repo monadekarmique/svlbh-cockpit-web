@@ -3,11 +3,13 @@
 // Carte thérapeute (extraite de page.tsx en client component pour le DnD).
 // DEC Patrick 2026-05-18.
 
+import { useState } from "react";
 import { setMyDailyStatus } from "./daily-status-actions";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { DYNAMIQUE_AXIS_TONE, type DynamiqueChip } from "@/lib/cercle/dynamiques";
 import type { DesaAtom, DesaCapacities } from "@/lib/cercle/desa";
+import { DesaEditModal } from "./desa-edit-modal";
 
 // DESA — Dark Entities & Spirit Attachments. Bloc top-right de la carte
 // (sous NSB). Affiche le sigle DESA si `desa_active=true`, suivi des chips
@@ -17,17 +19,40 @@ function DesaBlock({
   active,
   capacities,
   catalog,
+  onOpenEdit,
 }: {
   active: boolean;
   capacities: DesaCapacities;
   catalog: Record<string, DesaAtom>;
+  onOpenEdit?: () => void;
 }) {
   if (!active) return null;
+  const sigle = (
+    <span className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900">
+      DESA
+    </span>
+  );
   return (
-    <div className="flex shrink-0 flex-col items-end gap-1" title="DESA — Dark Entities & Spirit Attachments (capacités de libération)">
-      <span className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900">
-        DESA
-      </span>
+    <div
+      className="flex shrink-0 flex-col items-end gap-1"
+      title="DESA — Dark Entities & Spirit Attachments (capacités de libération)"
+    >
+      {onOpenEdit ? (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenEdit();
+          }}
+          className="rounded-md transition hover:ring-2 hover:ring-indigo-300"
+          title="Attribuer les capacités DESA (Owner)"
+        >
+          {sigle}
+        </button>
+      ) : (
+        sigle
+      )}
       {capacities.length > 0 ? (
         <div className="flex flex-wrap justify-end gap-0.5">
           {capacities.map((code) => {
@@ -137,6 +162,9 @@ export function TherapeuteCardClient({
 
   const displayName = `${t.first_name ?? ""} ${t.last_name ?? ""}`.trim() || "—";
 
+  // Modal d'attribution des capacités DESA — Owner ST6 uniquement.
+  const [desaOpen, setDesaOpen] = useState(false);
+
   return (
     <div
       className="flex flex-col gap-2 rounded-xl border bg-white p-4 shadow-sm"
@@ -186,6 +214,7 @@ export function TherapeuteCardClient({
               active={t.desa_active}
               capacities={desaCapacities}
               catalog={desaCatalog}
+              onOpenEdit={isOwner ? () => setDesaOpen(true) : undefined}
             />
           </div>
         ) : null}
@@ -254,6 +283,15 @@ export function TherapeuteCardClient({
           </button>
         </div>
       </div>
+
+      <DesaEditModal
+        open={desaOpen}
+        onClose={() => setDesaOpen(false)}
+        svlbhId={t.svlbh_id}
+        praticienneName={displayName}
+        initialCapacities={desaCapacities}
+        catalog={desaCatalog}
+      />
     </div>
   );
 }
