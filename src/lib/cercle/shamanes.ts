@@ -161,6 +161,7 @@ export const SUPERVISORS_VIRTUAL: SupervisorVirtual[] = [
     role_label: "Superviseur méthodologique familial",
     emoji: "🔬",
     color: "#1d4ed8", // bleu (n°1 bleu)
+    bdec_karmic: ["DEII", "Dra"],
   },
   {
     cercle_number: null,

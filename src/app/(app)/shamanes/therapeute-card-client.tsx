@@ -205,13 +205,16 @@ export function TherapeuteCardClient({
           </div>
         </div>
 
-        {/* Colonne top-right : NSB (si présent, tous les users) + sigle DESA
-            (Owner only — outil admin). DEC Patrick 2026-05-29. */}
-        {(t.attention_steps != null || isOwner) ? (
+        {/* Colonne top-right : NSB + sigle DESA. Visible si NSB présent
+            OU si l'utilisateur peut éditer (Owner ST6 OU Cercle SR).
+            DEC Patrick 2026-05-29 : "Toutes les membres du cercle peuvent
+            jouer avec ces symboles." */}
+        {(t.attention_steps != null || canWriteCachees) ? (
           <div className="flex flex-shrink-0 flex-col items-end gap-1">
-            {/* NSB éditable inline (Owner only). Non-Owner voit la chip
-                read-only si valeur présente, rien sinon. DEC Patrick 2026-05-29. */}
-            {isOwner ? (
+            {/* NSB éditable inline (Owner ST6 OU Cercle SR). Non-membre
+                voit la chip read-only si valeur présente, rien sinon.
+                DEC Patrick 2026-05-29. */}
+            {canWriteCachees ? (
               nsbEditing ? (
                 <form
                   action={setTherapeuteNSB}
@@ -282,7 +285,7 @@ export function TherapeuteCardClient({
               }
               const desa = (
                 <DesaBlock
-                  onOpenEdit={isOwner ? () => setDesaOpen(true) : undefined}
+                  onOpenEdit={canWriteCachees ? () => setDesaOpen(true) : undefined}
                 />
               );
               if (chunks.length === 0) return desa;
@@ -467,6 +470,7 @@ export function TherapeuteCardClient({
               onPointerDown={(e) => e.stopPropagation()}
             >
               <input type="hidden" name="svlbh_id" value={t.svlbh_id} />
+              <input type="hidden" name="expected_updated_at" value={t.guides_lumiere_updated_at} />
               <input
                 type="number"
                 name="value"

@@ -24,6 +24,10 @@ export type DnDTherapeute = {
   attention_color: string | null;
   attention_steps: number | null;
   guides_lumiere: number;
+  /** Timestamp version pour OCC (saisie absolue GL). DEC Patrick 2026-05-29. */
+  guides_lumiere_updated_at: string;
+  /** Timestamp version pour OCC NSB thérapeute (praticienne_daily_status). */
+  daily_status_updated_at: string | null;
 };
 
 export function TherapeutesDnDZones({

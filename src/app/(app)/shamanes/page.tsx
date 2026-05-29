@@ -49,6 +49,8 @@ type Therapeute = {
   attention_color: string | null;
   attention_steps: number | null;
   guides_lumiere: number;
+  guides_lumiere_updated_at: string;
+  daily_status_updated_at: string | null;
 };
 
 // Si updated_at < today (Europe/Zurich), on considère un reset implicite
@@ -91,7 +93,7 @@ export default async function ShamanesPage() {
   //    avec droit de veto Patrick (colonne cercle_veto).
   const { data: therapeutesRaw } = await sb
     .from("praticienne_profile")
-    .select("svlbh_id, first_name, last_name, code_praticien, stx, tx, capacity_anchor, cercle_lumiere_sr, desa_active, guides_lumiere")
+    .select("svlbh_id, first_name, last_name, code_praticien, stx, tx, capacity_anchor, cercle_lumiere_sr, desa_active, guides_lumiere, guides_lumiere_updated_at")
     .eq("pro_status", "ACTIVE")
     .eq("cercle_lumiere_sr", true)
     .eq("cercle_veto", false)
@@ -161,6 +163,7 @@ export default async function ShamanesPage() {
     svlbh_id: string; status: string; updated_at: string;
     attention_color: string | null; attention_steps: number | null;
   };
+  // DailyStatusRow updated_at déjà inclus pour OCC NSB thérapeute.
   const dailyMap = new Map<string, DailyRow>(
     ((dailyRaw ?? []) as DailyRow[]).map((r) => [r.svlbh_id, r]),
   );
@@ -203,6 +206,7 @@ export default async function ShamanesPage() {
     capacity_anchor: string | null; cercle_lumiere_sr: boolean | null;
     desa_active: boolean | null;
     guides_lumiere: number | null;
+    guides_lumiere_updated_at: string | null;
   }>).map((p) => {
     const d = dailyMap.get(p.svlbh_id);
     const somme = niveauxSomme.get(p.svlbh_id) ?? 0;
@@ -226,6 +230,8 @@ export default async function ShamanesPage() {
       attention_color: d?.attention_color ?? null,
       attention_steps: niveauAffiche,
       guides_lumiere: p.guides_lumiere ?? 0,
+      guides_lumiere_updated_at: p.guides_lumiere_updated_at ?? new Date().toISOString(),
+      daily_status_updated_at: d?.updated_at ?? null,
     };
   });
 

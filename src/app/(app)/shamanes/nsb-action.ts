@@ -18,10 +18,13 @@ async function assertOwner() {
   if (!user) throw new Error("Non authentifié");
   const { data: me } = await sb
     .from("praticienne_profile")
-    .select("svlbh_id, stx")
+    .select("svlbh_id, stx, cercle_lumiere_sr")
     .eq("supabase_user_id", user.id)
     .maybeSingle();
-  if (me?.stx !== "ST6") throw new Error("Réservé à l'Owner ST6");
+  // DEC Patrick 2026-05-29 : Cercle SR peut aussi éditer le NSB.
+  if (me?.stx !== "ST6" && me?.cercle_lumiere_sr !== true) {
+    throw new Error("Réservé à l'Owner ou aux membres du Cercle SR");
+  }
   return { sb, me };
 }
 

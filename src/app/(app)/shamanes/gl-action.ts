@@ -7,6 +7,13 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
+/** Résultat unifié des Server Actions OCC. `conflict=true` indique qu'une
+ *  autre instance a écrit avant nous ; le client doit refresh + ré-essayer.
+ *  DEC Patrick 2026-05-29. */
+export type ActionResult =
+  | { ok: true }
+  | { ok: false; error: string; conflict?: boolean };
+
 const CERCLE_STX = ["ST2", "ST3", "ST4", "ST5", "ST6"] as const;
 
 export async function updateGuidesLumiere(formData: FormData) {
@@ -55,18 +62,24 @@ export async function updateGuidesLumiere(formData: FormData) {
 
   const { error } = await sb
     .from("praticienne_profile")
-    .update({ guides_lumiere: next })
+    .update({
+      guides_lumiere: next,
+      guides_lumiere_updated_at: new Date().toISOString(),
+    })
     .eq("svlbh_id", targetSvlbhId);
   if (error) throw new Error(`GL : ${error.message}`);
 
   revalidatePath("/shamanes");
 }
 
-// Set absolu — Owner ST6 only. Permet à Patrick d'ajuster directement la
-// valeur sans cliquer +/− des centaines de fois. DEC Patrick 2026-05-29.
+/** Set absolu GL — Owner ST6, avec OCC sur guides_lumiere_updated_at.
+ *  formData attend `expected_updated_at` (ISO). Si la valeur a changé
+ *  côté DB entre lecture client et submit, throw "CONFLIT" — le caller
+ *  refresh et l'user re-saisit. DEC Patrick 2026-05-29. */
 export async function setGuidesLumiereAbsolute(formData: FormData) {
   const targetSvlbhId = String(formData.get("svlbh_id") ?? "");
   const rawValue = String(formData.get("value") ?? "");
+  const expected = String(formData.get("expected_updated_at") ?? "");
   const value = parseInt(rawValue, 10);
   if (!targetSvlbhId) throw new Error("svlbh_id requis");
   if (!Number.isFinite(value) || value < 0) {
@@ -88,11 +101,19 @@ export async function setGuidesLumiereAbsolute(formData: FormData) {
     throw new Error("Réservé à l'Owner ST6");
   }
 
-  const { error } = await sb
+  // OCC : UPDATE conditionnel sur expected timestamp. Si 0 rows touchées,
+  // soit la row a disparu, soit elle a été modifiée entretemps.
+  let q = sb
     .from("praticienne_profile")
-    .update({ guides_lumiere: value })
+    .update({ guides_lumiere: value, guides_lumiere_updated_at: new Date().toISOString() })
     .eq("svlbh_id", targetSvlbhId);
+  if (expected) q = q.eq("guides_lumiere_updated_at", expected);
+  const { data: updated, error } = await q.select("svlbh_id");
   if (error) throw new Error(`GL set : ${error.message}`);
+  if (!updated || updated.length === 0) {
+    revalidatePath("/shamanes");
+    throw new Error("CONFLIT : GL modifié par quelqu'un d'autre. Page rafraîchie, ré-essaie.");
+  }
 
   revalidatePath("/shamanes");
 }
