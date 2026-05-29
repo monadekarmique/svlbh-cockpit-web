@@ -98,6 +98,9 @@ export const APPRENANTES: Participant[] = [
     },
   },
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
+  // Duplication de Paola pour Myriam Blal (apprenante ST2 passive).
+  // DEC Patrick 2026-05-29.
+  { name: "Myriam Blal", tier: "parcours-passif", emoji: "🪷" },
   {
     name: "Julie Bays", tier: "formation", emoji: "🌷", desa_active: true,
     nsb_familial: { count: 1, description: "Son compagnon" },
