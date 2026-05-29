@@ -285,6 +285,9 @@ export function TherapeuteCardClient({
           {isOwner && glEditing ? (
             <form
               action={setGuidesLumiereAbsolute}
+              // onSubmit ferme l'édition APRÈS dispatch de l'action serveur.
+              // Avec un bouton submit caché + handler Enter explicite,
+              // requestSubmit() est garanti d'invoquer l'action côté React.
               onSubmit={() => setGlEditing(false)}
               onPointerDown={(e) => e.stopPropagation()}
             >
@@ -300,13 +303,25 @@ export function TherapeuteCardClient({
                 onFocus={(e) => e.currentTarget.select()}
                 onBlur={(e) => e.currentTarget.form?.requestSubmit()}
                 onKeyDown={(e) => {
-                  if (e.key === "Escape") {
+                  if (e.key === "Enter") {
+                    // Enter explicite : requestSubmit() déclenche action +
+                    // onSubmit (fermeture). Sans ce handler, Enter peut ne
+                    // pas soumettre selon la version React/browser.
+                    // DEC Patrick 2026-05-29.
+                    e.preventDefault();
+                    e.currentTarget.form?.requestSubmit();
+                  } else if (e.key === "Escape") {
                     e.preventDefault();
                     setGlEditing(false);
                   }
                 }}
                 className="w-20 rounded-full bg-violet-50 px-2 py-0.5 text-center font-mono text-[11px] font-bold text-violet-900 ring-1 ring-violet-400 focus:outline-none focus:ring-2"
               />
+              {/* Submit caché — ceinture+bretelles pour garantir que Enter
+                  soumette le form même si onKeyDown rate. */}
+              <button type="submit" className="sr-only" tabIndex={-1}>
+                Sauver
+              </button>
             </form>
           ) : isOwner ? (
             <button
