@@ -170,7 +170,7 @@ export function TherapeuteCardClient({
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-neutral-900">
+            <p className="break-words font-semibold text-neutral-900">
               {displayName}
               {isMe ? <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-900">moi</span> : null}
               {t.cercle_lumiere_sr ? <span className="ml-1 text-[10px]" title="Cercle SR">◉</span> : null}

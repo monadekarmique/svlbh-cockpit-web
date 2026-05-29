@@ -31,7 +31,6 @@ export function ApprenanteCacheeCard({
 }) {
   const [desaOpen, setDesaOpen] = useState(false);
   const [bdecOpen, setBdecOpen] = useState(false);
-  const [roleEditing, setRoleEditing] = useState(false);
 
   const bdecCodes = new Set(
     Object.values(desaCatalog).filter((c) => c.system === "BDEC").map((c) => c.code),
@@ -43,13 +42,12 @@ export function ApprenanteCacheeCard({
     <div className="rounded-lg border border-dashed border-neutral-300 bg-neutral-50/60 p-2 text-[11px]">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-neutral-700">
+          <p className="break-words font-semibold text-neutral-700">
             🫥 Apprenante cachée sur {hostName}
           </p>
-          {roleEditing && canWrite ? (
+          {canWrite ? (
             <form
               action={setApprenanteCacheeRole}
-              onSubmit={() => setRoleEditing(false)}
               className="mt-1 flex items-center gap-1"
             >
               <input type="hidden" name="id" value={cachee.id} />
@@ -57,39 +55,31 @@ export function ApprenanteCacheeCard({
                 type="text"
                 name="role"
                 defaultValue={cachee.role ?? ""}
-                autoFocus
                 onFocus={(e) => e.currentTarget.select()}
-                onBlur={(e) => e.currentTarget.form?.requestSubmit()}
+                onBlur={(e) => {
+                  // Sauve uniquement si la valeur a changé pour éviter les
+                  // submits inutiles à chaque blur.
+                  if (e.currentTarget.value !== (cachee.role ?? "")) {
+                    e.currentTarget.form?.requestSubmit();
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     e.currentTarget.form?.requestSubmit();
-                  } else if (e.key === "Escape") {
-                    e.preventDefault();
-                    setRoleEditing(false);
                   }
                 }}
-                className="w-full rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder="Rôle de l'apprenante cachée"
+                className="w-full min-w-0 rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                placeholder="✏️ Rôle (Enter pour sauver)"
               />
               <button type="submit" className="sr-only" tabIndex={-1}>
                 Sauver
               </button>
             </form>
           ) : (
-            <button
-              type="button"
-              disabled={!canWrite}
-              onClick={() => canWrite && setRoleEditing(true)}
-              className={
-                "mt-0.5 text-left text-[10px] " +
-                (cachee.role ? "text-neutral-700" : "italic text-neutral-400") +
-                (canWrite ? " hover:underline" : "")
-              }
-              title={canWrite ? "Cliquer pour éditer le rôle" : undefined}
-            >
-              {cachee.role ?? "rôle non défini"}
-            </button>
+            <p className="mt-0.5 break-words text-[10px] text-neutral-700">
+              {cachee.role ?? <span className="italic text-neutral-400">rôle non défini</span>}
+            </p>
           )}
         </div>
         <div className="flex flex-shrink-0 flex-col items-end gap-1">
