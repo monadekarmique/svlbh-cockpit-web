@@ -303,6 +303,8 @@ function ApprenanteCardInner({
                 </button>
               );
               if (chunks.length === 0) return desaButton;
+              // DESA reste ancré sur la 1ʳᵉ ligne (haut de la carte) ; les
+              // chunks suivants wrap en-dessous, à gauche, sans DESA.
               return chunks.map((row, idx) => (
                 <div key={idx} className="flex items-center gap-1">
                   {row.map((code) => (
@@ -314,7 +316,7 @@ function ApprenanteCardInner({
                       {code}
                     </span>
                   ))}
-                  {idx === chunks.length - 1 ? desaButton : null}
+                  {idx === 0 ? desaButton : null}
                 </div>
               ));
             })()}
