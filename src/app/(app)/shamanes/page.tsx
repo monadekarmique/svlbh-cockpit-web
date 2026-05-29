@@ -22,6 +22,7 @@ import { apprenanteSvlbhId } from "@/lib/cercle/apprenante-uuid";
 import { fetchDynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
 import { BacklogSidebar } from "./backlog-sidebar";
 import { SoinsCommunsList } from "./soins-communs-list";
+import { ShamanesAutoRefresh } from "./auto-refresh";
 import type { SoinCommun } from "./soins-communs-list";
 
 // Patrick svlbh_id pour mapper la carte virtuelle 754545 → ses cercles
@@ -352,6 +353,10 @@ export default async function ShamanesPage() {
 
   return (
     <div className="space-y-5">
+      {/* Auto-refresh 15s pour limiter les conflits multi-utilisateur
+          (router.refresh() ne wipe pas le state local des éditeurs). */}
+      <ShamanesAutoRefresh intervalMs={15000} />
+
       <nav className="relative flex items-center">
         <Link href="/dashboard" className="text-sm text-neutral-500 hover:text-neutral-900">
           ← Cockpit
