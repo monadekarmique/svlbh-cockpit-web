@@ -112,6 +112,9 @@ export const APPRENANTES: Participant[] = [
   },
   { name: "Sarah Bays", tier: "formation", emoji: "🌻", desa_active: true },
   { name: "Béatrice Pathey", tier: "cercle-akashique", emoji: "🌌" },
+  // Duplication de Béatrice Pathey pour Ildiko Togni-Kosma (apprenante
+  // ST1 Passive). DEC Patrick 2026-05-29.
+  { name: "Ildiko Togni-Kosma", tier: "cercle-akashique", emoji: "🌠" },
 ];
 
 export const TIER_LABEL: Record<ParticipantTier, string> = {
