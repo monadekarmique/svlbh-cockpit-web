@@ -367,6 +367,19 @@ export default async function ShamanesPage() {
         </a>
       </nav>
 
+      {/* Glossaire des acronymes utilisés sur la page (DEC Patrick 2026-05-29). */}
+      <details className="rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-[11px]">
+        <summary className="cursor-pointer font-semibold text-neutral-700">
+          ℹ️ Glossaire
+        </summary>
+        <dl className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
+          <div className="flex gap-2">
+            <dt className="font-mono font-bold text-rose-700">NSB</dt>
+            <dd className="text-neutral-700">Niveaux Shamaniques Bloqués</dd>
+          </div>
+        </dl>
+      </details>
+
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold tracking-tight text-blue-950">
