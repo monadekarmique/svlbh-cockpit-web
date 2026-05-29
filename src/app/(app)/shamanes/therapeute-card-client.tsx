@@ -7,7 +7,7 @@ import { useState } from "react";
 import { setMyDailyStatus } from "./daily-status-actions";
 import { setGuidesLumiereAbsolute } from "./gl-action";
 import { setTherapeuteNSB } from "./nsb-action";
-import { addApprenanteCachee, removeApprenanteCachee } from "./apprenante-cachee-action";
+import { addApprenanteCachee, removeApprenanteCachee, setApprenanteCacheeCount } from "./apprenante-cachee-action";
 import { ApprenanteCacheeCard, type CacheeData } from "./apprenante-cachee-card";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
@@ -148,6 +148,8 @@ export function TherapeuteCardClient({
   const [glEditing, setGlEditing] = useState(false);
   // Édition inline du NSB (Owner-only).
   const [nsbEditing, setNsbEditing] = useState(false);
+  // Édition inline du compteur Cachées (Owner ou Cercle SR).
+  const [cacheesEditing, setCacheesEditing] = useState(false);
 
   return (
     <div
@@ -361,12 +363,61 @@ export function TherapeuteCardClient({
               </button>
             </form>
           ) : null}
-          <span
-            className="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold text-neutral-700"
-            title="Apprenant.e.s cachées hébergées sur cette carte"
-          >
-            🫥 Cachées · {cachees.length}
-          </span>
+          {/* Pastille Cachées — click-to-edit pour saisir un compteur
+              absolu (clone GL). DEC Patrick 2026-05-29. */}
+          {canWriteCachees && cacheesEditing ? (
+            <form
+              action={setApprenanteCacheeCount}
+              onSubmit={() => setCacheesEditing(false)}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <input type="hidden" name="host_svlbh_id" value={t.svlbh_id} />
+              <input
+                type="number"
+                name="count"
+                defaultValue={cachees.length}
+                min={0}
+                autoFocus
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onFocus={(e) => e.currentTarget.select()}
+                onBlur={(e) => e.currentTarget.form?.requestSubmit()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.currentTarget.form?.requestSubmit();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setCacheesEditing(false);
+                  }
+                }}
+                className="w-16 rounded-full bg-neutral-100 px-2 py-0.5 text-center font-mono text-[11px] font-bold text-neutral-900 ring-1 ring-neutral-400 focus:outline-none focus:ring-2"
+              />
+              <button type="submit" className="sr-only" tabIndex={-1}>
+                Sauver
+              </button>
+            </form>
+          ) : canWriteCachees ? (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCacheesEditing(true);
+              }}
+              className="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold text-neutral-700 transition hover:ring-2 hover:ring-neutral-300"
+              title="Cliquer pour saisir un nombre exact de cachées"
+            >
+              🫥 Cachées · {cachees.length}
+            </button>
+          ) : (
+            <span
+              className="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold text-neutral-700"
+              title="Apprenant.e.s cachées hébergées sur cette carte"
+            >
+              🫥 Cachées · {cachees.length}
+            </span>
+          )}
           {canWriteCachees ? (
             <form
               action={addApprenanteCachee}

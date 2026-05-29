@@ -75,6 +75,53 @@ export async function removeApprenanteCachee(formData: FormData) {
   revalidatePath("/shamanes");
 }
 
+/** Fixe le nombre de cachées d'un hôte à une valeur cible (clone GL).
+ *  - target > current → INSERT (target - current) nouvelles rows.
+ *  - target < current → DELETE les rows aux display_order les plus élevés
+ *    + nettoie leurs DESA/BDEC capacities.
+ *  - target = 0 → tout supprimer.
+ *  DEC Patrick 2026-05-29. */
+export async function setApprenanteCacheeCount(formData: FormData) {
+  const hostSvlbhId = String(formData.get("host_svlbh_id") ?? "").trim();
+  if (!hostSvlbhId) throw new Error("host_svlbh_id requis");
+  const rawTarget = String(formData.get("count") ?? "").trim();
+  const target = Number(rawTarget);
+  if (!Number.isFinite(target) || target < 0) throw new Error("count doit être ≥ 0");
+  const targetInt = Math.round(target);
+
+  const { sb, me } = await assertCanWrite();
+
+  const { data: existing } = await sb
+    .from("apprenante_cachee")
+    .select("id, svlbh_id, display_order")
+    .eq("host_svlbh_id", hostSvlbhId)
+    .order("display_order", { ascending: true });
+  const current = (existing ?? []) as Array<{ id: string; svlbh_id: string; display_order: number }>;
+  const currentCount = current.length;
+
+  if (targetInt > currentCount) {
+    // INSERT diff
+    const toInsert = Array.from({ length: targetInt - currentCount }, (_, i) => ({
+      host_svlbh_id: hostSvlbhId,
+      display_order: (current[currentCount - 1]?.display_order ?? -1) + 1 + i,
+      created_by_svlbh_id: me.svlbh_id,
+    }));
+    const { error } = await sb.from("apprenante_cachee").insert(toInsert);
+    if (error) throw new Error(`Cachées (insert) : ${error.message}`);
+  } else if (targetInt < currentCount) {
+    // DELETE les (currentCount - targetInt) dernières (display_order top).
+    const toDelete = current.slice(targetInt); // garde les targetInt premières
+    const ids = toDelete.map((r) => r.id);
+    const svlbhIds = toDelete.map((r) => r.svlbh_id);
+    if (svlbhIds.length > 0) {
+      await sb.from("praticienne_desa_capacity").delete().in("svlbh_id", svlbhIds);
+    }
+    const { error } = await sb.from("apprenante_cachee").delete().in("id", ids);
+    if (error) throw new Error(`Cachées (delete) : ${error.message}`);
+  }
+  revalidatePath("/shamanes");
+}
+
 export async function setApprenanteCacheeRole(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("id requis");
