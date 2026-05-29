@@ -16,6 +16,8 @@ import type { DesaAtom } from "@/lib/cercle/desa";
 import { DesaEditModal } from "./desa-edit-modal";
 import { BdecGisantsModal } from "./bdec-gisants-modal";
 import { setApprenanteNSB } from "./nsb-action";
+import { addApprenanteCachee, removeApprenanteCachee, setApprenanteCacheeCount } from "./apprenante-cachee-action";
+import { ApprenanteCacheeCard, type CacheeData } from "./apprenante-cachee-card";
 
 export type DnDApprenante = {
   name: string;
@@ -45,6 +47,8 @@ export type DnDApprenante = {
   nsb_followers?: Array<{ name: string; cercle?: string }>;
   /** Pastille verte NSB familiales avec contexte. DEC Patrick 2026-05-29. */
   nsb_familial?: { count: number; description: string };
+  /** Apprenantes cachées hébergées par cette apprenante. DEC Patrick 2026-05-29. */
+  cachees?: CacheeData[];
 };
 
 type ZoneKey = "st3-active" | "st1-active" | "formation" | "parcours-passif" | "cercle-akashique";
@@ -102,10 +106,12 @@ export function ApprenantesDnD({
   initial,
   dhatuMeta,
   desaCatalog,
+  canWriteCachees = false,
 }: {
   initial: DnDApprenante[];
   dhatuMeta: Record<Dhatu, DhatuMeta>;
   desaCatalog: Record<string, DesaAtom>;
+  canWriteCachees?: boolean;
 }) {
   // Rendu statique : items = initial sans state local. Le drag inter-zones
   // n'est plus nécessaire (DEC Patrick 2026-05-29).
@@ -136,6 +142,7 @@ export function ApprenantesDnD({
                         color={c}
                         dhatuMeta={dhatuMeta}
                         desaCatalog={desaCatalog}
+                        canWriteCachees={canWriteCachees}
                       />
                     </li>
                   ))}
@@ -154,16 +161,20 @@ function ApprenanteCardInner({
   color,
   dhatuMeta,
   desaCatalog,
+  canWriteCachees = false,
 }: {
   a: DnDApprenante;
   color: string;
   dhatuMeta: Record<Dhatu, DhatuMeta>;
   desaCatalog: Record<string, DesaAtom>;
+  canWriteCachees?: boolean;
 }) {
   const memb = lookupMembership(a.name);
   const [desaOpen, setDesaOpen] = useState(false);
   const [bdecOpen, setBdecOpen] = useState(false);
   const [nsbEditing, setNsbEditing] = useState(false);
+  const [cacheesEditing, setCacheesEditing] = useState(false);
+  const cachees = a.cachees ?? [];
 
   // BDEC = système parallèle clone de DESA (consciences gisantes vertes,
   // 4 codes DEII/EP/Des/Dra). Ses codes karmiques s'affichent dans la
@@ -397,6 +408,112 @@ function ApprenanteCardInner({
                   <span className="font-normal text-rose-500">· {follower.cercle}</span>
                 ) : null}
               </span>
+            ))}
+          </div>
+        ) : null}
+        {/* Compteur "Apprenant.e.s cachées" + mini-cards (clone du
+            comportement carte thérapeute). Owner + Cercle SR.
+            DEC Patrick 2026-05-29. */}
+        <div
+          className="mt-2 flex items-center gap-1"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {canWriteCachees && cachees.length > 0 ? (
+            <form
+              action={removeApprenanteCachee}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <input type="hidden" name="id" value={cachees[cachees.length - 1].id} />
+              <button
+                type="submit"
+                onPointerDown={(e) => e.stopPropagation()}
+                className="flex h-5 w-5 items-center justify-center rounded border border-neutral-300 bg-white text-neutral-600 transition hover:bg-rose-50 hover:text-rose-600"
+                title="Retirer la dernière apprenante cachée"
+              >
+                −
+              </button>
+            </form>
+          ) : null}
+          {canWriteCachees && cacheesEditing ? (
+            <form
+              action={setApprenanteCacheeCount}
+              onSubmit={() => setCacheesEditing(false)}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <input type="hidden" name="host_svlbh_id" value={a.svlbh_id} />
+              <input
+                type="number"
+                name="count"
+                defaultValue={cachees.length}
+                min={0}
+                autoFocus
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onFocus={(e) => e.currentTarget.select()}
+                onBlur={(e) => e.currentTarget.form?.requestSubmit()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.currentTarget.form?.requestSubmit();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setCacheesEditing(false);
+                  }
+                }}
+                className="w-16 rounded-full bg-neutral-100 px-2 py-0.5 text-center font-mono text-[11px] font-bold text-neutral-900 ring-1 ring-neutral-400 focus:outline-none focus:ring-2"
+              />
+              <button type="submit" className="sr-only" tabIndex={-1}>
+                Sauver
+              </button>
+            </form>
+          ) : canWriteCachees ? (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCacheesEditing(true);
+              }}
+              className="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold text-neutral-700 transition hover:ring-2 hover:ring-neutral-300"
+              title="Cliquer pour saisir un nombre exact de cachées"
+            >
+              🫥 Cachées · {cachees.length}
+            </button>
+          ) : (
+            <span
+              className="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold text-neutral-700"
+              title="Apprenant.e.s cachées hébergées sur cette carte"
+            >
+              🫥 Cachées · {cachees.length}
+            </span>
+          )}
+          {canWriteCachees ? (
+            <form
+              action={addApprenanteCachee}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <input type="hidden" name="host_svlbh_id" value={a.svlbh_id} />
+              <button
+                type="submit"
+                onPointerDown={(e) => e.stopPropagation()}
+                className="flex h-5 w-5 items-center justify-center rounded border border-neutral-300 bg-white text-neutral-700 transition hover:bg-neutral-50"
+                title="Ajouter une apprenante cachée"
+              >
+                +
+              </button>
+            </form>
+          ) : null}
+        </div>
+        {cachees.length > 0 ? (
+          <div className="mt-1 flex flex-col gap-1">
+            {cachees.map((c) => (
+              <ApprenanteCacheeCard
+                key={c.id}
+                cachee={c}
+                hostName={a.name}
+                desaCatalog={desaCatalog}
+                canWrite={canWriteCachees}
+              />
             ))}
           </div>
         ) : null}

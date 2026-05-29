@@ -30,10 +30,15 @@ export async function setDesaCapacity(
 
   const { data: me } = await sb
     .from("praticienne_profile")
-    .select("svlbh_id, stx, pro_status")
+    .select("svlbh_id, stx, pro_status, cercle_lumiere_sr")
     .eq("supabase_user_id", user.id)
     .maybeSingle();
-  if (me?.stx !== "ST6") return { ok: false, error: "Réservé à l'Owner ST6" };
+  // DEC Patrick 2026-05-29 : Owner ST6 OU membre du Cercle SR peuvent
+  // attribuer/retirer les symboles DESA et BDEC sur n'importe quelle
+  // carte (thérapeute, apprenante, ou apprenante cachée).
+  if (me?.stx !== "ST6" && me?.cercle_lumiere_sr !== true) {
+    return { ok: false, error: "Réservé à l'Owner ou aux membres du Cercle SR" };
+  }
 
   // Lecture before pour calculer l'état combiné après modification.
   const { data: before } = await sb

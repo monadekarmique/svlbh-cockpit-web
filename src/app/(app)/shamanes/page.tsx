@@ -551,15 +551,17 @@ export default async function ShamanesPage() {
         </ul>
       </section>
 
-      {/* Apprenantes — 3 sous-sections avec DnD (Owner uniquement).
-          Tier persisté en DB (table apprenante_tier), source remplace
-          le tier statique du const APPRENANTES. */}
-      {isOwner ? <ApprenantesDnDSection /> : null}
+      {/* Apprenantes — visibles à tout membre du Cercle SR (Owner ou
+          cercle_lumiere_sr=true). DEC Patrick 2026-05-29 : "Toutes les
+          membres du cercle de lumière peuvent voir tous les membres du
+          cercle." Tier persisté en DB (apprenante_tier) ; static APPRENANTES
+          en fallback. */}
+      {canWriteCachees ? <ApprenantesDnDSection canWriteCachees={canWriteCachees} /> : null}
     </div>
   );
 }
 
-async function ApprenantesDnDSection() {
+async function ApprenantesDnDSection({ canWriteCachees }: { canWriteCachees: boolean }) {
   const sb = await createClient();
   const [dhatuMeta, desaCatalog, desaStateByPraticienne] = await Promise.all([
     getDhatuMeta(sb),
@@ -580,6 +582,30 @@ async function ApprenantesDnDSection() {
   const dbByName = new Map(
     ((data ?? []) as Array<{ name: string; tier: string; description: string | null; niveaux_bloques: number | null }>).map((r) => [r.name, r]),
   );
+  // Cachées par host_svlbh_id (incluant les svlbh_id synthétiques des apprenantes).
+  const { data: cacheesRaw } = await sb
+    .from("apprenante_cachee")
+    .select("id, svlbh_id, host_svlbh_id, role, display_order")
+    .order("host_svlbh_id", { ascending: true })
+    .order("display_order", { ascending: true });
+  const cacheesByHost: Record<string, Array<{
+    id: string; svlbh_id: string; role: string | null;
+    desa_granted: string[]; desa_karmic: string[];
+  }>> = {};
+  for (const c of (cacheesRaw ?? []) as Array<{
+    id: string; svlbh_id: string; host_svlbh_id: string;
+    role: string | null; display_order: number;
+  }>) {
+    if (!cacheesByHost[c.host_svlbh_id]) cacheesByHost[c.host_svlbh_id] = [];
+    const st = desaStateByPraticienne[c.svlbh_id];
+    cacheesByHost[c.host_svlbh_id].push({
+      id: c.id,
+      svlbh_id: c.svlbh_id,
+      role: c.role,
+      desa_granted: st?.granted ?? [],
+      desa_karmic: st?.karmic ?? [],
+    });
+  }
   const items: DnDApprenante[] = APPRENANTES.map((a) => {
     const db = dbByName.get(a.name);
     const dbTier = db?.tier;
@@ -609,6 +635,7 @@ async function ApprenantesDnDSection() {
       nsb_links: a.nsb_links,
       nsb_followers: nsbFollowersByName[a.name] ?? [],
       nsb_familial: a.nsb_familial,
+      cachees: cacheesByHost[svlbhId] ?? [],
     };
   });
   return (
@@ -616,6 +643,7 @@ async function ApprenantesDnDSection() {
       initial={items}
       dhatuMeta={dhatuMeta}
       desaCatalog={desaCatalog}
+      canWriteCachees={canWriteCachees}
     />
   );
 }
