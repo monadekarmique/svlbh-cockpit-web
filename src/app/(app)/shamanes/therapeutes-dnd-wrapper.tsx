@@ -21,6 +21,7 @@ export function TherapeutesDnDZonesWrapper({
   dhatuMeta,
   desaCatalog,
   desaStateByPraticienne,
+  nsbFollowersByName,
 }: {
   therapeutes: DnDTherapeute[];
   mySvlbhId?: string;
@@ -30,6 +31,7 @@ export function TherapeutesDnDZonesWrapper({
   dhatuMeta: Record<Dhatu, DhatuMeta>;
   desaCatalog: Record<string, DesaAtom>;
   desaStateByPraticienne: Record<string, DesaState>;
+  nsbFollowersByName: Record<string, Array<{ name: string; cercle?: string }>>;
 }) {
   return (
     <TherapeutesDnDZones
@@ -38,6 +40,7 @@ export function TherapeutesDnDZonesWrapper({
       isOwner={isOwner}
       renderCard={(t, { isMe, bumpGL }) => {
         const state = desaStateByPraticienne[t.svlbh_id];
+        const fullName = `${t.first_name ?? ""} ${t.last_name ?? ""}`.trim();
         return (
           <TherapeuteCardClient
             t={t}
@@ -49,6 +52,7 @@ export function TherapeutesDnDZonesWrapper({
             desaCatalog={desaCatalog}
             desaGranted={state?.granted ?? []}
             desaKarmic={state?.karmic ?? []}
+            nsbFollowers={nsbFollowersByName[fullName] ?? []}
             bumpGL={bumpGL}
           />
         );

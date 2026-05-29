@@ -111,7 +111,7 @@ function DynamiquesChips({ dynamiques }: { dynamiques: DynamiqueChip[] }) {
 }
 
 export function TherapeuteCardClient({
-  t, isMe, isOwner, dynamiques = [], membership = null, dhatuMeta, desaCatalog, desaGranted = [], desaKarmic = [], bumpGL,
+  t, isMe, isOwner, dynamiques = [], membership = null, dhatuMeta, desaCatalog, desaGranted = [], desaKarmic = [], nsbFollowers = [], bumpGL,
 }: {
   t: DnDTherapeute;
   isMe: boolean;
@@ -122,6 +122,7 @@ export function TherapeuteCardClient({
   desaCatalog: Record<string, DesaAtom>;
   desaGranted?: string[];
   desaKarmic?: string[];
+  nsbFollowers?: Array<{ name: string; cercle?: string }>;
   bumpGL?: (svlbhId: string, delta: 1 | -1) => void;
 }) {
   const targetStatusOnToggle = t.status === "active" ? "hidden" : "active";
@@ -169,6 +170,26 @@ export function TherapeuteCardClient({
             ) : null}
             <CerclesAkashiquesChips membership={membership} dhatuMeta={dhatuMeta} />
             <DynamiquesChips dynamiques={dynamiques} />
+            {nsbFollowers.length > 0 ? (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {nsbFollowers.map((f, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-rose-700"
+                    title={
+                      f.cercle
+                        ? `NSB de relation avec ${f.name} (cercle ${f.cercle})`
+                        : `NSB de relation avec ${f.name}`
+                    }
+                  >
+                    NSB · {f.name}
+                    {f.cercle ? (
+                      <span className="font-normal text-rose-500">· {f.cercle}</span>
+                    ) : null}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
 

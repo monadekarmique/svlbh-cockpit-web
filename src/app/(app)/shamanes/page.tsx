@@ -112,6 +112,17 @@ export default async function ShamanesPage() {
     getDesaCatalog(sb),
     fetchDesaState(sb),
   ]);
+  // 1sexies. Reverse map des liens NSB : pour chaque nom cité dans
+  // APPRENANTES[].nsb_links, on construit la liste des sources (followers).
+  // Ces pastilles s'affichent sur la carte de la personne CITÉE, pas sur
+  // celle de la source. DEC Patrick 2026-05-29.
+  const nsbFollowersByName: Record<string, Array<{ name: string; cercle?: string }>> = {};
+  for (const a of APPRENANTES) {
+    for (const link of a.nsb_links ?? []) {
+      if (!nsbFollowersByName[link.name]) nsbFollowersByName[link.name] = [];
+      nsbFollowersByName[link.name].push({ name: a.name, cercle: link.cercle });
+    }
+  }
 
   // 2. Daily status pour chaque
   const { data: dailyRaw } = await sb
@@ -433,6 +444,7 @@ export default async function ShamanesPage() {
         dhatuMeta={dhatuMeta}
         desaCatalog={desaCatalog}
         desaStateByPraticienne={desaStateByPraticienne}
+        nsbFollowersByName={nsbFollowersByName}
       />
 
       {/* Cartes virtuelles Patrick × 2 (superviseurs) — sous les thérapeutes
@@ -500,6 +512,14 @@ async function ApprenantesDnDSection() {
     getDesaCatalog(sb),
     fetchDesaState(sb),
   ]);
+  // Reverse map des liens NSB (cf. parent function pour la même logique).
+  const nsbFollowersByName: Record<string, Array<{ name: string; cercle?: string }>> = {};
+  for (const a of APPRENANTES) {
+    for (const link of a.nsb_links ?? []) {
+      if (!nsbFollowersByName[link.name]) nsbFollowersByName[link.name] = [];
+      nsbFollowersByName[link.name].push({ name: a.name, cercle: link.cercle });
+    }
+  }
   const { data } = await sb
     .from("apprenante_tier")
     .select("name, tier, description, niveaux_bloques");
@@ -532,6 +552,7 @@ async function ApprenantesDnDSection() {
       cx: a.cx,
       stx: a.stx,
       nsb_links: a.nsb_links,
+      nsb_followers: nsbFollowersByName[a.name] ?? [],
     };
   });
   return (

@@ -55,10 +55,12 @@ export const APPRENANTES: Participant[] = [
   {
     name: "Carine", tier: "st1-active", emoji: "🌸",
     tx: "T14", cx: "C15", stx: "ST1",
+    // Liens NSB de Carine (source) → rendus sur les cartes des
+    // superviseurs/anchors, pas sur la sienne. DEC Patrick 2026-05-29.
     nsb_links: [
-      { name: "Patrick" },
-      { name: "Julie", cercle: "Māṁsa" },
-      { name: "Léa", cercle: "Māṁsa" },
+      { name: "Patrick Bays" },
+      { name: "Julie Bays", cercle: "Māṁsa" },
+      { name: "Léa Bays", cercle: "Māṁsa" },
     ],
   },
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
