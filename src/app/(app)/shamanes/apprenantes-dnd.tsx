@@ -31,6 +31,9 @@ export type DnDApprenante = {
   emoji?: string;
   description?: string | null;
   niveaux_bloques?: number | null;
+  /** Sigle DESA visible top-right de la carte. Display only (pas de
+   *  modal — apprenantes sans svlbh_id). DEC Patrick 2026-05-29. */
+  desa_active?: boolean;
 };
 
 type ZoneKey = "formation" | "parcours-passif" | "cercle-akashique";
@@ -246,13 +249,25 @@ function ApprenanteCardInner({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className="font-semibold text-neutral-900">{a.name}</p>
-          {a.niveaux_bloques != null ? (
-            <span
-              className="flex-shrink-0 rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-mono text-[11px] font-bold text-rose-900"
-              title="NSB — Niveaux Shamaniques Bloqués (apprenante_tier.niveaux_bloques)"
-            >
-              NSB {a.niveaux_bloques}
-            </span>
+          {(a.niveaux_bloques != null || a.desa_active) ? (
+            <div className="flex flex-shrink-0 flex-col items-end gap-1">
+              {a.niveaux_bloques != null ? (
+                <span
+                  className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-mono text-[11px] font-bold text-rose-900"
+                  title="NSB — Niveaux Shamaniques Bloqués (apprenante_tier.niveaux_bloques)"
+                >
+                  NSB {a.niveaux_bloques}
+                </span>
+              ) : null}
+              {a.desa_active ? (
+                <span
+                  className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900"
+                  title="DESA — Dark Entities & Spirit Attachments (capacités de libération)"
+                >
+                  DESA
+                </span>
+              ) : null}
+            </div>
           ) : null}
         </div>
         <p className="mt-0.5 text-[11px] font-semibold" style={{ color }}>

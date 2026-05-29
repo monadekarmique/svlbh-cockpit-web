@@ -515,6 +515,7 @@ async function ApprenantesDnDSection() {
       emoji: a.emoji,
       description: db?.description ?? null,
       niveaux_bloques: db?.niveaux_bloques ?? null,
+      desa_active: a.desa_active ?? false,
     };
   });
   return <ApprenantesDnD initial={items} dhatuMeta={dhatuMeta} />;

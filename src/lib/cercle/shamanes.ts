@@ -30,22 +30,24 @@ export type Participant = {
   emoji?: string;
   /** Code praticien actif si la personne en a un. */
   code?: string;
+  /** Sigle DESA visible top-right de la carte (display only — pas de
+   *  capacités attribuables faute de svlbh_id). DEC Patrick 2026-05-29. */
+  desa_active?: boolean;
 };
 
 /** Apprenantes en parcours — visibles uniquement aux Owners.
- * NOTE : Irène (svlbh_id 9746f232, code 304) est ST4 mais DEC Patrick
- * 2026-05-18 demande son affichage AUSSI dans cette section, à côté de
- * Béatrice Pathey (doublon UI volontaire). Véronique reste hors d'ici.
- * DEC Patrick 2026-05-20 — 4 nouvelles Shamanes passives membres du
- * cercle Māṁsa (consultantes liées à Patrick en DB consultante_record). */
+ * DEC Patrick 2026-05-29 — Irène (#304 ST4) retirée d'ici : sa carte
+ * therapeute SR existante suffit (le doublon apprenante du 2026-05-18 est
+ * supprimé). DEC Patrick 2026-05-20 — Shamanes passives membres du cercle
+ * Māṁsa (consultantes liées à Patrick en DB consultante_record).
+ * DEC Patrick 2026-05-29 — sigle DESA sur Julie/Sarah/Léa. */
 export const APPRENANTES: Participant[] = [
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
-  { name: "Julie Bays", tier: "parcours-passif", emoji: "🌷" },
+  { name: "Julie Bays", tier: "parcours-passif", emoji: "🌷", desa_active: true },
   { name: "Camille Bays", tier: "parcours-passif", emoji: "🌼" },
-  { name: "Léa Bays", tier: "parcours-passif", emoji: "🍀" },
-  { name: "Sarah Bays", tier: "parcours-passif", emoji: "🌻" },
+  { name: "Léa Bays", tier: "parcours-passif", emoji: "🍀", desa_active: true },
+  { name: "Sarah Bays", tier: "parcours-passif", emoji: "🌻", desa_active: true },
   { name: "Béatrice Pathey", tier: "cercle-akashique", emoji: "🌌" },
-  { name: "Irène", tier: "cercle-akashique", emoji: "🌿" },
 ];
 
 export const TIER_LABEL: Record<ParticipantTier, string> = {
