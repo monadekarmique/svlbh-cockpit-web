@@ -347,7 +347,10 @@ export function TherapeuteCardClient({
           DEC Patrick 2026-05-29. Le bloc Cachées est rendu conditionnellement
           (caché pour Patrick → déplacé sur sa carte virtuelle superviseur). */}
       <div
-        className="flex items-center justify-between gap-2 pt-1"
+        className={
+          "flex items-center gap-2 pt-1 " +
+          (hideCachees ? "justify-end" : "justify-between")
+        }
         onPointerDown={(e) => e.stopPropagation()}
       >
         {/* Apprenant.e.s cachées · compteur · +/- (Owner ou Cercle SR). */}

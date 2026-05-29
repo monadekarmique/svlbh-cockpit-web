@@ -24,6 +24,7 @@ import { BacklogSidebar } from "./backlog-sidebar";
 import { SoinsCommunsList } from "./soins-communs-list";
 import { ShamanesAutoRefresh } from "./auto-refresh";
 import { SupervisorCachees } from "./supervisor-cachees";
+import { SupervisorBdec } from "./supervisor-bdec";
 import type { SoinCommun } from "./soins-communs-list";
 
 // Patrick svlbh_id pour mapper la carte virtuelle 754545 → ses cercles
@@ -520,9 +521,10 @@ export default async function ShamanesPage() {
           {SUPERVISORS_VIRTUAL.map((s) => (
             <li
               key={s.code}
-              className="flex items-start gap-3 rounded-xl border bg-white p-4 shadow-sm"
+              className="flex flex-col gap-2 rounded-xl border bg-white p-4 shadow-sm"
               style={{ borderLeftColor: s.color, borderLeftWidth: 4 }}
             >
+            <div className="flex items-start gap-3">
               {s.cercle_number != null ? (
                 <span
                   className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-sm font-extrabold text-white"
@@ -554,43 +556,32 @@ export default async function ShamanesPage() {
                     dhatuMeta={dhatuMeta}
                   />
                 ) : null}
-                {/* Mécanisme "Apprenant.e.s cachées" — hébergé ici (Patrick
-                    superviseur) plutôt que sur sa carte thérapeute. Chaque
-                    rôle superviseur a son propre svlbh_id synthétique →
-                    deux pools de cachées distincts. DEC Patrick 2026-05-29. */}
-                {SUPERVISOR_HOST_SVLBH_ID[s.code] ? (
-                  <SupervisorCachees
-                    hostSvlbhId={SUPERVISOR_HOST_SVLBH_ID[s.code]}
-                    hostLabel={`Patrick · ${s.role_label}`}
-                    cachees={cacheesByHost[SUPERVISOR_HOST_SVLBH_ID[s.code]] ?? []}
-                    canWrite={canWriteCachees}
-                    desaCatalog={desaCatalog}
-                  />
-                ) : null}
               </div>
-              {/* BDEC top-right — codes karmiques verts (gisants).
-                  Affichés display-only sur la carte virtuelle superviseur.
-                  DEC Patrick 2026-05-29. */}
-              {s.bdec_karmic && s.bdec_karmic.length > 0 ? (
-                <div className="flex flex-shrink-0 flex-col items-end gap-1">
-                  <div className="flex items-center gap-1">
-                    {s.bdec_karmic.map((code) => (
-                      <span
-                        key={code}
-                        className="rounded-md border-2 border-emerald-500 bg-emerald-50 px-1 py-0.5 font-mono text-[10px] font-bold text-emerald-700"
-                        title={`${code} — conscience gisante BDEC karmique`}
-                      >
-                        {code}
-                      </span>
-                    ))}
-                    <span
-                      className="rounded-md bg-emerald-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-900"
-                      title="BDEC — Consciences gisantes (display-only sur carte virtuelle)"
-                    >
-                      BDEC
-                    </span>
-                  </div>
-                </div>
+              {/* BDEC top-right — bouton + codes karmiques verts (gisants).
+                  Cliquable pour Owner/Cercle SR, ouvre BdecGisantsModal sur
+                  le svlbh_id synthétique du rôle superviseur. DEC Patrick
+                  2026-05-29. */}
+              {SUPERVISOR_HOST_SVLBH_ID[s.code] ? (
+                <SupervisorBdec
+                  svlbhId={SUPERVISOR_HOST_SVLBH_ID[s.code]}
+                  praticienneName={`Patrick · ${s.role_label}`}
+                  granted={desaStateByPraticienne[SUPERVISOR_HOST_SVLBH_ID[s.code]]?.granted ?? []}
+                  karmic={desaStateByPraticienne[SUPERVISOR_HOST_SVLBH_ID[s.code]]?.karmic ?? []}
+                  desaCatalog={desaCatalog}
+                  canEdit={canWriteCachees}
+                />
+              ) : null}
+              </div>
+              {/* Mécanisme "Apprenant.e.s cachées" — rangée pleine largeur
+                  TOUT EN BAS de la carte virtuelle. DEC Patrick 2026-05-29. */}
+              {SUPERVISOR_HOST_SVLBH_ID[s.code] ? (
+                <SupervisorCachees
+                  hostSvlbhId={SUPERVISOR_HOST_SVLBH_ID[s.code]}
+                  hostLabel={`Patrick · ${s.role_label}`}
+                  cachees={cacheesByHost[SUPERVISOR_HOST_SVLBH_ID[s.code]] ?? []}
+                  canWrite={canWriteCachees}
+                  desaCatalog={desaCatalog}
+                />
               ) : null}
             </li>
           ))}
