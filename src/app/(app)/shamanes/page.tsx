@@ -18,6 +18,7 @@ import type { Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
 import { getDesaCatalog, fetchDesaCapacities } from "@/lib/cercle/desa";
 import type { DesaAtom, DesaCapacities } from "@/lib/cercle/desa";
+import { apprenanteSvlbhId } from "@/lib/cercle/apprenante-uuid";
 import { fetchDynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
 import { BacklogSidebar } from "./backlog-sidebar";
 import { SoinsCommunsList } from "./soins-communs-list";
@@ -494,7 +495,11 @@ export default async function ShamanesPage() {
 
 async function ApprenantesDnDSection() {
   const sb = await createClient();
-  const dhatuMeta = await getDhatuMeta(sb);
+  const [dhatuMeta, desaCatalog, desaByPraticienne] = await Promise.all([
+    getDhatuMeta(sb),
+    getDesaCatalog(sb),
+    fetchDesaCapacities(sb),
+  ]);
   const { data } = await sb
     .from("apprenante_tier")
     .select("name, tier, description, niveaux_bloques");
@@ -509,16 +514,28 @@ async function ApprenantesDnDSection() {
       : (a.tier === "formation" || a.tier === "parcours-passif" || a.tier === "cercle-akashique")
       ? a.tier
       : "formation";
+    // UUIDv5 déterministe pour les apprenantes statiques (pas d'svlbh_id réel
+    // en DB). Permet de stocker leurs attributions DESA dans la même table
+    // praticienne_desa_capacity que les therapeutes.
+    const svlbhId = apprenanteSvlbhId(a.name);
     return {
       name: a.name,
+      svlbh_id: svlbhId,
       tier: effectiveTier,
       emoji: a.emoji,
       description: db?.description ?? null,
       niveaux_bloques: db?.niveaux_bloques ?? null,
       desa_active: a.desa_active ?? false,
+      desa_capacities: desaByPraticienne[svlbhId] ?? [],
     };
   });
-  return <ApprenantesDnD initial={items} dhatuMeta={dhatuMeta} />;
+  return (
+    <ApprenantesDnD
+      initial={items}
+      dhatuMeta={dhatuMeta}
+      desaCatalog={desaCatalog}
+    />
+  );
 }
 
 /** Chips des cercles akashiques d'une personne pour la section

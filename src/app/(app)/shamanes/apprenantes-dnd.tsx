@@ -24,16 +24,23 @@ import { TIER_LABEL, TIER_COLOR } from "@/lib/cercle/shamanes";
 import type { ParticipantTier } from "@/lib/cercle/shamanes";
 import { lookupMembership } from "@/lib/cercle/akashiques";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
+import type { DesaAtom, DesaCapacities } from "@/lib/cercle/desa";
+import { DesaEditModal } from "./desa-edit-modal";
 
 export type DnDApprenante = {
   name: string;
+  /** UUIDv5 déterministe (cf. apprenanteSvlbhId) — clé pour les
+   *  attributions DESA. Pas un vrai svlbh_id en DB. */
+  svlbh_id: string;
   tier: "formation" | "parcours-passif" | "cercle-akashique";
   emoji?: string;
   description?: string | null;
   niveaux_bloques?: number | null;
-  /** Sigle DESA visible top-right de la carte. Display only (pas de
-   *  modal — apprenantes sans svlbh_id). DEC Patrick 2026-05-29. */
+  /** Sigle DESA visible top-right de la carte (Owner peut cliquer pour
+   *  attribuer les capacités). DEC Patrick 2026-05-29. */
   desa_active?: boolean;
+  /** Codes DESA accordés actuellement à cette apprenante. */
+  desa_capacities?: DesaCapacities;
 };
 
 type ZoneKey = "formation" | "parcours-passif" | "cercle-akashique";
@@ -86,9 +93,11 @@ function CerclesAkashiquesChips({
 export function ApprenantesDnD({
   initial,
   dhatuMeta,
+  desaCatalog,
 }: {
   initial: DnDApprenante[];
   dhatuMeta: Record<Dhatu, DhatuMeta>;
+  desaCatalog: Record<string, DesaAtom>;
 }) {
   const [items, setItems] = useState<DnDApprenante[]>(initial);
   const [draggingName, setDraggingName] = useState<string | null>(null);
@@ -156,7 +165,7 @@ export function ApprenantesDnD({
             <DropZone key={z.key} id={`zone-${z.key}`} title={`${z.emoji} ${z.title} (${inZone.length})`} color={c}>
               {inZone.map((a) => (
                 <DraggableCard key={a.name} name={a.name}>
-                  <ApprenanteCardInner a={a} color={c} dhatuMeta={dhatuMeta} />
+                  <ApprenanteCardInner a={a} color={c} dhatuMeta={dhatuMeta} desaCatalog={desaCatalog} />
                 </DraggableCard>
               ))}
             </DropZone>
@@ -167,7 +176,7 @@ export function ApprenantesDnD({
       <DragOverlay>
         {dragging ? (
           <div className="opacity-90 shadow-2xl ring-2 ring-blue-400">
-            <ApprenanteCardInner a={dragging} color={TIER_COLOR[dragging.tier as ParticipantTier]} dhatuMeta={dhatuMeta} />
+            <ApprenanteCardInner a={dragging} color={TIER_COLOR[dragging.tier as ParticipantTier]} dhatuMeta={dhatuMeta} desaCatalog={desaCatalog} />
           </div>
         ) : null}
       </DragOverlay>
@@ -234,12 +243,15 @@ function ApprenanteCardInner({
   a,
   color,
   dhatuMeta,
+  desaCatalog,
 }: {
   a: DnDApprenante;
   color: string;
   dhatuMeta: Record<Dhatu, DhatuMeta>;
+  desaCatalog: Record<string, DesaAtom>;
 }) {
   const memb = lookupMembership(a.name);
+  const [desaOpen, setDesaOpen] = useState(false);
   return (
     <div
       className="flex items-start gap-3 rounded-xl border bg-white p-4 shadow-sm"
@@ -260,12 +272,18 @@ function ApprenanteCardInner({
                 </span>
               ) : null}
               {a.desa_active ? (
-                <span
-                  className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900"
-                  title="DESA — Dark Entities & Spirit Attachments (capacités de libération)"
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDesaOpen(true);
+                  }}
+                  className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900 transition hover:ring-2 hover:ring-indigo-300"
+                  title="Attribuer les capacités DESA (Owner)"
                 >
                   DESA
-                </span>
+                </button>
               ) : null}
             </div>
           ) : null}
@@ -278,6 +296,14 @@ function ApprenanteCardInner({
           <p className="mt-1.5 text-[10px] italic text-neutral-600">{a.description}</p>
         ) : null}
       </div>
+      <DesaEditModal
+        open={desaOpen}
+        onClose={() => setDesaOpen(false)}
+        svlbhId={a.svlbh_id}
+        praticienneName={a.name}
+        initialCapacities={a.desa_capacities ?? []}
+        catalog={desaCatalog}
+      />
     </div>
   );
 }
