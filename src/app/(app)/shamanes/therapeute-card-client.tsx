@@ -16,22 +16,16 @@ import { DesaEditModal } from "./desa-edit-modal";
 // des capacités précises accordées (DC/TFEC/ES/SEI/ILSS/DR/RI/BDEC) — vides
 // tant que Patrick n'a pas attribué. DEC Patrick 2026-05-29.
 function DesaBlock({
-  active,
   onOpenEdit,
 }: {
-  active: boolean;
   onOpenEdit?: () => void;
 }) {
-  // Seul le sigle DESA est affiché sur la carte. Les capacités précises
-  // (DC/TFEC/…) ne sont visibles pour PERSONNE — uniquement consultables
-  // par l'Owner via le modal d'attribution. DEC Patrick 2026-05-29.
-  if (!active) return null;
-  const sigle = (
-    <span className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900">
-      DESA
-    </span>
-  );
-  if (!onOpenEdit) return sigle;
+  // DESA = outil admin Owner uniquement (DEC Patrick 2026-05-29 :
+  // « visible pour les membres du cercle ... mais en non visible »).
+  // Rendu uniquement quand l'Owner peut éditer ; pour tout autre user,
+  // rien n'apparaît sur la carte. Les codes (DC/TFEC/…) ne sont jamais
+  // affichés inline — uniquement dans le modal d'attribution.
+  if (!onOpenEdit) return null;
   return (
     <button
       type="button"
@@ -40,10 +34,10 @@ function DesaBlock({
         e.stopPropagation();
         onOpenEdit();
       }}
-      className="rounded-md transition hover:ring-2 hover:ring-indigo-300"
+      className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900 transition hover:ring-2 hover:ring-indigo-300"
       title="Attribuer les capacités DESA (Owner)"
     >
-      {sigle}
+      DESA
     </button>
   );
 }
@@ -174,8 +168,9 @@ export function TherapeuteCardClient({
           </div>
         </div>
 
-        {/* Colonne top-right : NSB (si présent) + sigle DESA (si actif). */}
-        {(t.attention_steps != null || t.desa_active) ? (
+        {/* Colonne top-right : NSB (si présent, tous les users) + sigle DESA
+            (Owner only — outil admin). DEC Patrick 2026-05-29. */}
+        {(t.attention_steps != null || isOwner) ? (
           <div className="flex flex-shrink-0 flex-col items-end gap-1">
             {t.attention_steps != null ? (
               <span
@@ -186,7 +181,6 @@ export function TherapeuteCardClient({
               </span>
             ) : null}
             <DesaBlock
-              active={t.desa_active}
               onOpenEdit={isOwner ? () => setDesaOpen(true) : undefined}
             />
           </div>

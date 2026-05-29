@@ -261,32 +261,30 @@ function ApprenanteCardInner({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className="font-semibold text-neutral-900">{a.name}</p>
-          {(a.niveaux_bloques != null || a.desa_active) ? (
-            <div className="flex flex-shrink-0 flex-col items-end gap-1">
-              {a.niveaux_bloques != null ? (
-                <span
-                  className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-mono text-[11px] font-bold text-rose-900"
-                  title="NSB — Niveaux Shamaniques Bloqués (apprenante_tier.niveaux_bloques)"
-                >
-                  NSB {a.niveaux_bloques}
-                </span>
-              ) : null}
-              {a.desa_active ? (
-                <button
-                  type="button"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDesaOpen(true);
-                  }}
-                  className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900 transition hover:ring-2 hover:ring-indigo-300"
-                  title="Attribuer les capacités DESA (Owner)"
-                >
-                  DESA
-                </button>
-              ) : null}
-            </div>
-          ) : null}
+          {/* Section apprenantes = Owner-only (page-level gate). DESA toujours
+              rendu (outil admin). NSB seulement si présent. */}
+          <div className="flex flex-shrink-0 flex-col items-end gap-1">
+            {a.niveaux_bloques != null ? (
+              <span
+                className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-mono text-[11px] font-bold text-rose-900"
+                title="NSB — Niveaux Shamaniques Bloqués (apprenante_tier.niveaux_bloques)"
+              >
+                NSB {a.niveaux_bloques}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDesaOpen(true);
+              }}
+              className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900 transition hover:ring-2 hover:ring-indigo-300"
+              title="Attribuer les capacités DESA (Owner)"
+            >
+              DESA
+            </button>
+          </div>
         </div>
         <p className="mt-0.5 text-[11px] font-semibold" style={{ color }}>
           {TIER_LABEL[a.tier as ParticipantTier]}
