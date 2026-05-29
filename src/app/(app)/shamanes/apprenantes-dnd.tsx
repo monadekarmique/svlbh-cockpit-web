@@ -59,7 +59,7 @@ type ZoneKey = "st1-active" | "formation" | "parcours-passif" | "cercle-akashiqu
 
 const ZONES: Array<{ key: ZoneKey; emoji: string; title: string }> = [
   { key: "st1-active", emoji: "🌟", title: "Apprenantes ST1 actives" },
-  { key: "formation", emoji: "🌱", title: "Apprenantes actives" },
+  { key: "formation", emoji: "🌱", title: "Apprenantes ST2 actives" },
   { key: "parcours-passif", emoji: "💤", title: "Shamanes passives de Cercles akashiques actifs" },
   { key: "cercle-akashique", emoji: "🌌", title: "Shamanes du Cercle akashique ex-Shamanes passives" },
 ];

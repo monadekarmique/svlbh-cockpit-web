@@ -73,7 +73,7 @@ export const APPRENANTES: Participant[] = [
 
 export const TIER_LABEL: Record<ParticipantTier, string> = {
   "st1-active": "Apprenante ST1 active",
-  formation: "Apprenante active",
+  formation: "Apprenante ST2 active",
   "parcours-passif": "Shamane passive de Cercles akashiques actifs",
   "cercle-akashique": "Shamane du Cercle akashique (ex-passive)",
   "t3-en-attente": "ST3 en attente",
