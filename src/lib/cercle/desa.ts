@@ -1,0 +1,95 @@
+// DESA — Dark Entities & Spirit Attachments — capacités de libération
+// accordées dynamiquement par l'Owner aux participantes au Cercle. Affiché
+// top-right sur les cartes /shamanes (cockpit). DEC Patrick 2026-05-29.
+//
+// Source canonique : tables Supabase `desa_capacity_atom` (catalogue 8 codes
+// + label + description) et `praticienne_desa_capacity` (join dynamique).
+
+import { cache } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+export type DesaAtom = {
+  code: string;
+  label: string;
+  description: string | null;
+  sortOrder: number;
+};
+
+/** Capacités DESA accordées à une praticienne (par code). */
+export type DesaCapacities = string[];
+
+/**
+ * Catalogue des 8 codes DESA (label/description/ordre). Dédupliqué par
+ * render via React `cache()`.
+ */
+export const getDesaCatalog = cache(
+  async (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sb: SupabaseClient<any, any, any>,
+  ): Promise<Record<string, DesaAtom>> => {
+    const { data, error } = await sb
+      .from("desa_capacity_atom")
+      .select("code, label, description, sort_order")
+      .order("sort_order");
+    if (error || !data) return {};
+    const out: Record<string, DesaAtom> = {};
+    for (const row of data as Array<{
+      code: string;
+      label: string;
+      description: string | null;
+      sort_order: number;
+    }>) {
+      out[row.code] = {
+        code: row.code,
+        label: row.label,
+        description: row.description,
+        sortOrder: row.sort_order,
+      };
+    }
+    return out;
+  },
+);
+
+/**
+ * Capacités DESA accordées par praticienne (svlbh_id → liste de codes triés
+ * par sort_order du catalogue).
+ */
+export async function fetchDesaCapacities(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sb: SupabaseClient<any, any, any>,
+): Promise<Record<string, DesaCapacities>> {
+  const { data, error } = await sb
+    .from("praticienne_desa_capacity")
+    .select(
+      "svlbh_id, capacity_code, desa_capacity_atom:capacity_code ( sort_order )",
+    );
+  if (error || !data) return {};
+
+  type Row = {
+    svlbh_id: string;
+    capacity_code: string;
+    desa_capacity_atom:
+      | { sort_order: number }
+      | { sort_order: number }[]
+      | null;
+  };
+
+  const map: Record<string, Array<{ code: string; order: number }>> = {};
+  for (const row of data as unknown as Row[]) {
+    const atom = Array.isArray(row.desa_capacity_atom)
+      ? row.desa_capacity_atom[0]
+      : row.desa_capacity_atom;
+    if (!row.svlbh_id || !row.capacity_code) continue;
+    if (!map[row.svlbh_id]) map[row.svlbh_id] = [];
+    map[row.svlbh_id].push({
+      code: row.capacity_code,
+      order: atom?.sort_order ?? 999,
+    });
+  }
+
+  const out: Record<string, DesaCapacities> = {};
+  for (const k of Object.keys(map)) {
+    out[k] = map[k].sort((a, b) => a.order - b.order).map((x) => x.code);
+  }
+  return out;
+}

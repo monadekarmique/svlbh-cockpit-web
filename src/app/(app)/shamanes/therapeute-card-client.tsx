@@ -7,6 +7,46 @@ import { setMyDailyStatus } from "./daily-status-actions";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { DYNAMIQUE_AXIS_TONE, type DynamiqueChip } from "@/lib/cercle/dynamiques";
+import type { DesaAtom, DesaCapacities } from "@/lib/cercle/desa";
+
+// DESA — Dark Entities & Spirit Attachments. Bloc top-right de la carte
+// (sous NSB). Affiche le sigle DESA si `desa_active=true`, suivi des chips
+// des capacités précises accordées (DC/TFEC/ES/SEI/ILSS/DR/RI/BDEC) — vides
+// tant que Patrick n'a pas attribué. DEC Patrick 2026-05-29.
+function DesaBlock({
+  active,
+  capacities,
+  catalog,
+}: {
+  active: boolean;
+  capacities: DesaCapacities;
+  catalog: Record<string, DesaAtom>;
+}) {
+  if (!active) return null;
+  return (
+    <div className="flex shrink-0 flex-col items-end gap-1" title="DESA — Dark Entities & Spirit Attachments (capacités de libération)">
+      <span className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900">
+        DESA
+      </span>
+      {capacities.length > 0 ? (
+        <div className="flex flex-wrap justify-end gap-0.5">
+          {capacities.map((code) => {
+            const atom = catalog[code];
+            return (
+              <span
+                key={code}
+                className="rounded bg-indigo-50 px-1 py-0.5 font-mono text-[9px] font-semibold text-indigo-800 ring-1 ring-indigo-200"
+                title={atom?.description ?? atom?.label ?? code}
+              >
+                {atom?.label ?? code}
+              </span>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function CerclesAkashiquesChips({
   membership,
@@ -76,7 +116,7 @@ function DynamiquesChips({ dynamiques }: { dynamiques: DynamiqueChip[] }) {
 }
 
 export function TherapeuteCardClient({
-  t, isMe, isOwner, dynamiques = [], membership = null, dhatuMeta, bumpGL,
+  t, isMe, isOwner, dynamiques = [], membership = null, dhatuMeta, desaCatalog, desaCapacities = [], bumpGL,
 }: {
   t: DnDTherapeute;
   isMe: boolean;
@@ -84,6 +124,8 @@ export function TherapeuteCardClient({
   dynamiques?: DynamiqueChip[];
   membership?: AkashiqueMembership | null;
   dhatuMeta: Record<Dhatu, DhatuMeta>;
+  desaCatalog: Record<string, DesaAtom>;
+  desaCapacities?: DesaCapacities;
   bumpGL?: (svlbhId: string, delta: 1 | -1) => void;
 }) {
   const targetStatusOnToggle = t.status === "active" ? "hidden" : "active";
@@ -129,13 +171,23 @@ export function TherapeuteCardClient({
           </div>
         </div>
 
-        {t.attention_steps != null ? (
-          <span
-            className="flex-shrink-0 rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-mono text-[11px] font-bold text-rose-900"
-            title="NSB — Niveaux Shamaniques Bloqués (somme des relations bloquées ou override apprenante_tier)"
-          >
-            NSB {t.attention_steps}
-          </span>
+        {/* Colonne top-right : NSB (si présent) + sigle DESA (si actif). */}
+        {(t.attention_steps != null || t.desa_active) ? (
+          <div className="flex flex-shrink-0 flex-col items-end gap-1">
+            {t.attention_steps != null ? (
+              <span
+                className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-mono text-[11px] font-bold text-rose-900"
+                title="NSB — Niveaux Shamaniques Bloqués (somme des relations bloquées ou override apprenante_tier)"
+              >
+                NSB {t.attention_steps}
+              </span>
+            ) : null}
+            <DesaBlock
+              active={t.desa_active}
+              capacities={desaCapacities}
+              catalog={desaCatalog}
+            />
+          </div>
         ) : null}
       </div>
 

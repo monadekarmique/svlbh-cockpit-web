@@ -10,6 +10,7 @@ import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { TherapeuteCardClient } from "./therapeute-card-client";
 import type { DynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
+import type { DesaAtom, DesaCapacities } from "@/lib/cercle/desa";
 
 export function TherapeutesDnDZonesWrapper({
   therapeutes,
@@ -18,6 +19,8 @@ export function TherapeutesDnDZonesWrapper({
   dynamiquesByPraticienne,
   dhatuByPraticienne,
   dhatuMeta,
+  desaCatalog,
+  desaByPraticienne,
 }: {
   therapeutes: DnDTherapeute[];
   mySvlbhId?: string;
@@ -25,6 +28,8 @@ export function TherapeutesDnDZonesWrapper({
   dynamiquesByPraticienne?: DynamiquesByPraticienne;
   dhatuByPraticienne?: Record<string, AkashiqueMembership>;
   dhatuMeta: Record<Dhatu, DhatuMeta>;
+  desaCatalog: Record<string, DesaAtom>;
+  desaByPraticienne: Record<string, DesaCapacities>;
 }) {
   return (
     <TherapeutesDnDZones
@@ -39,6 +44,8 @@ export function TherapeutesDnDZonesWrapper({
           dynamiques={dynamiquesByPraticienne?.[t.svlbh_id] ?? []}
           membership={dhatuByPraticienne?.[t.svlbh_id] ?? null}
           dhatuMeta={dhatuMeta}
+          desaCatalog={desaCatalog}
+          desaCapacities={desaByPraticienne[t.svlbh_id] ?? []}
           bumpGL={bumpGL}
         />
       )}

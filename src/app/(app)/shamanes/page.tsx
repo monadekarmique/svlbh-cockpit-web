@@ -16,6 +16,8 @@ import type { DnDApprenante } from "./apprenantes-dnd";
 import { getDhatuMeta, fetchDhatuMemberships } from "@/lib/cercle/akashiques";
 import type { Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
+import { getDesaCatalog, fetchDesaCapacities } from "@/lib/cercle/desa";
+import type { DesaAtom, DesaCapacities } from "@/lib/cercle/desa";
 import { fetchDynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
 import { BacklogSidebar } from "./backlog-sidebar";
 import { SoinsCommunsList } from "./soins-communs-list";
@@ -40,6 +42,7 @@ type Therapeute = {
   tx: string | null;
   capacity_anchor: string | null;
   cercle_lumiere_sr: boolean | null;
+  desa_active: boolean;
   status: DailyStatus; // 5 valeurs : active/hidden/formation/parcours-passif/cercle-akashique
   attention_color: string | null;
   attention_steps: number | null;
@@ -86,7 +89,7 @@ export default async function ShamanesPage() {
   //    avec droit de veto Patrick (colonne cercle_veto).
   const { data: therapeutesRaw } = await sb
     .from("praticienne_profile")
-    .select("svlbh_id, first_name, last_name, code_praticien, stx, tx, capacity_anchor, cercle_lumiere_sr, guides_lumiere")
+    .select("svlbh_id, first_name, last_name, code_praticien, stx, tx, capacity_anchor, cercle_lumiere_sr, desa_active, guides_lumiere")
     .eq("pro_status", "ACTIVE")
     .eq("cercle_lumiere_sr", true)
     .eq("cercle_veto", false)
@@ -102,6 +105,12 @@ export default async function ShamanesPage() {
   // 1quater. Métadonnées des 7 dhātu atomiques (label/emoji/couleur) depuis
   // `dhatu_atom` — source canonique unique (Phase 2 DEC Patrick 2026-05-28).
   const dhatuMeta = await getDhatuMeta(sb);
+  // 1quinquies. DESA — capacités de libération Dark Entities & Spirit
+  // Attachments accordées dynamiquement par l'Owner (DEC Patrick 2026-05-29).
+  const [desaCatalog, desaByPraticienne] = await Promise.all([
+    getDesaCatalog(sb),
+    fetchDesaCapacities(sb),
+  ]);
 
   // 2. Daily status pour chaque
   const { data: dailyRaw } = await sb
@@ -151,6 +160,7 @@ export default async function ShamanesPage() {
     svlbh_id: string; first_name: string | null; last_name: string | null;
     code_praticien: number | null; stx: string | null; tx: string | null;
     capacity_anchor: string | null; cercle_lumiere_sr: boolean | null;
+    desa_active: boolean | null;
     guides_lumiere: number | null;
   }>).map((p) => {
     const d = dailyMap.get(p.svlbh_id);
@@ -170,6 +180,7 @@ export default async function ShamanesPage() {
       tx: p.tx,
       capacity_anchor: p.capacity_anchor,
       cercle_lumiere_sr: p.cercle_lumiere_sr,
+      desa_active: p.desa_active ?? false,
       status: statusEffective(d?.status ?? null, d?.updated_at ?? null),
       attention_color: d?.attention_color ?? null,
       attention_steps: niveauAffiche,
@@ -419,6 +430,8 @@ export default async function ShamanesPage() {
         dynamiquesByPraticienne={dynamiquesByPraticienne}
         dhatuByPraticienne={dhatuByPraticienne}
         dhatuMeta={dhatuMeta}
+        desaCatalog={desaCatalog}
+        desaByPraticienne={desaByPraticienne}
       />
 
       {/* Cartes virtuelles Patrick × 2 (superviseurs) — sous les thérapeutes
