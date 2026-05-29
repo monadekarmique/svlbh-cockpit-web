@@ -24,7 +24,7 @@ import { TIER_LABEL, TIER_COLOR } from "@/lib/cercle/shamanes";
 import type { ParticipantTier } from "@/lib/cercle/shamanes";
 import { lookupMembership } from "@/lib/cercle/akashiques";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
-import type { DesaAtom, DesaCapacities } from "@/lib/cercle/desa";
+import type { DesaAtom } from "@/lib/cercle/desa";
 import { DesaEditModal } from "./desa-edit-modal";
 
 export type DnDApprenante = {
@@ -36,11 +36,13 @@ export type DnDApprenante = {
   emoji?: string;
   description?: string | null;
   niveaux_bloques?: number | null;
-  /** Sigle DESA visible top-right de la carte (Owner peut cliquer pour
-   *  attribuer les capacités). DEC Patrick 2026-05-29. */
+  /** Champ legacy — conservé pour compatibilité, plus utilisé pour l'affichage. */
   desa_active?: boolean;
-  /** Codes DESA accordés actuellement à cette apprenante. */
-  desa_capacities?: DesaCapacities;
+  /** Codes DESA accordés (capacité détenue). */
+  desa_granted?: string[];
+  /** Codes DESA marqués karmiques à libérer — affichés en rouge à gauche du
+   *  sigle DESA sur le devant de la carte. DEC Patrick 2026-05-29. */
+  desa_karmic?: string[];
 };
 
 type ZoneKey = "formation" | "parcours-passif" | "cercle-akashique";
@@ -262,7 +264,7 @@ function ApprenanteCardInner({
         <div className="flex items-start justify-between gap-2">
           <p className="font-semibold text-neutral-900">{a.name}</p>
           {/* Section apprenantes = Owner-only (page-level gate). DESA toujours
-              rendu (outil admin). NSB seulement si présent. */}
+              rendu (outil admin). Codes karmiques en rouge à gauche du sigle. */}
           <div className="flex flex-shrink-0 flex-col items-end gap-1">
             {a.niveaux_bloques != null ? (
               <span
@@ -272,18 +274,29 @@ function ApprenanteCardInner({
                 NSB {a.niveaux_bloques}
               </span>
             ) : null}
-            <button
-              type="button"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                setDesaOpen(true);
-              }}
-              className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900 transition hover:ring-2 hover:ring-indigo-300"
-              title="Attribuer les capacités DESA (Owner)"
-            >
-              DESA
-            </button>
+            <div className="flex items-center gap-1">
+              {(a.desa_karmic ?? []).map((code) => (
+                <span
+                  key={code}
+                  className="rounded-md border-2 border-red-500 bg-red-50 px-1 py-0.5 font-mono text-[10px] font-bold text-red-600"
+                  title={`${code} — DESA karmique encore à libérer`}
+                >
+                  {code}
+                </span>
+              ))}
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDesaOpen(true);
+                }}
+                className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900 transition hover:ring-2 hover:ring-indigo-300"
+                title="Attribuer les capacités DESA (Owner)"
+              >
+                DESA
+              </button>
+            </div>
           </div>
         </div>
         <p className="mt-0.5 text-[11px] font-semibold" style={{ color }}>
@@ -299,7 +312,8 @@ function ApprenanteCardInner({
         onClose={() => setDesaOpen(false)}
         svlbhId={a.svlbh_id}
         praticienneName={a.name}
-        initialCapacities={a.desa_capacities ?? []}
+        initialGranted={a.desa_granted ?? []}
+        initialKarmic={a.desa_karmic ?? []}
         catalog={desaCatalog}
       />
     </div>

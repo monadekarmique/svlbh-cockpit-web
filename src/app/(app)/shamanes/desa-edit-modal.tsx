@@ -1,12 +1,13 @@
 "use client";
 
-// Modal d'attribution des 8 capacités DESA à une praticienne (Owner ST6
-// uniquement, gating côté server action). Ouvert au clic sur le sigle DESA
-// d'une carte shamane. Toggles optimistes + rollback on error.
-// DEC Patrick 2026-05-29.
+// Modal d'attribution des 2 axes DESA pour une praticienne. Owner ST6 only.
+// Ouvert au clic sur le sigle DESA d'une carte. 2 axes indépendants :
+//  - GAUCHE : checkbox « accordée » (capacité détenue).
+//  - DROITE : picker « karmique à libérer » (symbole + filet rouge).
+// Toggles optimistes + rollback on error. DEC Patrick 2026-05-29.
 
 import { useState, useTransition, useEffect } from "react";
-import type { DesaAtom, DesaCapacities } from "@/lib/cercle/desa";
+import type { DesaAtom } from "@/lib/cercle/desa";
 import { setDesaCapacity } from "./desa-action";
 
 export function DesaEditModal({
@@ -14,25 +15,31 @@ export function DesaEditModal({
   onClose,
   svlbhId,
   praticienneName,
-  initialCapacities,
+  initialGranted,
+  initialKarmic,
   catalog,
 }: {
   open: boolean;
   onClose: () => void;
   svlbhId: string;
   praticienneName: string;
-  initialCapacities: DesaCapacities;
+  initialGranted: string[];
+  initialKarmic: string[];
   catalog: Record<string, DesaAtom>;
 }) {
-  const [selected, setSelected] = useState<Set<string>>(new Set(initialCapacities));
+  const [granted, setGranted] = useState<Set<string>>(new Set(initialGranted));
+  const [karmic, setKarmic] = useState<Set<string>>(new Set(initialKarmic));
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  // Resync si la prop change (le serveur a revalidé).
+  // Resync sur revalidation serveur.
   useEffect(() => {
-    setSelected(new Set(initialCapacities));
-  }, [initialCapacities]);
+    setGranted(new Set(initialGranted));
+  }, [initialGranted]);
+  useEffect(() => {
+    setKarmic(new Set(initialKarmic));
+  }, [initialKarmic]);
 
   // Échap pour fermer.
   useEffect(() => {
@@ -50,26 +57,28 @@ export function DesaEditModal({
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((a) => a.code);
 
-  function toggle(code: string) {
-    const wasOn = selected.has(code);
-    // Mutation optimiste.
-    const next = new Set(selected);
+  function toggle(code: string, axis: "granted" | "karmic_to_liberate") {
+    const set = axis === "granted" ? granted : karmic;
+    const setSet = axis === "granted" ? setGranted : setKarmic;
+    const wasOn = set.has(code);
+    const next = new Set(set);
     if (wasOn) next.delete(code);
     else next.add(code);
-    setSelected(next);
+    setSet(next);
     setError(null);
-    setBusy((b) => new Set(b).add(code));
+    const busyKey = code + ":" + axis;
+    setBusy((b) => new Set(b).add(busyKey));
 
     startTransition(async () => {
-      const res = await setDesaCapacity(svlbhId, code, !wasOn);
+      const res = await setDesaCapacity(svlbhId, code, axis, !wasOn);
       setBusy((b) => {
         const n = new Set(b);
-        n.delete(code);
+        n.delete(busyKey);
         return n;
       });
       if (!res.ok) {
         // Rollback.
-        setSelected((cur) => {
+        setSet((cur) => {
           const r = new Set(cur);
           if (wasOn) r.add(code);
           else r.delete(code);
@@ -110,30 +119,36 @@ export function DesaEditModal({
           </button>
         </div>
 
-        <p className="mb-3 text-[12px] text-neutral-500">
-          Coche les capacités de libération accordées. Sauvegarde automatique à chaque clic.
+        <p className="mb-3 text-[11px] text-neutral-500">
+          Gauche : capacité <strong>accordée</strong>. Droite : marquage{" "}
+          <strong className="text-red-600">karmique à libérer</strong> (apparaît
+          en rouge sur la carte). Sauvegarde auto à chaque clic.
         </p>
 
         <ul className="space-y-1.5">
           {sortedCodes.map((code) => {
             const atom = catalog[code];
-            const isOn = selected.has(code);
-            const isBusy = busy.has(code);
+            const isGranted = granted.has(code);
+            const isKarmic = karmic.has(code);
+            const grantedBusy = busy.has(code + ":granted");
+            const karmicBusy = busy.has(code + ":karmic_to_liberate");
             return (
-              <li key={code}>
-                <label
-                  className={
-                    "flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2 transition " +
-                    (isOn
-                      ? "border-indigo-300 bg-indigo-50"
-                      : "border-neutral-200 bg-white hover:bg-neutral-50")
-                  }
-                >
+              <li
+                key={code}
+                className={
+                  "flex items-stretch gap-2 rounded-md border transition " +
+                  (isGranted
+                    ? "border-indigo-300 bg-indigo-50"
+                    : "border-neutral-200 bg-white")
+                }
+              >
+                {/* GAUCHE — checkbox accordée + label */}
+                <label className="flex flex-1 cursor-pointer items-start gap-3 px-3 py-2">
                   <input
                     type="checkbox"
-                    checked={isOn}
-                    disabled={isBusy}
-                    onChange={() => toggle(code)}
+                    checked={isGranted}
+                    disabled={grantedBusy}
+                    onChange={() => toggle(code, "granted")}
                     className="mt-0.5 h-4 w-4 accent-indigo-600"
                   />
                   <div className="min-w-0 flex-1">
@@ -146,9 +161,9 @@ export function DesaEditModal({
                           {atom.label}
                         </span>
                       ) : null}
-                      {isBusy ? (
+                      {grantedBusy ? (
                         <span className="text-[10px] italic text-neutral-400">
-                          en cours…
+                          …
                         </span>
                       ) : null}
                     </div>
@@ -159,6 +174,26 @@ export function DesaEditModal({
                     ) : null}
                   </div>
                 </label>
+
+                {/* DROITE — picker karmique (symbole + filet rouge si actif) */}
+                <button
+                  type="button"
+                  onClick={() => toggle(code, "karmic_to_liberate")}
+                  disabled={karmicBusy}
+                  className={
+                    "flex w-12 flex-shrink-0 items-center justify-center rounded-r-md border-l-2 font-mono text-[14px] font-bold transition " +
+                    (isKarmic
+                      ? "border-red-500 bg-red-50 text-red-600 ring-2 ring-red-400"
+                      : "border-neutral-200 bg-neutral-50 text-neutral-300 hover:bg-red-50 hover:text-red-400")
+                  }
+                  title={
+                    isKarmic
+                      ? "Karmique à libérer (visible en rouge sur la carte) — cliquer pour retirer"
+                      : "Marquer comme karmique à libérer pour cette personne"
+                  }
+                >
+                  {isKarmic ? "◉" : "○"}
+                </button>
               </li>
             );
           })}

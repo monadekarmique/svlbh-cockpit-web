@@ -8,7 +8,7 @@ import { setMyDailyStatus } from "./daily-status-actions";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { DYNAMIQUE_AXIS_TONE, type DynamiqueChip } from "@/lib/cercle/dynamiques";
-import type { DesaAtom, DesaCapacities } from "@/lib/cercle/desa";
+import type { DesaAtom } from "@/lib/cercle/desa";
 import { DesaEditModal } from "./desa-edit-modal";
 
 // DESA — Dark Entities & Spirit Attachments. Bloc top-right de la carte
@@ -110,7 +110,7 @@ function DynamiquesChips({ dynamiques }: { dynamiques: DynamiqueChip[] }) {
 }
 
 export function TherapeuteCardClient({
-  t, isMe, isOwner, dynamiques = [], membership = null, dhatuMeta, desaCatalog, desaCapacities = [], bumpGL,
+  t, isMe, isOwner, dynamiques = [], membership = null, dhatuMeta, desaCatalog, desaGranted = [], desaKarmic = [], bumpGL,
 }: {
   t: DnDTherapeute;
   isMe: boolean;
@@ -119,7 +119,8 @@ export function TherapeuteCardClient({
   membership?: AkashiqueMembership | null;
   dhatuMeta: Record<Dhatu, DhatuMeta>;
   desaCatalog: Record<string, DesaAtom>;
-  desaCapacities?: DesaCapacities;
+  desaGranted?: string[];
+  desaKarmic?: string[];
   bumpGL?: (svlbhId: string, delta: 1 | -1) => void;
 }) {
   const targetStatusOnToggle = t.status === "active" ? "hidden" : "active";
@@ -180,9 +181,21 @@ export function TherapeuteCardClient({
                 NSB {t.attention_steps}
               </span>
             ) : null}
-            <DesaBlock
-              onOpenEdit={isOwner ? () => setDesaOpen(true) : undefined}
-            />
+            {/* Codes karmiques (rouges) à GAUCHE du sigle DESA. */}
+            <div className="flex items-center gap-1">
+              {desaKarmic.map((code) => (
+                <span
+                  key={code}
+                  className="rounded-md border-2 border-red-500 bg-red-50 px-1 py-0.5 font-mono text-[10px] font-bold text-red-600"
+                  title={`${code} — DESA karmique encore à libérer`}
+                >
+                  {code}
+                </span>
+              ))}
+              <DesaBlock
+                onOpenEdit={isOwner ? () => setDesaOpen(true) : undefined}
+              />
+            </div>
           </div>
         ) : null}
       </div>
@@ -256,7 +269,8 @@ export function TherapeuteCardClient({
         onClose={() => setDesaOpen(false)}
         svlbhId={t.svlbh_id}
         praticienneName={displayName}
-        initialCapacities={desaCapacities}
+        initialGranted={desaGranted}
+        initialKarmic={desaKarmic}
         catalog={desaCatalog}
       />
     </div>

@@ -10,7 +10,7 @@ import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { TherapeuteCardClient } from "./therapeute-card-client";
 import type { DynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
-import type { DesaAtom, DesaCapacities } from "@/lib/cercle/desa";
+import type { DesaAtom, DesaState } from "@/lib/cercle/desa";
 
 export function TherapeutesDnDZonesWrapper({
   therapeutes,
@@ -20,7 +20,7 @@ export function TherapeutesDnDZonesWrapper({
   dhatuByPraticienne,
   dhatuMeta,
   desaCatalog,
-  desaByPraticienne,
+  desaStateByPraticienne,
 }: {
   therapeutes: DnDTherapeute[];
   mySvlbhId?: string;
@@ -29,26 +29,30 @@ export function TherapeutesDnDZonesWrapper({
   dhatuByPraticienne?: Record<string, AkashiqueMembership>;
   dhatuMeta: Record<Dhatu, DhatuMeta>;
   desaCatalog: Record<string, DesaAtom>;
-  desaByPraticienne: Record<string, DesaCapacities>;
+  desaStateByPraticienne: Record<string, DesaState>;
 }) {
   return (
     <TherapeutesDnDZones
       initial={therapeutes}
       mySvlbhId={mySvlbhId}
       isOwner={isOwner}
-      renderCard={(t, { isMe, bumpGL }) => (
-        <TherapeuteCardClient
-          t={t}
-          isMe={isMe}
-          isOwner={isOwner}
-          dynamiques={dynamiquesByPraticienne?.[t.svlbh_id] ?? []}
-          membership={dhatuByPraticienne?.[t.svlbh_id] ?? null}
-          dhatuMeta={dhatuMeta}
-          desaCatalog={desaCatalog}
-          desaCapacities={desaByPraticienne[t.svlbh_id] ?? []}
-          bumpGL={bumpGL}
-        />
-      )}
+      renderCard={(t, { isMe, bumpGL }) => {
+        const state = desaStateByPraticienne[t.svlbh_id];
+        return (
+          <TherapeuteCardClient
+            t={t}
+            isMe={isMe}
+            isOwner={isOwner}
+            dynamiques={dynamiquesByPraticienne?.[t.svlbh_id] ?? []}
+            membership={dhatuByPraticienne?.[t.svlbh_id] ?? null}
+            dhatuMeta={dhatuMeta}
+            desaCatalog={desaCatalog}
+            desaGranted={state?.granted ?? []}
+            desaKarmic={state?.karmic ?? []}
+            bumpGL={bumpGL}
+          />
+        );
+      }}
     />
   );
 }

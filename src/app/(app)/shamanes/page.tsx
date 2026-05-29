@@ -16,8 +16,8 @@ import type { DnDApprenante } from "./apprenantes-dnd";
 import { getDhatuMeta, fetchDhatuMemberships } from "@/lib/cercle/akashiques";
 import type { Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { AkashiqueMembership } from "@/lib/cercle/akashiques";
-import { getDesaCatalog, fetchDesaCapacities } from "@/lib/cercle/desa";
-import type { DesaAtom, DesaCapacities } from "@/lib/cercle/desa";
+import { getDesaCatalog, fetchDesaState } from "@/lib/cercle/desa";
+import type { DesaAtom, DesaState } from "@/lib/cercle/desa";
 import { apprenanteSvlbhId } from "@/lib/cercle/apprenante-uuid";
 import { fetchDynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
 import { BacklogSidebar } from "./backlog-sidebar";
@@ -108,9 +108,9 @@ export default async function ShamanesPage() {
   const dhatuMeta = await getDhatuMeta(sb);
   // 1quinquies. DESA — capacités de libération Dark Entities & Spirit
   // Attachments accordées dynamiquement par l'Owner (DEC Patrick 2026-05-29).
-  const [desaCatalog, desaByPraticienne] = await Promise.all([
+  const [desaCatalog, desaStateByPraticienne] = await Promise.all([
     getDesaCatalog(sb),
-    fetchDesaCapacities(sb),
+    fetchDesaState(sb),
   ]);
 
   // 2. Daily status pour chaque
@@ -432,7 +432,7 @@ export default async function ShamanesPage() {
         dhatuByPraticienne={dhatuByPraticienne}
         dhatuMeta={dhatuMeta}
         desaCatalog={desaCatalog}
-        desaByPraticienne={desaByPraticienne}
+        desaStateByPraticienne={desaStateByPraticienne}
       />
 
       {/* Cartes virtuelles Patrick × 2 (superviseurs) — sous les thérapeutes
@@ -495,10 +495,10 @@ export default async function ShamanesPage() {
 
 async function ApprenantesDnDSection() {
   const sb = await createClient();
-  const [dhatuMeta, desaCatalog, desaByPraticienne] = await Promise.all([
+  const [dhatuMeta, desaCatalog, desaStateByPraticienne] = await Promise.all([
     getDhatuMeta(sb),
     getDesaCatalog(sb),
-    fetchDesaCapacities(sb),
+    fetchDesaState(sb),
   ]);
   const { data } = await sb
     .from("apprenante_tier")
@@ -526,7 +526,8 @@ async function ApprenantesDnDSection() {
       description: db?.description ?? null,
       niveaux_bloques: db?.niveaux_bloques ?? null,
       desa_active: a.desa_active ?? false,
-      desa_capacities: desaByPraticienne[svlbhId] ?? [],
+      desa_granted: desaStateByPraticienne[svlbhId]?.granted ?? [],
+      desa_karmic: desaStateByPraticienne[svlbhId]?.karmic ?? [],
     };
   });
   return (

@@ -18,6 +18,12 @@ export type DesaAtom = {
 /** Capacités DESA accordées à une praticienne (par code). */
 export type DesaCapacities = string[];
 
+/** État DESA d'une praticienne : codes accordés + codes karmiques à libérer. */
+export type DesaState = {
+  granted: string[];
+  karmic: string[];
+};
+
 /**
  * Catalogue des 8 codes DESA (label/description/ordre). Dédupliqué par
  * render via React `cache()`.
@@ -51,30 +57,35 @@ export const getDesaCatalog = cache(
 );
 
 /**
- * Capacités DESA accordées par praticienne (svlbh_id → liste de codes triés
- * par sort_order du catalogue).
+ * État DESA par praticienne (svlbh_id → { granted, karmic } triés par
+ * sort_order du catalogue). Une ligne avec granted=false ET karmic=false
+ * est nettoyée côté server action — donc toute ligne ici a au moins un
+ * des deux axes à true.
  */
-export async function fetchDesaCapacities(
+export async function fetchDesaState(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sb: SupabaseClient<any, any, any>,
-): Promise<Record<string, DesaCapacities>> {
+): Promise<Record<string, DesaState>> {
   const { data, error } = await sb
     .from("praticienne_desa_capacity")
     .select(
-      "svlbh_id, capacity_code, desa_capacity_atom:capacity_code ( sort_order )",
+      "svlbh_id, capacity_code, granted, karmic_to_liberate, desa_capacity_atom:capacity_code ( sort_order )",
     );
   if (error || !data) return {};
 
   type Row = {
     svlbh_id: string;
     capacity_code: string;
+    granted: boolean | null;
+    karmic_to_liberate: boolean | null;
     desa_capacity_atom:
       | { sort_order: number }
       | { sort_order: number }[]
       | null;
   };
 
-  const map: Record<string, Array<{ code: string; order: number }>> = {};
+  type Entry = { code: string; order: number; granted: boolean; karmic: boolean };
+  const map: Record<string, Entry[]> = {};
   for (const row of data as unknown as Row[]) {
     const atom = Array.isArray(row.desa_capacity_atom)
       ? row.desa_capacity_atom[0]
@@ -84,12 +95,29 @@ export async function fetchDesaCapacities(
     map[row.svlbh_id].push({
       code: row.capacity_code,
       order: atom?.sort_order ?? 999,
+      granted: row.granted ?? false,
+      karmic: row.karmic_to_liberate ?? false,
     });
   }
 
-  const out: Record<string, DesaCapacities> = {};
+  const out: Record<string, DesaState> = {};
   for (const k of Object.keys(map)) {
-    out[k] = map[k].sort((a, b) => a.order - b.order).map((x) => x.code);
+    const sorted = map[k].sort((a, b) => a.order - b.order);
+    out[k] = {
+      granted: sorted.filter((x) => x.granted).map((x) => x.code),
+      karmic: sorted.filter((x) => x.karmic).map((x) => x.code),
+    };
   }
+  return out;
+}
+
+/** Compatibilité — codes accordés uniquement, sans l'axe karmique. */
+export async function fetchDesaCapacities(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sb: SupabaseClient<any, any, any>,
+): Promise<Record<string, DesaCapacities>> {
+  const state = await fetchDesaState(sb);
+  const out: Record<string, DesaCapacities> = {};
+  for (const k of Object.keys(state)) out[k] = state[k].granted;
   return out;
 }
