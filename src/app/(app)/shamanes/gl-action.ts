@@ -61,3 +61,38 @@ export async function updateGuidesLumiere(formData: FormData) {
 
   revalidatePath("/shamanes");
 }
+
+// Set absolu — Owner ST6 only. Permet à Patrick d'ajuster directement la
+// valeur sans cliquer +/− des centaines de fois. DEC Patrick 2026-05-29.
+export async function setGuidesLumiereAbsolute(formData: FormData) {
+  const targetSvlbhId = String(formData.get("svlbh_id") ?? "");
+  const rawValue = String(formData.get("value") ?? "");
+  const value = parseInt(rawValue, 10);
+  if (!targetSvlbhId) throw new Error("svlbh_id requis");
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error("valeur invalide (entier ≥ 0)");
+  }
+
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Auth requise");
+
+  const { data: me } = await sb
+    .from("praticienne_profile")
+    .select("stx, pro_status")
+    .eq("supabase_user_id", user.id)
+    .maybeSingle();
+  if (me?.stx !== "ST6" || me?.pro_status !== "ACTIVE") {
+    throw new Error("Réservé à l'Owner ST6");
+  }
+
+  const { error } = await sb
+    .from("praticienne_profile")
+    .update({ guides_lumiere: value })
+    .eq("svlbh_id", targetSvlbhId);
+  if (error) throw new Error(`GL set : ${error.message}`);
+
+  revalidatePath("/shamanes");
+}

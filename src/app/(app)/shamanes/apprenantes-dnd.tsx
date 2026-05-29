@@ -4,7 +4,7 @@
 // uniquement. Mutation optimiste avec rollback on error.
 // DEC Patrick 2026-05-18.
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -32,7 +32,7 @@ export type DnDApprenante = {
   /** UUIDv5 déterministe (cf. apprenanteSvlbhId) — clé pour les
    *  attributions DESA. Pas un vrai svlbh_id en DB. */
   svlbh_id: string;
-  tier: "formation" | "parcours-passif" | "cercle-akashique";
+  tier: "st1-active" | "formation" | "parcours-passif" | "cercle-akashique";
   emoji?: string;
   description?: string | null;
   niveaux_bloques?: number | null;
@@ -45,10 +45,11 @@ export type DnDApprenante = {
   desa_karmic?: string[];
 };
 
-type ZoneKey = "formation" | "parcours-passif" | "cercle-akashique";
+type ZoneKey = "st1-active" | "formation" | "parcours-passif" | "cercle-akashique";
 
 const ZONES: Array<{ key: ZoneKey; emoji: string; title: string }> = [
-  { key: "formation", emoji: "🌱", title: "Apprenantes en formation" },
+  { key: "st1-active", emoji: "🌟", title: "Apprenantes ST1 actives" },
+  { key: "formation", emoji: "🌱", title: "Apprenantes actives" },
   { key: "parcours-passif", emoji: "💤", title: "Shamanes passives de Cercles akashiques actifs" },
   { key: "cercle-akashique", emoji: "🌌", title: "Shamanes du Cercle akashique ex-Shamanes passives" },
 ];
@@ -102,6 +103,12 @@ export function ApprenantesDnD({
   desaCatalog: Record<string, DesaAtom>;
 }) {
   const [items, setItems] = useState<DnDApprenante[]>(initial);
+  // Resync items quand initial change (après revalidatePath suite à une
+  // mutation DESA / tier). Sans ça, les nouveaux desa_karmic / desa_granted
+  // restent bloqués dans le state local. DEC Patrick 2026-05-29.
+  useEffect(() => {
+    setItems(initial);
+  }, [initial]);
   const [draggingName, setDraggingName] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
@@ -264,7 +271,8 @@ function ApprenanteCardInner({
         <div className="flex items-start justify-between gap-2">
           <p className="font-semibold text-neutral-900">{a.name}</p>
           {/* Section apprenantes = Owner-only (page-level gate). DESA toujours
-              rendu (outil admin). Codes karmiques en rouge à gauche du sigle. */}
+              rendu (outil admin). Codes karmiques en rouge, max 3 par ligne
+              avec retour à la ligne. DESA sigle à la fin de la dernière ligne. */}
           <div className="flex flex-shrink-0 flex-col items-end gap-1">
             {a.niveaux_bloques != null ? (
               <span
@@ -274,29 +282,42 @@ function ApprenanteCardInner({
                 NSB {a.niveaux_bloques}
               </span>
             ) : null}
-            <div className="flex items-center gap-1">
-              {(a.desa_karmic ?? []).map((code) => (
-                <span
-                  key={code}
-                  className="rounded-md border-2 border-red-500 bg-red-50 px-1 py-0.5 font-mono text-[10px] font-bold text-red-600"
-                  title={`${code} — DESA karmique encore à libérer`}
+            {(() => {
+              const karmic = a.desa_karmic ?? [];
+              const chunks: string[][] = [];
+              for (let i = 0; i < karmic.length; i += 3) {
+                chunks.push(karmic.slice(i, i + 3));
+              }
+              const desaButton = (
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDesaOpen(true);
+                  }}
+                  className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900 transition hover:ring-2 hover:ring-indigo-300"
+                  title="Attribuer les capacités DESA (Owner)"
                 >
-                  {code}
-                </span>
-              ))}
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDesaOpen(true);
-                }}
-                className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900 transition hover:ring-2 hover:ring-indigo-300"
-                title="Attribuer les capacités DESA (Owner)"
-              >
-                DESA
-              </button>
-            </div>
+                  DESA
+                </button>
+              );
+              if (chunks.length === 0) return desaButton;
+              return chunks.map((row, idx) => (
+                <div key={idx} className="flex items-center gap-1">
+                  {row.map((code) => (
+                    <span
+                      key={code}
+                      className="rounded-md border-2 border-red-500 bg-red-50 px-1 py-0.5 font-mono text-[10px] font-bold text-red-600"
+                      title={`${code} — DESA karmique encore à libérer`}
+                    >
+                      {code}
+                    </span>
+                  ))}
+                  {idx === chunks.length - 1 ? desaButton : null}
+                </div>
+              ));
+            })()}
           </div>
         </div>
         <p className="mt-0.5 text-[11px] font-semibold" style={{ color }}>

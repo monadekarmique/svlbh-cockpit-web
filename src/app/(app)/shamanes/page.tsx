@@ -509,9 +509,9 @@ async function ApprenantesDnDSection() {
   const items: DnDApprenante[] = APPRENANTES.map((a) => {
     const db = dbByName.get(a.name);
     const dbTier = db?.tier;
-    const effectiveTier = (dbTier === "formation" || dbTier === "parcours-passif" || dbTier === "cercle-akashique")
+    const effectiveTier = (dbTier === "st1-active" || dbTier === "formation" || dbTier === "parcours-passif" || dbTier === "cercle-akashique")
       ? dbTier
-      : (a.tier === "formation" || a.tier === "parcours-passif" || a.tier === "cercle-akashique")
+      : (a.tier === "st1-active" || a.tier === "formation" || a.tier === "parcours-passif" || a.tier === "cercle-akashique")
       ? a.tier
       : "formation";
     // UUIDv5 déterministe pour les apprenantes statiques (pas d'svlbh_id réel

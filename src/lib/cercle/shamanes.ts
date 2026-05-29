@@ -17,6 +17,7 @@ export type ShamaneRole =
  * - t3-en-attente : ST3 en cours de certification (legacy, conservé pour compat)
  */
 export type ParticipantTier =
+  | "st1-active"
   | "formation"
   | "parcours-passif"
   | "cercle-akashique"
@@ -43,15 +44,16 @@ export type Participant = {
  * DEC Patrick 2026-05-29 — sigle DESA sur Julie/Sarah/Léa. */
 export const APPRENANTES: Participant[] = [
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
-  { name: "Julie Bays", tier: "parcours-passif", emoji: "🌷", desa_active: true },
+  { name: "Julie Bays", tier: "formation", emoji: "🌷", desa_active: true },
   { name: "Camille Bays", tier: "parcours-passif", emoji: "🌼" },
-  { name: "Léa Bays", tier: "parcours-passif", emoji: "🍀", desa_active: true },
-  { name: "Sarah Bays", tier: "parcours-passif", emoji: "🌻", desa_active: true },
+  { name: "Léa Bays", tier: "formation", emoji: "🍀", desa_active: true },
+  { name: "Sarah Bays", tier: "formation", emoji: "🌻", desa_active: true },
   { name: "Béatrice Pathey", tier: "cercle-akashique", emoji: "🌌" },
 ];
 
 export const TIER_LABEL: Record<ParticipantTier, string> = {
-  formation: "Apprenante en formation",
+  "st1-active": "Apprenante ST1 active",
+  formation: "Apprenante active",
   "parcours-passif": "Shamane passive de Cercles akashiques actifs",
   "cercle-akashique": "Shamane du Cercle akashique (ex-passive)",
   "t3-en-attente": "ST3 en attente",
@@ -60,6 +62,7 @@ export const TIER_LABEL: Record<ParticipantTier, string> = {
 };
 
 export const TIER_COLOR: Record<ParticipantTier, string> = {
+  "st1-active": "#0ea5e9", // sky — naissance
   formation: "#10b981", // emerald — en mouvement
   "parcours-passif": "#94a3b8", // slate — en pause
   "cercle-akashique": "#7c3aed", // violet — akashique

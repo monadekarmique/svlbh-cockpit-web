@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 import { setMyDailyStatus } from "./daily-status-actions";
+import { setGuidesLumiereAbsolute } from "./gl-action";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { DYNAMIQUE_AXIS_TONE, type DynamiqueChip } from "@/lib/cercle/dynamiques";
@@ -134,6 +135,8 @@ export function TherapeuteCardClient({
 
   // Modal d'attribution des capacités DESA — Owner ST6 uniquement.
   const [desaOpen, setDesaOpen] = useState(false);
+  // Édition inline du GL (saisie absolue Owner-only).
+  const [glEditing, setGlEditing] = useState(false);
 
   return (
     <div
@@ -181,21 +184,35 @@ export function TherapeuteCardClient({
                 NSB {t.attention_steps}
               </span>
             ) : null}
-            {/* Codes karmiques (rouges) à GAUCHE du sigle DESA. */}
-            <div className="flex items-center gap-1">
-              {desaKarmic.map((code) => (
-                <span
-                  key={code}
-                  className="rounded-md border-2 border-red-500 bg-red-50 px-1 py-0.5 font-mono text-[10px] font-bold text-red-600"
-                  title={`${code} — DESA karmique encore à libérer`}
-                >
-                  {code}
-                </span>
-              ))}
-              <DesaBlock
-                onOpenEdit={isOwner ? () => setDesaOpen(true) : undefined}
-              />
-            </div>
+            {/* Codes karmiques (rouges) — max 3 par ligne avec retour à la
+                ligne. DESA sigle à la fin de la dernière ligne (ou seul si
+                aucun code karmique). DEC Patrick 2026-05-29. */}
+            {(() => {
+              const chunks: string[][] = [];
+              for (let i = 0; i < desaKarmic.length; i += 3) {
+                chunks.push(desaKarmic.slice(i, i + 3));
+              }
+              const desa = (
+                <DesaBlock
+                  onOpenEdit={isOwner ? () => setDesaOpen(true) : undefined}
+                />
+              );
+              if (chunks.length === 0) return desa;
+              return chunks.map((row, idx) => (
+                <div key={idx} className="flex items-center gap-1">
+                  {row.map((code) => (
+                    <span
+                      key={code}
+                      className="rounded-md border-2 border-red-500 bg-red-50 px-1 py-0.5 font-mono text-[10px] font-bold text-red-600"
+                      title={`${code} — DESA karmique encore à libérer`}
+                    >
+                      {code}
+                    </span>
+                  ))}
+                  {idx === chunks.length - 1 ? desa : null}
+                </div>
+              ));
+            })()}
           </div>
         ) : null}
       </div>
@@ -242,12 +259,53 @@ export function TherapeuteCardClient({
           >
             −
           </button>
-          <span
-            className="rounded-full bg-violet-100 px-2 py-0.5 font-mono text-[11px] font-bold text-violet-900"
-            title="Guides de Lumière — compteur collaboratif (modifiable par tout membre du Cercle)"
-          >
-            GL {t.guides_lumiere ?? 0}
-          </span>
+          {isOwner && glEditing ? (
+            <form
+              action={setGuidesLumiereAbsolute}
+              onSubmit={() => setGlEditing(false)}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <input type="hidden" name="svlbh_id" value={t.svlbh_id} />
+              <input
+                type="number"
+                name="value"
+                defaultValue={t.guides_lumiere ?? 0}
+                min={0}
+                autoFocus
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onFocus={(e) => e.currentTarget.select()}
+                onBlur={(e) => e.currentTarget.form?.requestSubmit()}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setGlEditing(false);
+                  }
+                }}
+                className="w-20 rounded-full bg-violet-50 px-2 py-0.5 text-center font-mono text-[11px] font-bold text-violet-900 ring-1 ring-violet-400 focus:outline-none focus:ring-2"
+              />
+            </form>
+          ) : isOwner ? (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setGlEditing(true);
+              }}
+              className="rounded-full bg-violet-100 px-2 py-0.5 font-mono text-[11px] font-bold text-violet-900 transition hover:ring-2 hover:ring-violet-300"
+              title="Cliquer pour saisir une valeur GL absolue (Owner)"
+            >
+              GL {t.guides_lumiere ?? 0}
+            </button>
+          ) : (
+            <span
+              className="rounded-full bg-violet-100 px-2 py-0.5 font-mono text-[11px] font-bold text-violet-900"
+              title="Guides de Lumière — compteur collaboratif (modifiable par tout membre du Cercle)"
+            >
+              GL {t.guides_lumiere ?? 0}
+            </span>
+          )}
           <button
             type="button"
             disabled={!bumpGL}
