@@ -43,6 +43,10 @@ export type DnDApprenante = {
   /** Codes DESA marqués karmiques à libérer — affichés en rouge à gauche du
    *  sigle DESA sur le devant de la carte. DEC Patrick 2026-05-29. */
   desa_karmic?: string[];
+  /** Pastilles affichées en colonne gauche (mêmes que sur cartes therapeute). */
+  tx?: string;
+  cx?: string;
+  stx?: string;
 };
 
 type ZoneKey = "st1-active" | "formation" | "parcours-passif" | "cercle-akashique";
@@ -266,7 +270,21 @@ function ApprenanteCardInner({
       className="flex items-start gap-3 rounded-xl border bg-white p-4 shadow-sm"
       style={{ borderLeftColor: color, borderLeftWidth: 4 }}
     >
-      <span className="text-2xl">{a.emoji ?? "·"}</span>
+      {(a.tx || a.cx || a.stx) ? (
+        <div className="flex flex-col gap-0.5 font-mono text-[9px] font-bold">
+          <span className="rounded bg-rose-100 px-1.5 py-0.5 text-rose-900" title="Tx — capacité à recevoir / risque">
+            {a.tx ?? "T?"}
+          </span>
+          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-900" title="Cx — capacité à transmettre">
+            {a.cx ?? "C?"}
+          </span>
+          <span className="rounded bg-violet-100 px-1.5 py-0.5 text-violet-900" title="ST — parcours / rôle">
+            {a.stx ?? "ST?"}
+          </span>
+        </div>
+      ) : (
+        <span className="text-2xl">{a.emoji ?? "·"}</span>
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className="font-semibold text-neutral-900">{a.name}</p>

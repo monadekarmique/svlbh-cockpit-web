@@ -34,6 +34,11 @@ export type Participant = {
   /** Sigle DESA visible top-right de la carte (display only — pas de
    *  capacités attribuables faute de svlbh_id). DEC Patrick 2026-05-29. */
   desa_active?: boolean;
+  /** Pastilles affichées en colonne gauche de la carte (mêmes 3 que sur
+   *  les cartes therapeute). Valeurs DISPLAY (ex. tx="T14", cx="C15"). */
+  tx?: string;
+  cx?: string;
+  stx?: string;
 };
 
 /** Apprenantes en parcours — visibles uniquement aux Owners.
@@ -43,6 +48,7 @@ export type Participant = {
  * Māṁsa (consultantes liées à Patrick en DB consultante_record).
  * DEC Patrick 2026-05-29 — sigle DESA sur Julie/Sarah/Léa. */
 export const APPRENANTES: Participant[] = [
+  { name: "Carine", tier: "st1-active", emoji: "🌸", tx: "T14", cx: "C15", stx: "ST1" },
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
   { name: "Julie Bays", tier: "formation", emoji: "🌷", desa_active: true },
   { name: "Camille Bays", tier: "parcours-passif", emoji: "🌼" },
@@ -86,7 +92,7 @@ export const SUPERVISORS_VIRTUAL: SupervisorVirtual[] = [
   {
     cercle_number: 1,
     code: "455000",
-    role_label: "Superviseur méthodologique",
+    role_label: "Superviseur méthodologique familial",
     emoji: "🔬",
     color: "#1d4ed8", // bleu (n°1 bleu)
   },

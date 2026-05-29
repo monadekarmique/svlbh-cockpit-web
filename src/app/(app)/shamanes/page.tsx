@@ -528,6 +528,9 @@ async function ApprenantesDnDSection() {
       desa_active: a.desa_active ?? false,
       desa_granted: desaStateByPraticienne[svlbhId]?.granted ?? [],
       desa_karmic: desaStateByPraticienne[svlbhId]?.karmic ?? [],
+      tx: a.tx,
+      cx: a.cx,
+      stx: a.stx,
     };
   });
   return (
