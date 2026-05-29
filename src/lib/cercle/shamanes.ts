@@ -88,7 +88,7 @@ export const APPRENANTES: Participant[] = [
     name: "Julie Bays", tier: "formation", emoji: "🌷", desa_active: true,
     nsb_familial: { count: 1, description: "Son compagnon" },
   },
-  { name: "Camille Bays", tier: "parcours-passif", emoji: "🌼" },
+  { name: "Camille Bays", tier: "formation", emoji: "🌼" },
   {
     name: "Léa Bays", tier: "formation", emoji: "🍀", desa_active: true,
     nsb_familial: { count: 1, description: "Son compagnon" },
