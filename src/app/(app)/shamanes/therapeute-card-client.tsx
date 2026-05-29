@@ -17,59 +17,34 @@ import { DesaEditModal } from "./desa-edit-modal";
 // tant que Patrick n'a pas attribué. DEC Patrick 2026-05-29.
 function DesaBlock({
   active,
-  capacities,
-  catalog,
   onOpenEdit,
 }: {
   active: boolean;
-  capacities: DesaCapacities;
-  catalog: Record<string, DesaAtom>;
   onOpenEdit?: () => void;
 }) {
+  // Seul le sigle DESA est affiché sur la carte. Les capacités précises
+  // (DC/TFEC/…) ne sont visibles pour PERSONNE — uniquement consultables
+  // par l'Owner via le modal d'attribution. DEC Patrick 2026-05-29.
   if (!active) return null;
   const sigle = (
     <span className="rounded-md bg-indigo-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-900">
       DESA
     </span>
   );
+  if (!onOpenEdit) return sigle;
   return (
-    <div
-      className="flex shrink-0 flex-col items-end gap-1"
-      title="DESA — Dark Entities & Spirit Attachments (capacités de libération)"
+    <button
+      type="button"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpenEdit();
+      }}
+      className="rounded-md transition hover:ring-2 hover:ring-indigo-300"
+      title="Attribuer les capacités DESA (Owner)"
     >
-      {onOpenEdit ? (
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenEdit();
-          }}
-          className="rounded-md transition hover:ring-2 hover:ring-indigo-300"
-          title="Attribuer les capacités DESA (Owner)"
-        >
-          {sigle}
-        </button>
-      ) : (
-        sigle
-      )}
-      {capacities.length > 0 ? (
-        <div className="flex flex-wrap justify-end gap-0.5">
-          {capacities.map((code) => {
-            const atom = catalog[code];
-            return (
-              <span
-                key={code}
-                className="rounded bg-indigo-50 px-1 py-0.5 font-mono text-[9px] font-semibold text-indigo-800 ring-1 ring-indigo-200"
-                title={atom?.description ?? atom?.label ?? code}
-              >
-                {atom?.label ?? code}
-              </span>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
+      {sigle}
+    </button>
   );
 }
 
@@ -212,8 +187,6 @@ export function TherapeuteCardClient({
             ) : null}
             <DesaBlock
               active={t.desa_active}
-              capacities={desaCapacities}
-              catalog={desaCatalog}
               onOpenEdit={isOwner ? () => setDesaOpen(true) : undefined}
             />
           </div>
