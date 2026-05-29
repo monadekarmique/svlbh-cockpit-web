@@ -457,7 +457,7 @@ export default async function ShamanesPage() {
           {SUPERVISORS_VIRTUAL.map((s) => (
             <li
               key={s.code}
-              className="flex items-center gap-3 rounded-xl border bg-white p-4 shadow-sm"
+              className="flex items-start gap-3 rounded-xl border bg-white p-4 shadow-sm"
               style={{ borderLeftColor: s.color, borderLeftWidth: 4 }}
             >
               {s.cercle_number != null ? (
@@ -492,6 +492,30 @@ export default async function ShamanesPage() {
                   />
                 ) : null}
               </div>
+              {/* BDEC top-right — codes karmiques verts (gisants).
+                  Affichés display-only sur la carte virtuelle superviseur.
+                  DEC Patrick 2026-05-29. */}
+              {s.bdec_karmic && s.bdec_karmic.length > 0 ? (
+                <div className="flex flex-shrink-0 flex-col items-end gap-1">
+                  <div className="flex items-center gap-1">
+                    {s.bdec_karmic.map((code) => (
+                      <span
+                        key={code}
+                        className="rounded-md border-2 border-emerald-500 bg-emerald-50 px-1 py-0.5 font-mono text-[10px] font-bold text-emerald-700"
+                        title={`${code} — conscience gisante BDEC karmique`}
+                      >
+                        {code}
+                      </span>
+                    ))}
+                    <span
+                      className="rounded-md bg-emerald-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-900"
+                      title="BDEC — Consciences gisantes (display-only sur carte virtuelle)"
+                    >
+                      BDEC
+                    </span>
+                  </div>
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

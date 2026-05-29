@@ -148,6 +148,10 @@ export type SupervisorVirtual = {
   role_label: string;
   emoji: string;
   color: string;
+  /** Codes BDEC karmiques affichés top-right de la carte virtuelle
+   *  (consciences gisantes vertes, sous-codes du système BDEC).
+   *  DEC Patrick 2026-05-29. */
+  bdec_karmic?: string[];
 };
 
 export const SUPERVISORS_VIRTUAL: SupervisorVirtual[] = [
@@ -164,6 +168,7 @@ export const SUPERVISORS_VIRTUAL: SupervisorVirtual[] = [
     role_label: "Superviseur protection méthodologique",
     emoji: "🛡",
     color: "#1d4ed8",
+    bdec_karmic: ["DEII", "Dra"],
   },
 ];
 
