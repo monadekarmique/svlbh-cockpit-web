@@ -8,11 +8,18 @@
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+/** Système de capacités. DESA = Dark Entities & Spirit Attachments (rouge,
+ *  7 codes DC/TFEC/ES/SEI/ILSS/DR/RI). BDEC = clone parallèle pour les
+ *  consciences gisantes (vert, 4 codes DEII/EP/Des/Dra). DEC Patrick 2026-05-29. */
+export type CapacitySystem = "DESA" | "BDEC";
+
 export type DesaAtom = {
   code: string;
   label: string;
   description: string | null;
   sortOrder: number;
+  /** Système d'appartenance (DESA ou BDEC). */
+  system: CapacitySystem;
 };
 
 /** Capacités DESA accordées à une praticienne (par code). */
@@ -35,7 +42,7 @@ export const getDesaCatalog = cache(
   ): Promise<Record<string, DesaAtom>> => {
     const { data, error } = await sb
       .from("desa_capacity_atom")
-      .select("code, label, description, sort_order")
+      .select("code, label, description, sort_order, system")
       .order("sort_order");
     if (error || !data) return {};
     const out: Record<string, DesaAtom> = {};
@@ -44,12 +51,15 @@ export const getDesaCatalog = cache(
       label: string;
       description: string | null;
       sort_order: number;
+      system: string;
     }>) {
+      const sys: CapacitySystem = row.system === "BDEC" ? "BDEC" : "DESA";
       out[row.code] = {
         code: row.code,
         label: row.label,
         description: row.description,
         sortOrder: row.sort_order,
+        system: sys,
       };
     }
     return out;

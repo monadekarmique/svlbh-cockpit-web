@@ -1,31 +1,20 @@
 "use client";
 
-// Drag-and-drop des apprenantes entre les 3 sous-catégories. Owner ST6
-// uniquement. Mutation optimiste avec rollback on error.
-// DEC Patrick 2026-05-18.
+// Apprenantes — vue statique groupée par catégorie. Owner ST6 uniquement.
+// DEC Patrick 2026-05-29 : drag-and-drop retiré (rendait le survol mobile
+// impraticable et ne fonctionnait pas correctement). Pour changer un tier
+// d'apprenante, éditer directement la table apprenante_tier en DB ou
+// APPRENANTES dans shamanes.ts.
+// DEC Patrick 2026-05-18 (legacy).
 
-import { useState, useTransition, useEffect } from "react";
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  PointerSensor,
-  TouchSensor,
-  KeyboardSensor,
-  closestCorners,
-  useDroppable,
-  useDraggable,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import { setApprenanteTier } from "./apprenante-tier-action";
+import { useState } from "react";
 import { TIER_LABEL, TIER_COLOR } from "@/lib/cercle/shamanes";
 import type { ParticipantTier } from "@/lib/cercle/shamanes";
 import { lookupMembership } from "@/lib/cercle/akashiques";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DesaAtom } from "@/lib/cercle/desa";
 import { DesaEditModal } from "./desa-edit-modal";
+import { BdecGisantsModal } from "./bdec-gisants-modal";
 
 export type DnDApprenante = {
   name: string;
@@ -114,149 +103,45 @@ export function ApprenantesDnD({
   dhatuMeta: Record<Dhatu, DhatuMeta>;
   desaCatalog: Record<string, DesaAtom>;
 }) {
-  const [items, setItems] = useState<DnDApprenante[]>(initial);
-  // Resync items quand initial change (après revalidatePath suite à une
-  // mutation DESA / tier). Sans ça, les nouveaux desa_karmic / desa_granted
-  // restent bloqués dans le state local. DEC Patrick 2026-05-29.
-  useEffect(() => {
-    setItems(initial);
-  }, [initial]);
-  const [draggingName, setDraggingName] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
-    useSensor(KeyboardSensor),
-  );
-
-  function onDragStart(e: DragStartEvent) {
-    setDraggingName(String(e.active.id));
-  }
-
-  function onDragEnd(e: DragEndEvent) {
-    const { active, over } = e;
-    setDraggingName(null);
-    if (!over) return;
-    const name = String(active.id);
-    const overId = String(over.id);
-
-    // Résolution : drop sur background zone OU sur une carte voisine
-    // (auquel cas on prend la zone de cette carte).
-    let targetZone: ZoneKey;
-    if (overId.startsWith("zone-")) {
-      const z = overId.replace("zone-", "") as ZoneKey;
-      if (!ZONES.some((zone) => zone.key === z)) return;
-      targetZone = z;
-    } else {
-      const overCard = items.find((t) => t.name === overId);
-      if (!overCard) return;
-      targetZone = overCard.tier as ZoneKey;
-    }
-
-    const current = items.find((t) => t.name === name);
-    if (!current || current.tier === targetZone) return;
-
-    setItems((prev) => prev.map((t) => (t.name === name ? { ...t, tier: targetZone } : t)));
-
-    const fd = new FormData();
-    fd.append("name", name);
-    fd.append("tier", targetZone);
-    startTransition(() => {
-      setApprenanteTier(fd).catch((err) => {
-        console.error("[apprenantes-dnd] rollback", err);
-        setItems((prev) => prev.map((t) => (t.name === name ? { ...t, tier: current.tier } : t)));
-      });
-    });
-  }
-
-  const dragging = draggingName ? items.find((t) => t.name === draggingName) : null;
-
+  // Rendu statique : items = initial sans state local. Le drag inter-zones
+  // n'est plus nécessaire (DEC Patrick 2026-05-29).
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <div className="space-y-5 pt-2">
-        <p className="text-[10px] font-normal text-neutral-500">
-          🔒 Vue Owner — non visible aux thérapeutes · Glisse les cartes
-          entre les zones pour mettre à jour le parcours.
-        </p>
-        {ZONES.map((z) => {
-          const c = TIER_COLOR[z.key as ParticipantTier];
-          const inZone = items.filter((it) => it.tier === z.key);
-          return (
-            <DropZone key={z.key} id={`zone-${z.key}`} title={`${z.emoji} ${z.title} (${inZone.length})`} color={c}>
-              {inZone.map((a) => (
-                <DraggableCard key={a.name} name={a.name}>
-                  <ApprenanteCardInner a={a} color={c} dhatuMeta={dhatuMeta} desaCatalog={desaCatalog} />
-                </DraggableCard>
-              ))}
-            </DropZone>
-          );
-        })}
-      </div>
-
-      <DragOverlay>
-        {dragging ? (
-          <div className="opacity-90 shadow-2xl ring-2 ring-blue-400">
-            <ApprenanteCardInner a={dragging} color={TIER_COLOR[dragging.tier as ParticipantTier]} dhatuMeta={dhatuMeta} desaCatalog={desaCatalog} />
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
-  );
-}
-
-function DropZone({
-  id, title, color, children,
-}: { id: string; title: string; color: string; children: React.ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-  const childArray = Array.isArray(children) ? children : [children];
-  const empty = childArray.filter(Boolean).length === 0;
-  return (
-    <section className="space-y-2">
-      <h2 className="text-base font-semibold" style={{ color }}>
-        {title}
-      </h2>
-      <div
-        ref={setNodeRef}
-        className={
-          "rounded-xl p-2 transition-colors " +
-          (isOver ? "ring-2 ring-blue-400" : "")
-        }
-        style={isOver ? { backgroundColor: `${color}15` } : undefined}
-      >
-        {empty ? (
-          <p className="px-2 py-4 text-center text-xs italic text-neutral-500">
-            Glisse une apprenante ici.
-          </p>
-        ) : (
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">{children}</ul>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function DraggableCard({ name, children }: { name: string; children: React.ReactNode }) {
-  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: name });
-  // Carte aussi droppable → drop sur le bord d'une autre carte vise la zone
-  // de cette carte voisine. Match l'attente Patrick : « toucher le bord =
-  // prendre sa place ».
-  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: name });
-  const setNodeRef = (el: HTMLLIElement | null) => { setDragRef(el); setDropRef(el); };
-  return (
-    <li
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      className={
-        "cursor-grab touch-none active:cursor-grabbing " +
-        (isDragging ? "opacity-30 " : "") +
-        (isOver ? "ring-2 ring-blue-400 rounded-xl " : "")
-      }
-      title="Glisse pour changer de catégorie"
-    >
-      {children}
-    </li>
+    <div className="space-y-5 pt-2">
+      <p className="text-[10px] font-normal text-neutral-500">
+        🔒 Vue Owner — non visible aux thérapeutes.
+      </p>
+      {ZONES.map((z) => {
+        const c = TIER_COLOR[z.key as ParticipantTier];
+        const inZone = initial.filter((it) => it.tier === z.key);
+        return (
+          <section key={z.key} className="space-y-2">
+            <h2 className="text-base font-semibold" style={{ color: c }}>
+              {z.emoji} {z.title} ({inZone.length})
+            </h2>
+            <div className="rounded-xl p-2">
+              {inZone.length === 0 ? (
+                <p className="px-2 py-4 text-center text-xs italic text-neutral-500">
+                  Aucune apprenante.
+                </p>
+              ) : (
+                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {inZone.map((a) => (
+                    <li key={a.name}>
+                      <ApprenanteCardInner
+                        a={a}
+                        color={c}
+                        dhatuMeta={dhatuMeta}
+                        desaCatalog={desaCatalog}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+        );
+      })}
+    </div>
   );
 }
 
@@ -273,6 +158,18 @@ function ApprenanteCardInner({
 }) {
   const memb = lookupMembership(a.name);
   const [desaOpen, setDesaOpen] = useState(false);
+  const [bdecOpen, setBdecOpen] = useState(false);
+
+  // BDEC = système parallèle clone de DESA (consciences gisantes vertes,
+  // 4 codes DEII/EP/Des/Dra). Ses codes karmiques s'affichent dans la
+  // rangée VERTE au-dessus de la rangée rouge DESA. DEC Patrick 2026-05-29.
+  const bdecCodes = new Set(
+    Object.values(desaCatalog)
+      .filter((c) => c.system === "BDEC")
+      .map((c) => c.code),
+  );
+  const desaKarmic = (a.desa_karmic ?? []).filter((c) => !bdecCodes.has(c));
+  const bdecKarmic = (a.desa_karmic ?? []).filter((c) => bdecCodes.has(c));
   return (
     <div
       className="flex items-start gap-3 rounded-xl border bg-white p-4 shadow-sm"
@@ -308,11 +205,49 @@ function ApprenanteCardInner({
                 NSB {a.niveaux_bloques}
               </span>
             ) : null}
+            {/* BDEC — clone parallèle de DESA, thème vert (consciences
+                gisantes). Rangée(s) AU-DESSUS de DESA. DEC Patrick 2026-05-29. */}
             {(() => {
-              const karmic = a.desa_karmic ?? [];
               const chunks: string[][] = [];
-              for (let i = 0; i < karmic.length; i += 3) {
-                chunks.push(karmic.slice(i, i + 3));
+              for (let i = 0; i < bdecKarmic.length; i += 3) {
+                chunks.push(bdecKarmic.slice(i, i + 3));
+              }
+              const bdecButton = (
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setBdecOpen(true);
+                  }}
+                  className="rounded-md bg-emerald-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-900 transition hover:ring-2 hover:ring-emerald-300"
+                  title="Attribuer les capacités BDEC — consciences gisantes (Owner)"
+                >
+                  BDEC
+                </button>
+              );
+              if (chunks.length === 0) return bdecButton;
+              return chunks.map((row, idx) => (
+                <div key={`bdec-${idx}`} className="flex items-center gap-1">
+                  {row.map((code) => (
+                    <span
+                      key={code}
+                      className="rounded-md border-2 border-emerald-500 bg-emerald-50 px-1 py-0.5 font-mono text-[10px] font-bold text-emerald-700"
+                      title={`${code} — conscience gisante BDEC karmique à apaiser`}
+                    >
+                      {code}
+                    </span>
+                  ))}
+                  {idx === 0 ? bdecButton : null}
+                </div>
+              ));
+            })()}
+            {/* DESA — système d'origine, thème rouge (Dark Entities & Spirit
+                Attachments). Codes karmiques en rouge, max 3 par ligne. */}
+            {(() => {
+              const chunks: string[][] = [];
+              for (let i = 0; i < desaKarmic.length; i += 3) {
+                chunks.push(desaKarmic.slice(i, i + 3));
               }
               const desaButton = (
                 <button
@@ -329,10 +264,8 @@ function ApprenanteCardInner({
                 </button>
               );
               if (chunks.length === 0) return desaButton;
-              // DESA reste ancré sur la 1ʳᵉ ligne (haut de la carte) ; les
-              // chunks suivants wrap en-dessous, à gauche, sans DESA.
               return chunks.map((row, idx) => (
-                <div key={idx} className="flex items-center gap-1">
+                <div key={`desa-${idx}`} className="flex items-center gap-1">
                   {row.map((code) => (
                     <span
                       key={code}
@@ -352,10 +285,10 @@ function ApprenanteCardInner({
           {TIER_LABEL[a.tier as ParticipantTier]}
         </p>
         <CerclesAkashiquesChips membership={memb} dhatuMeta={dhatuMeta} />
-        {a.description ? (
-          <p className="mt-1.5 text-[10px] italic text-neutral-600">{a.description}</p>
-        ) : null}
-        {/* NSB familiales — pastille verte autonome (branche transgén propre). */}
+        {/* NSB famille — pastille verte autonome (branche transgén propre).
+            Placée juste après les cercles akashiques pour s'afficher sous
+            la pastille Māṁsa (ou autre cercle pertinent) côté Julie/Léa,
+            ou sous la zone cercles (vide) pour Carine. DEC Patrick 2026-05-29. */}
         {a.nsb_familial ? (
           <div className="mt-1.5 flex flex-col gap-0.5">
             <p className="text-[10px] font-medium text-emerald-700">
@@ -363,11 +296,14 @@ function ApprenanteCardInner({
             </p>
             <span
               className="inline-flex w-fit items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-700"
-              title={`NSB familiales — ${a.nsb_familial.description}`}
+              title={`NSB famille — ${a.nsb_familial.description}`}
             >
-              NSB familiales · {a.nsb_familial.count}
+              NSB famille · {a.nsb_familial.count}
             </span>
           </div>
+        ) : null}
+        {a.description ? (
+          <p className="mt-1.5 text-[10px] italic text-neutral-600">{a.description}</p>
         ) : null}
         {/* Pastilles NSB INCOMING : Carine a-t-elle pointé cette personne
             comme superviseur/anchor ? Si oui, on affiche une mini-pastille
@@ -396,6 +332,15 @@ function ApprenanteCardInner({
       <DesaEditModal
         open={desaOpen}
         onClose={() => setDesaOpen(false)}
+        svlbhId={a.svlbh_id}
+        praticienneName={a.name}
+        initialGranted={a.desa_granted ?? []}
+        initialKarmic={a.desa_karmic ?? []}
+        catalog={desaCatalog}
+      />
+      <BdecGisantsModal
+        open={bdecOpen}
+        onClose={() => setBdecOpen(false)}
         svlbhId={a.svlbh_id}
         praticienneName={a.name}
         initialGranted={a.desa_granted ?? []}

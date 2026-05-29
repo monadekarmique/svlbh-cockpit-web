@@ -59,11 +59,11 @@ export const APPRENANTES: Participant[] = [
     name: "Carine", tier: "st1-active", emoji: "🌸",
     tx: "T14", cx: "C15", stx: "ST1",
     // Liens NSB de Carine (source) → rendus sur les cartes des
-    // superviseurs/anchors, pas sur la sienne. DEC Patrick 2026-05-29.
+    // superviseurs/anchors, pas sur la sienne. DEC Patrick 2026-05-29 :
+    // Julie/Léa retirées (la pastille NSB · Carine sur leurs cartes n'a
+    // pas lieu d'être) — seul Patrick reste comme anchor.
     nsb_links: [
       { name: "Patrick Bays" },
-      { name: "Julie Bays", cercle: "Māṁsa" },
-      { name: "Léa Bays", cercle: "Māṁsa" },
     ],
     nsb_familial: {
       count: 2,
@@ -76,7 +76,10 @@ export const APPRENANTES: Participant[] = [
     nsb_familial: { count: 1, description: "Son compagnon" },
   },
   { name: "Camille Bays", tier: "parcours-passif", emoji: "🌼" },
-  { name: "Léa Bays", tier: "formation", emoji: "🍀", desa_active: true },
+  {
+    name: "Léa Bays", tier: "formation", emoji: "🍀", desa_active: true,
+    nsb_familial: { count: 1, description: "Son compagnon" },
+  },
   { name: "Sarah Bays", tier: "formation", emoji: "🌻", desa_active: true },
   { name: "Béatrice Pathey", tier: "cercle-akashique", emoji: "🌌" },
 ];

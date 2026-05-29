@@ -1,16 +1,16 @@
 "use client";
 
-// Modal d'attribution des 2 axes DESA pour une praticienne. Owner ST6 only.
-// Ouvert au clic sur le sigle DESA d'une carte. 2 axes indépendants :
-//  - GAUCHE : checkbox « accordée » (capacité détenue).
-//  - DROITE : picker « karmique à libérer » (symbole + filet rouge).
-// Toggles optimistes + rollback on error. DEC Patrick 2026-05-29.
+// Sous-modale BDEC — Consciences gisantes (vertes). Ouverte au clic sur la
+// pastille BDEC d'une carte. Même mécanisme que DesaEditModal (2 axes :
+// accordée + karmique à libérer), thème vert au lieu de rouge.
+// Sous-codes : DEII, EP, Des, Dra (parent_code = 'BDEC' en DB).
+// DEC Patrick 2026-05-29.
 
 import { useState, useTransition, useEffect } from "react";
 import type { DesaAtom } from "@/lib/cercle/desa";
 import { setDesaCapacity } from "./desa-action";
 
-export function DesaEditModal({
+export function BdecGisantsModal({
   open,
   onClose,
   svlbhId,
@@ -33,7 +33,6 @@ export function DesaEditModal({
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  // Resync sur revalidation serveur.
   useEffect(() => {
     setGranted(new Set(initialGranted));
   }, [initialGranted]);
@@ -41,7 +40,6 @@ export function DesaEditModal({
     setKarmic(new Set(initialKarmic));
   }, [initialKarmic]);
 
-  // Échap pour fermer.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -53,10 +51,9 @@ export function DesaEditModal({
 
   if (!open) return null;
 
-  // Modale DESA = uniquement les codes du système DESA. BDEC est un système
-  // parallèle géré par BdecGisantsModal.
+  // Modale BDEC = uniquement les codes du système BDEC (clone parallèle).
   const sortedCodes = Object.values(catalog)
-    .filter((a) => a.system === "DESA")
+    .filter((a) => a.system === "BDEC")
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((a) => a.code);
 
@@ -80,7 +77,6 @@ export function DesaEditModal({
         return n;
       });
       if (!res.ok) {
-        // Rollback.
         setSet((cur) => {
           const r = new Set(cur);
           if (wasOn) r.add(code);
@@ -105,8 +101,8 @@ export function DesaEditModal({
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-indigo-700">
-              DESA — Dark Entities &amp; Spirit Attachments
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-emerald-700">
+              BDEC — Consciences gisantes
             </p>
             <h2 className="mt-0.5 text-lg font-semibold text-neutral-900">
               {praticienneName}
@@ -124,8 +120,8 @@ export function DesaEditModal({
 
         <p className="mb-3 text-[11px] text-neutral-500">
           Gauche : capacité <strong>accordée</strong>. Droite : marquage{" "}
-          <strong className="text-red-600">karmique à libérer</strong> (apparaît
-          en rouge sur la carte). Sauvegarde auto à chaque clic.
+          <strong className="text-emerald-700">karmique gisant à apaiser</strong>{" "}
+          (vert sur la carte). Sauvegarde auto à chaque clic.
         </p>
 
         <ul className="space-y-1.5">
@@ -141,22 +137,21 @@ export function DesaEditModal({
                 className={
                   "flex items-stretch gap-2 rounded-md border transition " +
                   (isGranted
-                    ? "border-indigo-300 bg-indigo-50"
+                    ? "border-emerald-300 bg-emerald-50"
                     : "border-neutral-200 bg-white")
                 }
               >
-                {/* GAUCHE — checkbox accordée + label */}
                 <label className="flex flex-1 cursor-pointer items-start gap-3 px-3 py-2">
                   <input
                     type="checkbox"
                     checked={isGranted}
                     disabled={grantedBusy}
                     onChange={() => toggle(code, "granted")}
-                    className="mt-0.5 h-4 w-4 accent-indigo-600"
+                    className="mt-0.5 h-4 w-4 accent-emerald-600"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="font-mono text-[12px] font-bold text-indigo-900">
+                      <span className="font-mono text-[12px] font-bold text-emerald-900">
                         {code}
                       </span>
                       {atom?.label && atom.label !== code ? (
@@ -178,7 +173,6 @@ export function DesaEditModal({
                   </div>
                 </label>
 
-                {/* DROITE — picker karmique (symbole + filet rouge si actif) */}
                 <button
                   type="button"
                   onClick={() => toggle(code, "karmic_to_liberate")}
@@ -186,13 +180,13 @@ export function DesaEditModal({
                   className={
                     "flex w-12 flex-shrink-0 items-center justify-center rounded-r-md border-l-2 font-mono text-[14px] font-bold transition " +
                     (isKarmic
-                      ? "border-red-500 bg-red-50 text-red-600 ring-2 ring-red-400"
-                      : "border-neutral-200 bg-neutral-50 text-neutral-300 hover:bg-red-50 hover:text-red-400")
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-400"
+                      : "border-neutral-200 bg-neutral-50 text-neutral-300 hover:bg-emerald-50 hover:text-emerald-500")
                   }
                   title={
                     isKarmic
-                      ? "Karmique à libérer (visible en rouge sur la carte) — cliquer pour retirer"
-                      : "Marquer comme karmique à libérer pour cette personne"
+                      ? "Conscience gisante karmique à apaiser (verte sur la carte) — cliquer pour retirer"
+                      : "Marquer comme conscience gisante karmique à apaiser pour cette personne"
                   }
                 >
                   {isKarmic ? "◉" : "○"}
