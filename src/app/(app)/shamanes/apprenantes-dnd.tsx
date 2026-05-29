@@ -47,6 +47,8 @@ export type DnDApprenante = {
   tx?: string;
   cx?: string;
   stx?: string;
+  /** Annotations « NSB · <nom> · <cercle?> » (sans valeur numérique). */
+  nsb_links?: Array<{ name: string; cercle?: string }>;
 };
 
 type ZoneKey = "st1-active" | "formation" | "parcours-passif" | "cercle-akashique";
@@ -346,6 +348,26 @@ function ApprenanteCardInner({
         <CerclesAkashiquesChips membership={memb} dhatuMeta={dhatuMeta} />
         {a.description ? (
           <p className="mt-1.5 text-[10px] italic text-neutral-600">{a.description}</p>
+        ) : null}
+        {(a.nsb_links ?? []).length > 0 ? (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {(a.nsb_links ?? []).map((link, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-rose-700"
+                title={
+                  link.cercle
+                    ? `NSB de relation avec ${link.name} (cercle ${link.cercle})`
+                    : `NSB de relation avec ${link.name}`
+                }
+              >
+                NSB · {link.name}
+                {link.cercle ? (
+                  <span className="font-normal text-rose-500">· {link.cercle}</span>
+                ) : null}
+              </span>
+            ))}
+          </div>
         ) : null}
       </div>
       <DesaEditModal

@@ -39,6 +39,10 @@ export type Participant = {
   tx?: string;
   cx?: string;
   stx?: string;
+  /** Mini-pastilles « NSB · <nom> [· <cercle>] » — annotations visuelles
+   *  de relations de supervision (sans valeur numérique). DEC Patrick
+   *  2026-05-29. */
+  nsb_links?: Array<{ name: string; cercle?: string }>;
 };
 
 /** Apprenantes en parcours — visibles uniquement aux Owners.
@@ -48,7 +52,15 @@ export type Participant = {
  * Māṁsa (consultantes liées à Patrick en DB consultante_record).
  * DEC Patrick 2026-05-29 — sigle DESA sur Julie/Sarah/Léa. */
 export const APPRENANTES: Participant[] = [
-  { name: "Carine", tier: "st1-active", emoji: "🌸", tx: "T14", cx: "C15", stx: "ST1" },
+  {
+    name: "Carine", tier: "st1-active", emoji: "🌸",
+    tx: "T14", cx: "C15", stx: "ST1",
+    nsb_links: [
+      { name: "Patrick" },
+      { name: "Julie", cercle: "Māṁsa" },
+      { name: "Léa", cercle: "Māṁsa" },
+    ],
+  },
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
   { name: "Julie Bays", tier: "formation", emoji: "🌷", desa_active: true },
   { name: "Camille Bays", tier: "parcours-passif", emoji: "🌼" },

@@ -531,6 +531,7 @@ async function ApprenantesDnDSection() {
       tx: a.tx,
       cx: a.cx,
       stx: a.stx,
+      nsb_links: a.nsb_links,
     };
   });
   return (
