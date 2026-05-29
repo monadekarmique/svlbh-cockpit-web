@@ -248,6 +248,16 @@ export default async function ShamanesPage() {
   const activesTherapeutes = therapeutes.filter((t) => t.status === "active");
   const hiddenTherapeutes = therapeutes.filter((t) => t.status === "hidden");
 
+  // 3ter-bis. Compteurs collaboratifs Backlog (Esprits désincarnés,
+  // Entité Champignons, …). DEC Patrick 2026-05-29.
+  const { data: countersRaw } = await sb
+    .from("cercle_backlog_counter")
+    .select("id, name, emoji, count, updated_at")
+    .order("display_order", { ascending: true });
+  const backlogCounters = ((countersRaw ?? []) as Array<{
+    id: string; name: string; emoji: string | null; count: number; updated_at: string;
+  }>);
+
   // 3ter. Backlog Cercle SR — vue de tri/saturation des Soins en commun.
   // Map saturation par soin commun. Items proviennent automatiquement des
   // soinsCommuns (calculé plus bas). Pas de saisie manuelle.
@@ -488,12 +498,14 @@ export default async function ShamanesPage() {
         />
       </section>
 
-      {/* Section 0bis : Backlog Cercle SR — vue 3 buckets DnD saturation */}
+      {/* Section 0bis : Backlog Cercle SR — vue 3 buckets DnD saturation
+          + compteurs collaboratifs Esprits désincarnés / Champignons. */}
       <BacklogSidebar
         soins={soinsCommuns}
         saturationMap={saturationMap}
         dissipationMap={dissipationMap}
         canEdit={canEditBacklog}
+        counters={backlogCounters}
       />
 
       {/* Sections 1 & 2 : Thérapeutes actives / cachées (rendu statique). */}

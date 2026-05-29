@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { setSoinSaturation, setDissipationMode } from "./saturation-action";
 import type { SoinCommun } from "./soins-communs-list";
+import { BacklogCountersList, type BacklogCounter } from "./backlog-counters";
 
 const DISSIPATION_MODES: Array<{ key: "massif" | "moyen" | "minimal"; n: 3 | 2 | 1; label: string; color: string }> = [
   { key: "massif",  n: 3, label: "Massif",  color: "#dc2626" },
@@ -30,9 +31,10 @@ export type BacklogProps = {
   saturationMap: Record<string, Bucket>;    // key = `${kind}:${ref_id}` → bucket
   dissipationMap: Record<string, "massif" | "moyen" | "minimal" | null>;
   canEdit: boolean;
+  counters?: BacklogCounter[];              // Compteurs collaboratifs (Esprits désincarnés, Champignons, …)
 };
 
-export function BacklogSidebar({ soins, saturationMap, dissipationMap, canEdit }: BacklogProps) {
+export function BacklogSidebar({ soins, saturationMap, dissipationMap, canEdit, counters = [] }: BacklogProps) {
   const [open, setOpen] = useState(false);
   const total = soins.length;
 
@@ -51,6 +53,12 @@ export function BacklogSidebar({ soins, saturationMap, dissipationMap, canEdit }
           {open ? "tri par saturation" : "clic pour ouvrir"}
         </span>
       </button>
+
+      {/* Compteurs collaboratifs (Esprits désincarnés, Champignons, …) —
+          toujours visibles, indépendants du collapse. DEC Patrick 2026-05-29. */}
+      {counters.length > 0 ? (
+        <BacklogCountersList counters={counters} canWrite={canEdit} />
+      ) : null}
 
       {open ? (
         total === 0 ? (
