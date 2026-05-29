@@ -13,6 +13,11 @@ import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiq
 import type { DesaAtom, DesaState } from "@/lib/cercle/desa";
 import type { CacheeData } from "./apprenante-cachee-card";
 
+// Patrick svlbh_id — sa carte thérapeute n'héberge PAS le mécanisme
+// Cachées (déplacé vers la carte virtuelle Superviseur méthodologique
+// familial). DEC Patrick 2026-05-29.
+const PATRICK_SVLBH_ID = "52adbc98-d2b0-4444-b89c-b1311a02a983";
+
 export function TherapeutesDnDZonesWrapper({
   therapeutes,
   mySvlbhId,
@@ -61,6 +66,7 @@ export function TherapeutesDnDZonesWrapper({
             bumpGL={bumpGL}
             cachees={cacheesByHost[t.svlbh_id] ?? []}
             canWriteCachees={canWriteCachees}
+            hideCachees={t.svlbh_id === PATRICK_SVLBH_ID}
           />
         );
       }}

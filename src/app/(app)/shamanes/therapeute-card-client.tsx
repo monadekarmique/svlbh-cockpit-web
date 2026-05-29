@@ -115,7 +115,7 @@ function DynamiquesChips({ dynamiques }: { dynamiques: DynamiqueChip[] }) {
 
 export function TherapeuteCardClient({
   t, isMe, isOwner, dynamiques = [], membership = null, dhatuMeta, desaCatalog, desaGranted = [], desaKarmic = [], nsbFollowers = [], bumpGL,
-  cachees = [], canWriteCachees = false,
+  cachees = [], canWriteCachees = false, hideCachees = false,
 }: {
   t: DnDTherapeute;
   isMe: boolean;
@@ -132,6 +132,10 @@ export function TherapeuteCardClient({
   cachees?: CacheeData[];
   /** Owner OR membre du Cercle SR : peut créer/supprimer/éditer des cachées. */
   canWriteCachees?: boolean;
+  /** Si true, on n'affiche ni le compteur ni la liste de cachées sur
+   *  cette carte (déplacement vers une autre surface, ex. Supervisor
+   *  méthodologique familial pour Patrick). DEC Patrick 2026-05-29. */
+  hideCachees?: boolean;
 }) {
   const targetStatusOnToggle = t.status === "active" ? "hidden" : "active";
   const toggleLabel = t.status === "active" ? "Me cacher aujourd'hui" : "Redevenir active";
@@ -340,7 +344,8 @@ export function TherapeuteCardClient({
 
       {/* Rangée bas de carte : compteur "Apprenant.e.s cachées" à gauche
           (clone GL pour les sous-cartes) + compteur GL collaboratif à droite.
-          DEC Patrick 2026-05-29. */}
+          DEC Patrick 2026-05-29. Le bloc Cachées est rendu conditionnellement
+          (caché pour Patrick → déplacé sur sa carte virtuelle superviseur). */}
       <div
         className="flex items-center justify-between gap-2 pt-1"
         onPointerDown={(e) => e.stopPropagation()}
@@ -349,6 +354,7 @@ export function TherapeuteCardClient({
         <div
           className="flex items-center gap-1"
           onPointerDown={(e) => e.stopPropagation()}
+          style={hideCachees ? { display: "none" } : undefined}
         >
           {canWriteCachees && cachees.length > 0 ? (
             <form
@@ -542,7 +548,7 @@ export function TherapeuteCardClient({
 
       {/* Liste des apprenantes cachées hébergées par cette thérapeute.
           Une mini-card par row, DESA + BDEC + rôle éditables. */}
-      {cachees.length > 0 ? (
+      {!hideCachees && cachees.length > 0 ? (
         <div className="mt-1 flex flex-col gap-1">
           {cachees.map((c) => (
             <ApprenanteCacheeCard

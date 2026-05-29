@@ -23,10 +23,19 @@ import { fetchDynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
 import { BacklogSidebar } from "./backlog-sidebar";
 import { SoinsCommunsList } from "./soins-communs-list";
 import { ShamanesAutoRefresh } from "./auto-refresh";
+import { SupervisorCachees } from "./supervisor-cachees";
 import type { SoinCommun } from "./soins-communs-list";
 
 // Patrick svlbh_id pour mapper la carte virtuelle 754545 → ses cercles
 const PATRICK_SVLBH_ID = "52adbc98-d2b0-4444-b89c-b1311a02a983";
+
+// svlbh_id synthétiques (UUIDv5) pour héberger les "Apprenant.e.s cachées"
+// sur les cartes virtuelles superviseurs au lieu de la carte thérapeute
+// Patrick. DEC Patrick 2026-05-29.
+const SUPERVISOR_HOST_SVLBH_ID: Record<string, string> = {
+  "455000": "19c919ca-c93d-54d5-9246-1381b09dc0b4", // méthodologique familial
+  "754545": "db42c57f-af2c-5a14-8d28-46a700ef2998", // protection méthodologique
+};
 import { createClient } from "@/lib/supabase/server";
 import { setFeltCount, toggleFeltLike } from "./felt-actions";
 
@@ -543,6 +552,19 @@ export default async function ShamanesPage() {
                     svlbhKey={PATRICK_SVLBH_ID}
                     dhatuByPraticienne={dhatuByPraticienne}
                     dhatuMeta={dhatuMeta}
+                  />
+                ) : null}
+                {/* Mécanisme "Apprenant.e.s cachées" — hébergé ici (Patrick
+                    superviseur) plutôt que sur sa carte thérapeute. Chaque
+                    rôle superviseur a son propre svlbh_id synthétique →
+                    deux pools de cachées distincts. DEC Patrick 2026-05-29. */}
+                {SUPERVISOR_HOST_SVLBH_ID[s.code] ? (
+                  <SupervisorCachees
+                    hostSvlbhId={SUPERVISOR_HOST_SVLBH_ID[s.code]}
+                    hostLabel={`Patrick · ${s.role_label}`}
+                    cachees={cacheesByHost[SUPERVISOR_HOST_SVLBH_ID[s.code]] ?? []}
+                    canWrite={canWriteCachees}
+                    desaCatalog={desaCatalog}
                   />
                 ) : null}
               </div>
