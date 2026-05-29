@@ -1,26 +1,13 @@
 "use client";
 
 // Backlog Cercle SR — VUE de tri & priorisation des Soins en commun.
-// Pas de saisie : les items s'empilent automatiquement depuis les soins
-// en commun (relation OU énergie offensive ≥ 2 ST4+). Patrick drag&drop
-// les cartes entre 3 buckets : Trois+ / Deux / Un.
-// Repliée par défaut, déploie au clic sur le titre.
-// DEC Patrick 2026-05-18.
+// Les items s'empilent dans 3 buckets (Trois+ / Deux / Un) selon
+// saturationMap calculé côté server. DEC Patrick 2026-05-29 : DnD retiré
+// (rendait le survol mobile impraticable). Pour reclasser un item,
+// utiliser le menu de saturation sous chaque carte.
+// DEC Patrick 2026-05-18 (legacy).
 
-import { useState, useEffect, useTransition } from "react";
-import {
-  DndContext,
-  DragEndEvent,
-  DragStartEvent,
-  PointerSensor,
-  TouchSensor,
-  KeyboardSensor,
-  closestCorners,
-  useDroppable,
-  useDraggable,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
+import { useState } from "react";
 import { setSoinSaturation, setDissipationMode } from "./saturation-action";
 import type { SoinCommun } from "./soins-communs-list";
 
@@ -47,73 +34,7 @@ export type BacklogProps = {
 
 export function BacklogSidebar({ soins, saturationMap, dissipationMap, canEdit }: BacklogProps) {
   const [open, setOpen] = useState(false);
-  // Map locale optimiste : key = `${kind}:${ref_id}` → bucket
-  const initialMap = (): Record<string, Bucket> => {
-    const m: Record<string, Bucket> = {};
-    for (const s of soins) {
-      const key = `${s.kind}:${s.ref_id}`;
-      m[key] = saturationMap[key] ?? "un";
-    }
-    return m;
-  };
-  const [local, setLocal] = useState<Record<string, Bucket>>(initialMap);
-  const [draggingKey, setDraggingKey] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
-
-  // Resync quand props changent (revalidatePath après save)
-  const sig = soins.map((s) => `${s.kind}:${s.ref_id}:${saturationMap[`${s.kind}:${s.ref_id}`] ?? "un"}`).join("|");
-  useEffect(() => {
-    setLocal(initialMap());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sig]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
-    useSensor(KeyboardSensor),
-  );
-
-  function onDragStart(e: DragStartEvent) {
-    setDraggingKey(String(e.active.id));
-  }
-
-  function onDragEnd(e: DragEndEvent) {
-    const { active, over } = e;
-    setDraggingKey(null);
-    if (!over || !canEdit) return;
-    const key = String(active.id);
-    const overId = String(over.id);
-    let target: Bucket;
-    if (overId.startsWith("bucket-")) {
-      target = overId.replace("bucket-", "") as Bucket;
-    } else {
-      // drop sur une carte → prend son bucket
-      const otherBucket = local[overId];
-      if (!otherBucket) return;
-      target = otherBucket;
-    }
-    if (!BUCKETS.some((b) => b.key === target)) return;
-    const current = local[key];
-    if (!current || current === target) return;
-
-    const [kind, refId] = key.split(":", 2);
-    setLocal((prev) => ({ ...prev, [key]: target }));
-
-    const fd = new FormData();
-    fd.append("ref_type", kind === "energie" ? "energie_offensive" : "relation");
-    fd.append("ref_id", refId);
-    fd.append("saturation_level", target);
-    startTransition(() => {
-      setSoinSaturation(fd).catch((err) => {
-        console.error("[backlog-dnd] rollback", err);
-        setLocal((prev) => ({ ...prev, [key]: current }));
-      });
-    });
-  }
-
   const total = soins.length;
-  const draggingSoin = draggingKey ? soins.find((s) => `${s.kind}:${s.ref_id}` === draggingKey) ?? null : null;
-  void draggingSoin; // référence inutilisée mais préparée si on veut un DragOverlay
 
   return (
     <section className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/40 p-3">
@@ -137,82 +58,51 @@ export function BacklogSidebar({ soins, saturationMap, dissipationMap, canEdit }
             Aucun cas de libération commune. Les soins partagés entre ≥ 2 ST4+ apparaissent ici automatiquement.
           </p>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {BUCKETS.map((b) => {
-                const items = soins.filter((s) => (local[`${s.kind}:${s.ref_id}`] ?? "un") === b.key);
-                return (
-                  <DropZone key={b.key} bucket={b}>
-                    {items.length === 0 ? (
-                      <p className="px-2 py-3 text-center text-[10px] italic text-neutral-500">
-                        Glisse une carte ici.
-                      </p>
-                    ) : (
-                      <ul className="space-y-1">
-                        {items.map((s) => (
-                          <DraggableSoin key={`${s.kind}:${s.ref_id}`} id={`${s.kind}:${s.ref_id}`} canMove={canEdit}>
-                            <SoinMini item={s} dissipation={dissipationMap[`${s.kind}:${s.ref_id}`] ?? null} canEdit={canEdit} />
-                          </DraggableSoin>
-                        ))}
-                      </ul>
-                    )}
-                  </DropZone>
-                );
-              })}
-            </div>
-          </DndContext>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {BUCKETS.map((b) => {
+              const items = soins.filter(
+                (s) => (saturationMap[`${s.kind}:${s.ref_id}`] ?? "un") === b.key,
+              );
+              return (
+                <div
+                  key={b.key}
+                  className="rounded-lg border-2 p-2"
+                  style={{ borderColor: b.color, backgroundColor: "white" }}
+                >
+                  <h3 className="mb-1 flex items-center gap-1 text-xs font-bold" style={{ color: b.color }}>
+                    {b.emoji} {b.label}
+                  </h3>
+                  {items.length === 0 ? (
+                    <p className="px-2 py-3 text-center text-[10px] italic text-neutral-500">
+                      Aucun item.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {items.map((s) => (
+                        <li key={`${s.kind}:${s.ref_id}`}>
+                          <SoinMini
+                            item={s}
+                            currentBucket={b.key}
+                            dissipation={dissipationMap[`${s.kind}:${s.ref_id}`] ?? null}
+                            canEdit={canEdit}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )
       ) : null}
     </section>
   );
 }
 
-function DropZone({
-  bucket, children,
-}: { bucket: { key: Bucket; label: string; emoji: string; color: string }; children: React.ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `bucket-${bucket.key}` });
-  return (
-    <div
-      ref={setNodeRef}
-      className="rounded-lg border-2 p-2 transition-colors"
-      style={{
-        borderColor: bucket.color,
-        backgroundColor: isOver ? `${bucket.color}15` : "white",
-      }}
-    >
-      <h3 className="mb-1 flex items-center gap-1 text-xs font-bold" style={{ color: bucket.color }}>
-        {bucket.emoji} {bucket.label}
-      </h3>
-      {children}
-    </div>
-  );
-}
-
-function DraggableSoin({
-  id, canMove, children,
-}: { id: string; canMove: boolean; children: React.ReactNode }) {
-  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id, disabled: !canMove });
-  const { setNodeRef: setDropRef, isOver } = useDroppable({ id });
-  const setNodeRef = (el: HTMLLIElement | null) => { setDragRef(el); setDropRef(el); };
-  return (
-    <li
-      ref={setNodeRef}
-      {...(canMove ? attributes : {})}
-      {...(canMove ? listeners : {})}
-      className={
-        (canMove ? "cursor-grab touch-none active:cursor-grabbing " : "") +
-        (isDragging ? "opacity-30 " : "") +
-        (isOver ? "ring-2 ring-blue-400 rounded " : "")
-      }
-    >
-      {children}
-    </li>
-  );
-}
-
 function SoinMini({
-  item, dissipation, canEdit,
-}: { item: SoinCommun; dissipation: "massif" | "moyen" | "minimal" | null; canEdit: boolean }) {
+  item, currentBucket, dissipation, canEdit,
+}: { item: SoinCommun; currentBucket: Bucket; dissipation: "massif" | "moyen" | "minimal" | null; canEdit: boolean }) {
   const refType = item.kind === "energie" ? "energie_offensive" : "relation";
   return (
     <div className="space-y-1 rounded border border-neutral-200 bg-white p-1.5 text-[11px] shadow-sm">
@@ -222,6 +112,38 @@ function SoinMini({
       <p className="text-[9px] text-neutral-600">
         {item.contributors.length} ST4+ · {item.kind === "relation" ? (item.relation_state ?? "—") : `int. ${item.intensity ?? "?"}/100`}
       </p>
+      {/* Pickers de saturation (3 boutons Trois+/Deux/Un) — remplacement
+          du DnD. Le bouton du bucket courant est plein. Owner only. */}
+      {canEdit ? (
+        <div
+          className="flex items-center gap-0.5 pt-0.5"
+          title="Niveau de saturation observé sur cette manifestation."
+        >
+          <span className="mr-0.5 text-[9px] text-neutral-500">Sat.</span>
+          {BUCKETS.map((b) => {
+            const isActive = b.key === currentBucket;
+            return (
+              <form key={b.key} action={setSoinSaturation} className="inline-flex">
+                <input type="hidden" name="ref_type" value={refType} />
+                <input type="hidden" name="ref_id" value={item.ref_id} />
+                <input type="hidden" name="saturation_level" value={b.key} />
+                <button
+                  type="submit"
+                  className="h-5 rounded border px-1 text-[9px] font-bold transition"
+                  style={{
+                    borderColor: b.color,
+                    backgroundColor: isActive ? b.color : "white",
+                    color: isActive ? "white" : b.color,
+                  }}
+                  title={`Reclasser en « ${b.label} »`}
+                >
+                  {b.emoji}
+                </button>
+              </form>
+            );
+          })}
+        </div>
+      ) : null}
       {canEdit ? (
         <div
           className="flex items-center gap-0.5 pt-0.5"

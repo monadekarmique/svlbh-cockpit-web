@@ -1,28 +1,13 @@
 "use client";
 
-// Zones drag-and-drop Thérapeutes actives ↔ Thérapeutes cachées.
-// Chaque ST4+ peut déplacer sa propre carte. Patrick (ST6) peut déplacer
-// n'importe quelle carte. DEC Patrick 2026-05-18.
-//
-// Note : les server actions setTherapeuteDailyStatus revalident /shamanes
-// après chaque drop. Mutation optimiste pour rendu instantané.
+// Zones Thérapeutes actives ↔ Thérapeutes cachées.
+// DEC Patrick 2026-05-29 : drag-and-drop retiré sur toute la page /shamanes
+// (rendait le survol mobile impraticable). Pour changer son propre statut,
+// utiliser le bouton "Me cacher / Me réactiver" en bas de la carte (form
+// setMyDailyStatus). État local conservé pour les ± du compteur GL.
+// DEC Patrick 2026-05-18 (legacy).
 
 import { useState, useTransition, useEffect } from "react";
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  PointerSensor,
-  TouchSensor,
-  KeyboardSensor,
-  closestCorners,
-  useDroppable,
-  useDraggable,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import { setTherapeuteDailyStatus } from "./daily-status-actions";
 import { updateGuidesLumiere } from "./gl-action";
 
 export type DnDTherapeute = {
@@ -41,12 +26,9 @@ export type DnDTherapeute = {
   guides_lumiere: number;
 };
 
-type ZoneKey = "active" | "hidden";
-
 export function TherapeutesDnDZones({
   initial,
   mySvlbhId,
-  isOwner,
   renderCard,
 }: {
   initial: DnDTherapeute[];
@@ -58,72 +40,18 @@ export function TherapeutesDnDZones({
   ) => React.ReactNode;
 }) {
   const [items, setItems] = useState<DnDTherapeute[]>(initial);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  // Resync local state with server props after revalidatePath
-  // (form actions update DB + revalidate but client state would stay stale).
-  // Compare by signature (svlbh_id + status) to avoid resyncing on identical re-renders.
-  const initialSig = initial.map((t) => `${t.svlbh_id}:${t.status}`).join("|");
+  // Resync local state with server props after revalidatePath (form actions
+  // update DB + revalidate, mais le state local resterait stale).
+  const initialSig = initial.map((t) => `${t.svlbh_id}:${t.status}:${t.guides_lumiere}`).join("|");
   useEffect(() => {
     setItems(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSig]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
-    useSensor(KeyboardSensor),
-  );
-
-  const canMove = (svlbhId: string) => isOwner || svlbhId === mySvlbhId;
-
-  function onDragStart(e: DragStartEvent) {
-    setDraggingId(String(e.active.id));
-  }
-
-  function onDragEnd(e: DragEndEvent) {
-    const { active, over } = e;
-    setDraggingId(null);
-    if (!over) return;
-    const id = String(active.id);
-    const overId = String(over.id);
-
-    // Résolution de la zone cible : drop sur background OU sur une autre carte
-    // (auquel cas on prend la zone de cette carte → permet "prendre la place
-    // de" en touchant juste le bord de la carte voisine).
-    let target: ZoneKey;
-    if (overId === "zone-active" || overId === "zone-hidden") {
-      target = overId.replace("zone-", "") as ZoneKey;
-    } else {
-      const overCard = items.find((t) => t.svlbh_id === overId);
-      if (!overCard) return;
-      if (overCard.status !== "active" && overCard.status !== "hidden") return;
-      target = overCard.status as ZoneKey;
-    }
-
-    const current = items.find((t) => t.svlbh_id === id);
-    if (!current || current.status === target) return;
-    if (!canMove(id)) return;
-
-    // Optimistic update
-    setItems((prev) => prev.map((t) => (t.svlbh_id === id ? { ...t, status: target } : t)));
-
-    const fd = new FormData();
-    fd.append("target_svlbh_id", id);
-    fd.append("status", target);
-    startTransition(() => {
-      setTherapeuteDailyStatus(fd).catch((err) => {
-        console.error("[dnd] rollback", err);
-        // Rollback
-        setItems((prev) => prev.map((t) => (t.svlbh_id === id ? { ...t, status: current.status } : t)));
-      });
-    });
-  }
-
   // bumpGL — update optimiste du compteur GL (collaboratif Cercle).
   // Met à jour items localement → le total se recalcule instantanément.
-  // Server action en transition ; rollback sur erreur.
   function bumpGL(svlbhId: string, delta: 1 | -1) {
     const before = items.find((t) => t.svlbh_id === svlbhId);
     if (!before) return;
@@ -151,27 +79,21 @@ export function TherapeutesDnDZones({
 
   const actives = items.filter((t) => t.status === "active");
   const hidden = items.filter((t) => t.status === "hidden");
-  const draggingItem = draggingId ? items.find((t) => t.svlbh_id === draggingId) : null;
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <DropZone
-        id="zone-active"
+    <>
+      <Zone
         title={`✨ Thérapeutes SVLBH — Membres actives du Cercle (${actives.length})`}
         emptyHint="Aucune active aujourd'hui."
       >
         {actives.map((t) => (
-          <DraggableCard
-            key={t.svlbh_id}
-            id={t.svlbh_id}
-            canMove={canMove(t.svlbh_id)}
-          >
+          <li key={t.svlbh_id}>
             {renderCard(t, { isMe: t.svlbh_id === mySvlbhId, isDragging: false, bumpGL })}
-          </DraggableCard>
+          </li>
         ))}
-      </DropZone>
+      </Zone>
 
-      {/* Total GL des Membres actives — recalculé sur le state DnD courant. */}
+      {/* Total GL des Membres actives — recalculé sur le state local courant. */}
       <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 px-5 py-3 text-center shadow-sm">
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">
           ✨ Total des Guides de Lumière 300% qui soutiennent le Cercle de Lumière Suisse Romande
@@ -181,54 +103,33 @@ export function TherapeutesDnDZones({
         </p>
       </div>
 
-      <DropZone
-        id="zone-hidden"
+      <Zone
         title={`🌙 Thérapeutes cachées (${hidden.length})`}
-        emptyHint="Aucune cachée aujourd'hui. Glisse une carte ici pour te cacher."
+        emptyHint="Aucune cachée aujourd'hui. Utilise le bouton « Me cacher » sur ta carte."
       >
         {hidden.map((t) => (
-          <DraggableCard
-            key={t.svlbh_id}
-            id={t.svlbh_id}
-            canMove={canMove(t.svlbh_id)}
-          >
+          <li key={t.svlbh_id}>
             {renderCard(t, { isMe: t.svlbh_id === mySvlbhId, isDragging: false, bumpGL })}
-          </DraggableCard>
+          </li>
         ))}
-      </DropZone>
-
-      <DragOverlay>
-        {draggingItem ? (
-          <div className="opacity-90 shadow-2xl ring-2 ring-blue-400">
-            {renderCard(draggingItem, { isMe: draggingItem.svlbh_id === mySvlbhId, isDragging: true, bumpGL })}
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+      </Zone>
+    </>
   );
 }
 
-function DropZone({
-  id, title, emptyHint, children,
+function Zone({
+  title, emptyHint, children,
 }: {
-  id: string;
   title: string;
   emptyHint: string;
   children: React.ReactNode;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
   const childArray = Array.isArray(children) ? children : [children];
   const empty = childArray.filter(Boolean).length === 0;
   return (
     <section className="space-y-2">
       <h2 className="text-base font-semibold text-blue-900">{title}</h2>
-      <div
-        ref={setNodeRef}
-        className={
-          "rounded-xl p-2 transition-colors " +
-          (isOver ? "bg-blue-100 ring-2 ring-blue-400" : "bg-transparent")
-        }
-      >
+      <div className="rounded-xl p-2">
         {empty ? (
           <p className="px-2 py-4 text-center text-xs italic text-neutral-500">{emptyHint}</p>
         ) : (
@@ -236,37 +137,5 @@ function DropZone({
         )}
       </div>
     </section>
-  );
-}
-
-function DraggableCard({
-  id, canMove, children,
-}: {
-  id: string;
-  canMove: boolean;
-  children: React.ReactNode;
-}) {
-  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
-    id,
-    disabled: !canMove,
-  });
-  // Chaque carte est aussi droppable → dropper sur le bord d'une autre carte
-  // déclenche un changement de zone vers la zone de cette carte.
-  const { setNodeRef: setDropRef, isOver } = useDroppable({ id });
-  const setNodeRef = (el: HTMLLIElement | null) => { setDragRef(el); setDropRef(el); };
-  return (
-    <li
-      ref={setNodeRef}
-      {...(canMove ? attributes : {})}
-      {...(canMove ? listeners : {})}
-      className={
-        (canMove ? "cursor-grab touch-none active:cursor-grabbing " : "") +
-        (isDragging ? "opacity-30 " : "") +
-        (isOver ? "ring-2 ring-blue-400 rounded-xl " : "")
-      }
-      title={canMove ? "Glisse pour changer de zone" : "Drag réservé à toi ou à l'Owner"}
-    >
-      {children}
-    </li>
   );
 }
