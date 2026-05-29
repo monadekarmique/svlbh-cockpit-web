@@ -112,6 +112,34 @@ export default async function ShamanesPage() {
     getDesaCatalog(sb),
     fetchDesaState(sb),
   ]);
+  // 1quinquies-bis. Apprenantes cachées par hôte (sub-cards thérapeutes).
+  // DEC Patrick 2026-05-29. État DESA/BDEC déjà inclus dans
+  // desaStateByPraticienne via leur svlbh_id synthétique.
+  const { data: cacheesRaw } = await sb
+    .from("apprenante_cachee")
+    .select("id, svlbh_id, host_svlbh_id, role, display_order")
+    .order("host_svlbh_id", { ascending: true })
+    .order("display_order", { ascending: true });
+  const cacheesByHost: Record<string, Array<{
+    id: string; svlbh_id: string; role: string | null;
+    desa_granted: string[]; desa_karmic: string[];
+  }>> = {};
+  for (const c of (cacheesRaw ?? []) as Array<{
+    id: string; svlbh_id: string; host_svlbh_id: string;
+    role: string | null; display_order: number;
+  }>) {
+    if (!cacheesByHost[c.host_svlbh_id]) cacheesByHost[c.host_svlbh_id] = [];
+    const st = desaStateByPraticienne[c.svlbh_id];
+    cacheesByHost[c.host_svlbh_id].push({
+      id: c.id,
+      svlbh_id: c.svlbh_id,
+      role: c.role,
+      desa_granted: st?.granted ?? [],
+      desa_karmic: st?.karmic ?? [],
+    });
+  }
+  // Droit d'écrire sur les cachées : Owner OU membre du Cercle SR.
+  const canWriteCachees = isOwner || me?.cercle_lumiere_sr === true;
   // 1sexies. Reverse map des liens NSB : pour chaque nom cité dans
   // APPRENANTES[].nsb_links, on construit la liste des sources (followers).
   // Ces pastilles s'affichent sur la carte de la personne CITÉE, pas sur
@@ -434,7 +462,7 @@ export default async function ShamanesPage() {
         canEdit={canEditBacklog}
       />
 
-      {/* Sections 1 & 2 : Thérapeutes actives / cachées avec drag-and-drop */}
+      {/* Sections 1 & 2 : Thérapeutes actives / cachées (rendu statique). */}
       <TherapeutesDnDZonesWrapper
         therapeutes={therapeutes}
         mySvlbhId={mySvlbhId}
@@ -445,6 +473,8 @@ export default async function ShamanesPage() {
         desaCatalog={desaCatalog}
         desaStateByPraticienne={desaStateByPraticienne}
         nsbFollowersByName={nsbFollowersByName}
+        cacheesByHost={cacheesByHost}
+        canWriteCachees={canWriteCachees}
       />
 
       {/* Cartes virtuelles Patrick × 2 (superviseurs) — sous les thérapeutes

@@ -7,6 +7,8 @@ import { useState } from "react";
 import { setMyDailyStatus } from "./daily-status-actions";
 import { setGuidesLumiereAbsolute } from "./gl-action";
 import { setTherapeuteNSB } from "./nsb-action";
+import { addApprenanteCachee, removeApprenanteCachee } from "./apprenante-cachee-action";
+import { ApprenanteCacheeCard, type CacheeData } from "./apprenante-cachee-card";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { DYNAMIQUE_AXIS_TONE, type DynamiqueChip } from "@/lib/cercle/dynamiques";
@@ -113,6 +115,7 @@ function DynamiquesChips({ dynamiques }: { dynamiques: DynamiqueChip[] }) {
 
 export function TherapeuteCardClient({
   t, isMe, isOwner, dynamiques = [], membership = null, dhatuMeta, desaCatalog, desaGranted = [], desaKarmic = [], nsbFollowers = [], bumpGL,
+  cachees = [], canWriteCachees = false,
 }: {
   t: DnDTherapeute;
   isMe: boolean;
@@ -125,6 +128,10 @@ export function TherapeuteCardClient({
   desaKarmic?: string[];
   nsbFollowers?: Array<{ name: string; cercle?: string }>;
   bumpGL?: (svlbhId: string, delta: 1 | -1) => void;
+  /** Apprenantes cachées hébergées par cette thérapeute. */
+  cachees?: CacheeData[];
+  /** Owner OR membre du Cercle SR : peut créer/supprimer/éditer des cachées. */
+  canWriteCachees?: boolean;
 }) {
   const targetStatusOnToggle = t.status === "active" ? "hidden" : "active";
   const toggleLabel = t.status === "active" ? "Me cacher aujourd'hui" : "Redevenir active";
@@ -326,13 +333,62 @@ export function TherapeuteCardClient({
         </form>
       ) : null}
 
-      {/* GL — Guides de Lumière, géré collectivement par les membres du Cercle
-          (gate côté server : updateGuidesLumiere refuse si non-membre).
-          Toujours rendu APRÈS Me cacher pour rester en bas de la carte. */}
+      {/* Rangée bas de carte : compteur "Apprenant.e.s cachées" à gauche
+          (clone GL pour les sous-cartes) + compteur GL collaboratif à droite.
+          DEC Patrick 2026-05-29. */}
       <div
-        className="flex items-center justify-end pt-1"
+        className="flex items-center justify-between gap-2 pt-1"
         onPointerDown={(e) => e.stopPropagation()}
       >
+        {/* Apprenant.e.s cachées · compteur · +/- (Owner ou Cercle SR). */}
+        <div
+          className="flex items-center gap-1"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {canWriteCachees && cachees.length > 0 ? (
+            <form
+              action={removeApprenanteCachee}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <input type="hidden" name="id" value={cachees[cachees.length - 1].id} />
+              <button
+                type="submit"
+                onPointerDown={(e) => e.stopPropagation()}
+                className="flex h-5 w-5 items-center justify-center rounded border border-neutral-300 bg-white text-neutral-600 transition hover:bg-rose-50 hover:text-rose-600"
+                title="Retirer la dernière apprenante cachée"
+              >
+                −
+              </button>
+            </form>
+          ) : null}
+          <span
+            className="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold text-neutral-700"
+            title="Apprenant.e.s cachées hébergées sur cette carte"
+          >
+            🫥 Cachées · {cachees.length}
+          </span>
+          {canWriteCachees ? (
+            <form
+              action={addApprenanteCachee}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <input type="hidden" name="host_svlbh_id" value={t.svlbh_id} />
+              <button
+                type="submit"
+                onPointerDown={(e) => e.stopPropagation()}
+                className="flex h-5 w-5 items-center justify-center rounded border border-neutral-300 bg-white text-neutral-700 transition hover:bg-neutral-50"
+                title="Ajouter une apprenante cachée"
+              >
+                +
+              </button>
+            </form>
+          ) : null}
+        </div>
+        {/* GL — Guides de Lumière collaboratif. */}
+        <div
+          className="flex items-center justify-end"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
         <div
           className="flex items-center gap-1"
           onPointerDown={(e) => e.stopPropagation()}
@@ -426,7 +482,24 @@ export function TherapeuteCardClient({
             +
           </button>
         </div>
+        </div>
       </div>
+
+      {/* Liste des apprenantes cachées hébergées par cette thérapeute.
+          Une mini-card par row, DESA + BDEC + rôle éditables. */}
+      {cachees.length > 0 ? (
+        <div className="mt-1 flex flex-col gap-1">
+          {cachees.map((c) => (
+            <ApprenanteCacheeCard
+              key={c.id}
+              cachee={c}
+              hostName={displayName}
+              desaCatalog={desaCatalog}
+              canWrite={canWriteCachees}
+            />
+          ))}
+        </div>
+      ) : null}
 
       <DesaEditModal
         open={desaOpen}

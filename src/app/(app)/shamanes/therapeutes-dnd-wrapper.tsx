@@ -11,6 +11,7 @@ import { TherapeuteCardClient } from "./therapeute-card-client";
 import type { DynamiquesByPraticienne } from "@/lib/cercle/dynamiques";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DesaAtom, DesaState } from "@/lib/cercle/desa";
+import type { CacheeData } from "./apprenante-cachee-card";
 
 export function TherapeutesDnDZonesWrapper({
   therapeutes,
@@ -22,6 +23,8 @@ export function TherapeutesDnDZonesWrapper({
   desaCatalog,
   desaStateByPraticienne,
   nsbFollowersByName,
+  cacheesByHost,
+  canWriteCachees,
 }: {
   therapeutes: DnDTherapeute[];
   mySvlbhId?: string;
@@ -32,6 +35,8 @@ export function TherapeutesDnDZonesWrapper({
   desaCatalog: Record<string, DesaAtom>;
   desaStateByPraticienne: Record<string, DesaState>;
   nsbFollowersByName: Record<string, Array<{ name: string; cercle?: string }>>;
+  cacheesByHost: Record<string, CacheeData[]>;
+  canWriteCachees: boolean;
 }) {
   return (
     <TherapeutesDnDZones
@@ -54,6 +59,8 @@ export function TherapeutesDnDZonesWrapper({
             desaKarmic={state?.karmic ?? []}
             nsbFollowers={nsbFollowersByName[fullName] ?? []}
             bumpGL={bumpGL}
+            cachees={cacheesByHost[t.svlbh_id] ?? []}
+            canWriteCachees={canWriteCachees}
           />
         );
       }}
