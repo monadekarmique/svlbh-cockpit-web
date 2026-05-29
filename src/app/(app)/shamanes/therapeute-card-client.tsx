@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { setMyDailyStatus } from "./daily-status-actions";
 import { setGuidesLumiereAbsolute } from "./gl-action";
+import { setTherapeuteNSB } from "./nsb-action";
 import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiques";
 import type { DnDTherapeute } from "./therapeutes-dnd-zones";
 import { DYNAMIQUE_AXIS_TONE, type DynamiqueChip } from "@/lib/cercle/dynamiques";
@@ -138,6 +139,8 @@ export function TherapeuteCardClient({
   const [desaOpen, setDesaOpen] = useState(false);
   // Édition inline du GL (saisie absolue Owner-only).
   const [glEditing, setGlEditing] = useState(false);
+  // Édition inline du NSB (Owner-only).
+  const [nsbEditing, setNsbEditing] = useState(false);
 
   return (
     <div
@@ -197,10 +200,65 @@ export function TherapeuteCardClient({
             (Owner only — outil admin). DEC Patrick 2026-05-29. */}
         {(t.attention_steps != null || isOwner) ? (
           <div className="flex flex-shrink-0 flex-col items-end gap-1">
-            {t.attention_steps != null ? (
+            {/* NSB éditable inline (Owner only). Non-Owner voit la chip
+                read-only si valeur présente, rien sinon. DEC Patrick 2026-05-29. */}
+            {isOwner ? (
+              nsbEditing ? (
+                <form
+                  action={setTherapeuteNSB}
+                  onSubmit={() => setNsbEditing(false)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <input type="hidden" name="svlbh_id" value={t.svlbh_id} />
+                  <input
+                    type="number"
+                    name="value"
+                    defaultValue={t.attention_steps ?? ""}
+                    min={0}
+                    autoFocus
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    onFocus={(e) => e.currentTarget.select()}
+                    onBlur={(e) => e.currentTarget.form?.requestSubmit()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.currentTarget.form?.requestSubmit();
+                      } else if (e.key === "Escape") {
+                        e.preventDefault();
+                        setNsbEditing(false);
+                      }
+                    }}
+                    className="w-16 rounded-full border border-rose-400 bg-rose-50 px-2 py-0.5 text-center font-mono text-[11px] font-bold text-rose-900 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                    placeholder="NSB"
+                  />
+                  <button type="submit" className="sr-only" tabIndex={-1}>
+                    Sauver
+                  </button>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setNsbEditing(true);
+                  }}
+                  className={
+                    "rounded-full border px-2 py-0.5 font-mono text-[11px] font-bold transition hover:ring-2 hover:ring-rose-300 " +
+                    (t.attention_steps != null
+                      ? "border-rose-300 bg-rose-50 text-rose-900"
+                      : "border-dashed border-rose-200 bg-white text-rose-400")
+                  }
+                  title="Cliquer pour saisir / modifier le NSB (vide = retire l'override)"
+                >
+                  NSB {t.attention_steps ?? "+"}
+                </button>
+              )
+            ) : t.attention_steps != null ? (
               <span
                 className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-mono text-[11px] font-bold text-rose-900"
-                title="NSB — Niveaux Shamaniques Bloqués (somme des relations bloquées ou override apprenante_tier)"
+                title="NSB — Niveaux Shamaniques Bloqués"
               >
                 NSB {t.attention_steps}
               </span>

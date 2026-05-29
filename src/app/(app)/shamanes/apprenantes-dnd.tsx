@@ -15,6 +15,7 @@ import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiq
 import type { DesaAtom } from "@/lib/cercle/desa";
 import { DesaEditModal } from "./desa-edit-modal";
 import { BdecGisantsModal } from "./bdec-gisants-modal";
+import { setApprenanteNSB } from "./nsb-action";
 
 export type DnDApprenante = {
   name: string;
@@ -159,6 +160,7 @@ function ApprenanteCardInner({
   const memb = lookupMembership(a.name);
   const [desaOpen, setDesaOpen] = useState(false);
   const [bdecOpen, setBdecOpen] = useState(false);
+  const [nsbEditing, setNsbEditing] = useState(false);
 
   // BDEC = système parallèle clone de DESA (consciences gisantes vertes,
   // 4 codes DEII/EP/Des/Dra). Ses codes karmiques s'affichent dans la
@@ -197,14 +199,60 @@ function ApprenanteCardInner({
               rendu (outil admin). Codes karmiques en rouge, max 3 par ligne
               avec retour à la ligne. DESA sigle à la fin de la dernière ligne. */}
           <div className="flex flex-shrink-0 flex-col items-end gap-1">
-            {a.niveaux_bloques != null ? (
-              <span
-                className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-mono text-[11px] font-bold text-rose-900"
-                title="NSB — Niveaux Shamaniques Bloqués (apprenante_tier.niveaux_bloques)"
+            {/* NSB éditable inline — Owner peut cliquer pour saisir ou
+                effacer (vide = retire l'override). DEC Patrick 2026-05-29. */}
+            {nsbEditing ? (
+              <form
+                action={setApprenanteNSB}
+                onSubmit={() => setNsbEditing(false)}
+                onPointerDown={(e) => e.stopPropagation()}
               >
-                NSB {a.niveaux_bloques}
-              </span>
-            ) : null}
+                <input type="hidden" name="name" value={a.name} />
+                <input
+                  type="number"
+                  name="value"
+                  defaultValue={a.niveaux_bloques ?? ""}
+                  min={0}
+                  autoFocus
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onBlur={(e) => e.currentTarget.form?.requestSubmit()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.currentTarget.form?.requestSubmit();
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      setNsbEditing(false);
+                    }
+                  }}
+                  className="w-16 rounded-full border border-rose-400 bg-rose-50 px-2 py-0.5 text-center font-mono text-[11px] font-bold text-rose-900 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                  placeholder="NSB"
+                />
+                <button type="submit" className="sr-only" tabIndex={-1}>
+                  Sauver
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNsbEditing(true);
+                }}
+                className={
+                  "rounded-full border px-2 py-0.5 font-mono text-[11px] font-bold transition hover:ring-2 hover:ring-rose-300 " +
+                  (a.niveaux_bloques != null
+                    ? "border-rose-300 bg-rose-50 text-rose-900"
+                    : "border-dashed border-rose-200 bg-white text-rose-400")
+                }
+                title="Cliquer pour saisir / modifier le NSB (vide = effacer)"
+              >
+                NSB {a.niveaux_bloques ?? "+"}
+              </button>
+            )}
             {/* BDEC — clone parallèle de DESA, thème vert (consciences
                 gisantes). Rangée(s) AU-DESSUS de DESA. Sur les lignes de
                 continuation, un placeholder invisible occupe la place de
