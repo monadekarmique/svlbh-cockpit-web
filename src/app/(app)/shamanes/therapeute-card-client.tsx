@@ -220,7 +220,8 @@ export function TherapeuteCardClient({
               );
               if (chunks.length === 0) return desa;
               // DESA reste ancré sur la 1ʳᵉ ligne (haut de la carte) ; les
-              // chunks suivants wrap en-dessous, à gauche, sans DESA.
+              // chunks suivants alignent par-dessous via un placeholder
+              // invisible occupant la place de DESA. DEC Patrick 2026-05-29.
               return chunks.map((row, idx) => (
                 <div key={idx} className="flex items-center gap-1">
                   {row.map((code) => (
@@ -232,7 +233,16 @@ export function TherapeuteCardClient({
                       {code}
                     </span>
                   ))}
-                  {idx === 0 ? desa : null}
+                  {idx === 0 ? (
+                    desa
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="invisible rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold"
+                    >
+                      DESA
+                    </span>
+                  )}
                 </div>
               ));
             })()}

@@ -206,7 +206,10 @@ function ApprenanteCardInner({
               </span>
             ) : null}
             {/* BDEC — clone parallèle de DESA, thème vert (consciences
-                gisantes). Rangée(s) AU-DESSUS de DESA. DEC Patrick 2026-05-29. */}
+                gisantes). Rangée(s) AU-DESSUS de DESA. Sur les lignes de
+                continuation, un placeholder invisible occupe la place de
+                BDEC pour aligner les sous-codes (ex. Dra sous Des).
+                DEC Patrick 2026-05-29. */}
             {(() => {
               const chunks: string[][] = [];
               for (let i = 0; i < bdecKarmic.length; i += 3) {
@@ -238,7 +241,16 @@ function ApprenanteCardInner({
                       {code}
                     </span>
                   ))}
-                  {idx === 0 ? bdecButton : null}
+                  {idx === 0 ? (
+                    bdecButton
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="invisible rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold"
+                    >
+                      BDEC
+                    </span>
+                  )}
                 </div>
               ));
             })()}
@@ -275,7 +287,16 @@ function ApprenanteCardInner({
                       {code}
                     </span>
                   ))}
-                  {idx === 0 ? desaButton : null}
+                  {idx === 0 ? (
+                    desaButton
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="invisible rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold"
+                    >
+                      DESA
+                    </span>
+                  )}
                 </div>
               ));
             })()}

@@ -70,6 +70,19 @@ export const APPRENANTES: Participant[] = [
       description: "Apprenants masculins supervisés par Patrick",
     },
   },
+  // Duplication de Carine pour Augustin / Emilie (duo apprenant supervisé
+  // par Patrick). DEC Patrick 2026-05-29.
+  {
+    name: "Augustin / Emilie", tier: "st1-active", emoji: "🌿",
+    tx: "T14", cx: "C15", stx: "ST1",
+    nsb_links: [
+      { name: "Patrick Bays" },
+    ],
+    nsb_familial: {
+      count: 2,
+      description: "Apprenants masculins supervisés par Patrick",
+    },
+  },
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
   {
     name: "Julie Bays", tier: "formation", emoji: "🌷", desa_active: true,
