@@ -43,6 +43,9 @@ export type Participant = {
    *  de relations de supervision (sans valeur numérique). DEC Patrick
    *  2026-05-29. */
   nsb_links?: Array<{ name: string; cercle?: string }>;
+  /** Pastille verte NSB familiales (sa propre branche transgénérationnelle)
+   *  avec une description courte du contexte. DEC Patrick 2026-05-29. */
+  nsb_familial?: { count: number; description: string };
 };
 
 /** Apprenantes en parcours — visibles uniquement aux Owners.
@@ -62,9 +65,16 @@ export const APPRENANTES: Participant[] = [
       { name: "Julie Bays", cercle: "Māṁsa" },
       { name: "Léa Bays", cercle: "Māṁsa" },
     ],
+    nsb_familial: {
+      count: 2,
+      description: "Apprenants masculins supervisés par Patrick",
+    },
   },
   { name: "Paola", tier: "parcours-passif", emoji: "🌺" },
-  { name: "Julie Bays", tier: "formation", emoji: "🌷", desa_active: true },
+  {
+    name: "Julie Bays", tier: "formation", emoji: "🌷", desa_active: true,
+    nsb_familial: { count: 1, description: "Son compagnon" },
+  },
   { name: "Camille Bays", tier: "parcours-passif", emoji: "🌼" },
   { name: "Léa Bays", tier: "formation", emoji: "🍀", desa_active: true },
   { name: "Sarah Bays", tier: "formation", emoji: "🌻", desa_active: true },

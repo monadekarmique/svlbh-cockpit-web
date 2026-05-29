@@ -553,6 +553,7 @@ async function ApprenantesDnDSection() {
       stx: a.stx,
       nsb_links: a.nsb_links,
       nsb_followers: nsbFollowersByName[a.name] ?? [],
+      nsb_familial: a.nsb_familial,
     };
   });
   return (

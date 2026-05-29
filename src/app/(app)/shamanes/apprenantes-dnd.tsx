@@ -53,6 +53,8 @@ export type DnDApprenante = {
   /** Pastilles INCOMING — d'autres personnes pointent celle-ci comme
    *  superviseur/anchor (avec cercle optionnel). DEC Patrick 2026-05-29. */
   nsb_followers?: Array<{ name: string; cercle?: string }>;
+  /** Pastille verte NSB familiales avec contexte. DEC Patrick 2026-05-29. */
+  nsb_familial?: { count: number; description: string };
 };
 
 type ZoneKey = "st1-active" | "formation" | "parcours-passif" | "cercle-akashique";
@@ -352,6 +354,20 @@ function ApprenanteCardInner({
         <CerclesAkashiquesChips membership={memb} dhatuMeta={dhatuMeta} />
         {a.description ? (
           <p className="mt-1.5 text-[10px] italic text-neutral-600">{a.description}</p>
+        ) : null}
+        {/* NSB familiales — pastille verte autonome (branche transgén propre). */}
+        {a.nsb_familial ? (
+          <div className="mt-1.5 flex flex-col gap-0.5">
+            <p className="text-[10px] font-medium text-emerald-700">
+              {a.nsb_familial.description}
+            </p>
+            <span
+              className="inline-flex w-fit items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-700"
+              title={`NSB familiales — ${a.nsb_familial.description}`}
+            >
+              NSB familiales · {a.nsb_familial.count}
+            </span>
+          </div>
         ) : null}
         {/* Pastilles NSB INCOMING : Carine a-t-elle pointé cette personne
             comme superviseur/anchor ? Si oui, on affiche une mini-pastille
