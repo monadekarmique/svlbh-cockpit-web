@@ -16,6 +16,8 @@ export type CacheeData = {
   role: string | null;
   desa_granted: string[];
   desa_karmic: string[];
+  /** Timestamp version pour OCC rôle. DEC Patrick 2026-05-29. */
+  updated_at: string;
 };
 
 export function ApprenanteCacheeCard({
@@ -51,6 +53,7 @@ export function ApprenanteCacheeCard({
               className="mt-1 flex items-center gap-1"
             >
               <input type="hidden" name="id" value={cachee.id} />
+              <input type="hidden" name="expected_updated_at" value={cachee.updated_at} />
               <input
                 type="text"
                 name="role"

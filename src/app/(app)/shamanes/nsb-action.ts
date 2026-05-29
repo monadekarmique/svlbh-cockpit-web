@@ -41,24 +41,36 @@ export async function setApprenanteNSB(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("name requis");
   const value = parseNSB(String(formData.get("value") ?? ""));
+  const expected = String(formData.get("expected_updated_at") ?? "").trim();
 
   const { sb, me } = await assertOwner();
   const now = new Date().toISOString();
 
-  // apprenante_tier.tier est NOT NULL. UPDATE en premier pour ne pas
-  // toucher tier ; INSERT si la row n'existe pas avec le tier statique
-  // de APPRENANTES en fallback.
-  const { data: upd, error: updErr } = await sb
+  // UPDATE conditionnel sur expected_updated_at (OCC). Si la row existe
+  // mais updated_at ≠ expected → 0 rows touchées → CONFLIT. Si la row
+  // n'existe pas (premier set NSB), INSERT direct (pas de conflit possible).
+  let q = sb
     .from("apprenante_tier")
     .update({
       niveaux_bloques: value,
       updated_at: now,
       updated_by_svlbh_id: me.svlbh_id,
     })
-    .eq("name", name)
-    .select("name");
+    .eq("name", name);
+  if (expected) q = q.eq("updated_at", expected);
+  const { data: upd, error: updErr } = await q.select("name");
   if (updErr) throw new Error(`NSB apprenante : ${updErr.message}`);
   if (!upd || upd.length === 0) {
+    // Disambig : la row existe ? CONFLIT si oui, INSERT sinon.
+    const { data: exists } = await sb
+      .from("apprenante_tier")
+      .select("name")
+      .eq("name", name)
+      .maybeSingle();
+    if (exists && expected) {
+      revalidatePath("/shamanes");
+      throw new Error("CONFLIT : NSB modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
+    }
     const staticTier = APPRENANTES.find((a) => a.name === name)?.tier ?? "formation";
     const { error: insErr } = await sb
       .from("apprenante_tier")
@@ -78,15 +90,14 @@ export async function setTherapeuteNSB(formData: FormData) {
   const svlbhId = String(formData.get("svlbh_id") ?? "").trim();
   if (!svlbhId) throw new Error("svlbh_id requis");
   const value = parseNSB(String(formData.get("value") ?? ""));
+  const expected = String(formData.get("expected_updated_at") ?? "").trim();
 
   const { sb, me } = await assertOwner();
   const now = new Date().toISOString();
 
-  // praticienne_daily_status.status est NOT NULL. UPDATE en premier pour
-  // ne pas écraser le status existant ; INSERT seulement si la row
-  // n'existe pas (status='active' par défaut, écrasé ensuite par le
-  // workflow Me cacher / Me réactiver).
-  const { data: upd, error: updErr } = await sb
+  // UPDATE conditionnel sur expected_updated_at (OCC). status reste
+  // intact (UPDATE ne touche que les colonnes données).
+  let q = sb
     .from("praticienne_daily_status")
     .update({
       attention_steps: value,
@@ -94,10 +105,21 @@ export async function setTherapeuteNSB(formData: FormData) {
       attention_set_at: now,
       updated_at: now,
     })
-    .eq("svlbh_id", svlbhId)
-    .select("svlbh_id");
+    .eq("svlbh_id", svlbhId);
+  if (expected) q = q.eq("updated_at", expected);
+  const { data: upd, error: updErr } = await q.select("svlbh_id");
   if (updErr) throw new Error(`NSB thérapeute : ${updErr.message}`);
   if (!upd || upd.length === 0) {
+    // Disambig : la row existe ? CONFLIT si oui, INSERT sinon.
+    const { data: exists } = await sb
+      .from("praticienne_daily_status")
+      .select("svlbh_id")
+      .eq("svlbh_id", svlbhId)
+      .maybeSingle();
+    if (exists && expected) {
+      revalidatePath("/shamanes");
+      throw new Error("CONFLIT : NSB modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
+    }
     const { error: insErr } = await sb
       .from("praticienne_daily_status")
       .insert({

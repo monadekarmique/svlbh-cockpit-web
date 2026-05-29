@@ -126,11 +126,19 @@ export async function setApprenanteCacheeRole(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("id requis");
   const role = String(formData.get("role") ?? "").trim() || null;
+  const expected = String(formData.get("expected_updated_at") ?? "").trim();
   const { sb } = await assertCanWrite();
-  const { error } = await sb
+  // UPDATE conditionnel OCC. Si expected fourni et 0 rows touchées → CONFLIT.
+  let q = sb
     .from("apprenante_cachee")
     .update({ role, updated_at: new Date().toISOString() })
     .eq("id", id);
+  if (expected) q = q.eq("updated_at", expected);
+  const { data: upd, error } = await q.select("id");
   if (error) throw new Error(`Apprenante cachée : ${error.message}`);
+  if (expected && (!upd || upd.length === 0)) {
+    revalidatePath("/shamanes");
+    throw new Error("CONFLIT : rôle modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
+  }
   revalidatePath("/shamanes");
 }

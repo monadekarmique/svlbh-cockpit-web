@@ -130,16 +130,16 @@ export default async function ShamanesPage() {
   // desaStateByPraticienne via leur svlbh_id synthétique.
   const { data: cacheesRaw } = await sb
     .from("apprenante_cachee")
-    .select("id, svlbh_id, host_svlbh_id, role, display_order")
+    .select("id, svlbh_id, host_svlbh_id, role, display_order, updated_at")
     .order("host_svlbh_id", { ascending: true })
     .order("display_order", { ascending: true });
   const cacheesByHost: Record<string, Array<{
     id: string; svlbh_id: string; role: string | null;
-    desa_granted: string[]; desa_karmic: string[];
+    desa_granted: string[]; desa_karmic: string[]; updated_at: string;
   }>> = {};
   for (const c of (cacheesRaw ?? []) as Array<{
     id: string; svlbh_id: string; host_svlbh_id: string;
-    role: string | null; display_order: number;
+    role: string | null; display_order: number; updated_at: string;
   }>) {
     if (!cacheesByHost[c.host_svlbh_id]) cacheesByHost[c.host_svlbh_id] = [];
     const st = desaStateByPraticienne[c.svlbh_id];
@@ -149,6 +149,7 @@ export default async function ShamanesPage() {
       role: c.role,
       desa_granted: st?.granted ?? [],
       desa_karmic: st?.karmic ?? [],
+      updated_at: c.updated_at,
     });
   }
   // Droit d'écrire sur les cachées : Owner OU membre du Cercle SR.
@@ -627,23 +628,23 @@ async function ApprenantesDnDSection({ canWriteCachees }: { canWriteCachees: boo
   }
   const { data } = await sb
     .from("apprenante_tier")
-    .select("name, tier, description, niveaux_bloques");
+    .select("name, tier, description, niveaux_bloques, updated_at");
   const dbByName = new Map(
-    ((data ?? []) as Array<{ name: string; tier: string; description: string | null; niveaux_bloques: number | null }>).map((r) => [r.name, r]),
+    ((data ?? []) as Array<{ name: string; tier: string; description: string | null; niveaux_bloques: number | null; updated_at: string }>).map((r) => [r.name, r]),
   );
   // Cachées par host_svlbh_id (incluant les svlbh_id synthétiques des apprenantes).
   const { data: cacheesRaw } = await sb
     .from("apprenante_cachee")
-    .select("id, svlbh_id, host_svlbh_id, role, display_order")
+    .select("id, svlbh_id, host_svlbh_id, role, display_order, updated_at")
     .order("host_svlbh_id", { ascending: true })
     .order("display_order", { ascending: true });
   const cacheesByHost: Record<string, Array<{
     id: string; svlbh_id: string; role: string | null;
-    desa_granted: string[]; desa_karmic: string[];
+    desa_granted: string[]; desa_karmic: string[]; updated_at: string;
   }>> = {};
   for (const c of (cacheesRaw ?? []) as Array<{
     id: string; svlbh_id: string; host_svlbh_id: string;
-    role: string | null; display_order: number;
+    role: string | null; display_order: number; updated_at: string;
   }>) {
     if (!cacheesByHost[c.host_svlbh_id]) cacheesByHost[c.host_svlbh_id] = [];
     const st = desaStateByPraticienne[c.svlbh_id];
@@ -653,6 +654,7 @@ async function ApprenantesDnDSection({ canWriteCachees }: { canWriteCachees: boo
       role: c.role,
       desa_granted: st?.granted ?? [],
       desa_karmic: st?.karmic ?? [],
+      updated_at: c.updated_at,
     });
   }
   const items: DnDApprenante[] = APPRENANTES.map((a) => {
@@ -685,6 +687,7 @@ async function ApprenantesDnDSection({ canWriteCachees }: { canWriteCachees: boo
       nsb_followers: nsbFollowersByName[a.name] ?? [],
       nsb_familial: a.nsb_familial,
       cachees: cacheesByHost[svlbhId] ?? [],
+      apprenante_tier_updated_at: db?.updated_at ?? null,
     };
   });
   return (

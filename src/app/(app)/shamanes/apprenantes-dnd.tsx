@@ -49,6 +49,9 @@ export type DnDApprenante = {
   nsb_familial?: { count: number; description: string };
   /** Apprenantes cachées hébergées par cette apprenante. DEC Patrick 2026-05-29. */
   cachees?: CacheeData[];
+  /** Timestamp version pour OCC NSB apprenante (apprenante_tier.updated_at).
+   *  Null si pas de row en DB → INSERT lors du premier set. */
+  apprenante_tier_updated_at?: string | null;
 };
 
 type ZoneKey = "st3-active" | "st1-active" | "formation" | "parcours-passif" | "cercle-akashique";
@@ -222,6 +225,7 @@ function ApprenanteCardInner({
                 onPointerDown={(e) => e.stopPropagation()}
               >
                 <input type="hidden" name="name" value={a.name} />
+                <input type="hidden" name="expected_updated_at" value={a.apprenante_tier_updated_at ?? ""} />
                 <input
                   type="number"
                   name="value"
