@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<!-- colonne-des-5-matins-v0.1.0.html · SVLBH · Auto-soin matinal · Cycle de 5 matins
+     Version 0.1.0 — document de travail interne, partie gated (priv.svlbh.com)
+     4e matin laissé en "Corrections" — à valider radiesthésiquement (picky-bagging à étudier) -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="version" content="0.1.0">
+<meta name="document" content="Colonne des 5 matins — Auto-soin SVLBH">
+<title>Colonne des 5 matins · SVLBH · v0.1.0</title>
+<style>
+  :root{
+    --rose-profond:#8B3A62;
+    --rose-moyen:#C27894;
+    --beige:#F5EDE4;
+    --or:#B8965A;
+    --rose-clair:#FBF4F7;
+    --texte:#3A2530;
+    --gris-doux:#7A6B72;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;
+    background:var(--beige);
+    color:var(--texte);
+    line-height:1.65;
+  }
+  .wrap{max-width:840px;margin:0 auto;padding:48px 28px 80px;}
+  header.doc{
+    border-bottom:3px solid var(--or);
+    padding-bottom:22px;margin-bottom:36px;
+  }
+  .eyebrow{
+    letter-spacing:.22em;text-transform:uppercase;
+    font-size:.72rem;color:var(--or);font-weight:700;
+    margin:0 0 10px;
+  }
+  h1{
+    font-size:2.1rem;line-height:1.2;margin:0 0 8px;
+    color:var(--rose-profond);font-weight:700;
+  }
+  .sub{color:var(--gris-doux);font-size:1.02rem;margin:0;font-style:italic;}
+  .meta{
+    margin-top:16px;font-size:.8rem;color:var(--gris-doux);
+    font-family:ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  h2{
+    color:var(--rose-profond);font-size:1.45rem;margin:48px 0 6px;
+    font-weight:700;
+  }
+  h2 .score{
+    font-family:ui-monospace,monospace;font-size:.95rem;
+    color:var(--or);font-weight:700;margin-left:8px;
+  }
+  h3{color:var(--rose-moyen);font-size:1.08rem;margin:26px 0 4px;font-weight:700;}
+  p{margin:10px 0;}
+  .intro{
+    background:var(--rose-clair);
+    border-left:4px solid var(--rose-moyen);
+    padding:18px 22px;border-radius:0 10px 10px 0;margin:28px 0;
+  }
+  .principe{
+    background:#fff;border:1px solid #ecddE4;
+    border-radius:12px;padding:22px 24px;margin:24px 0;
+  }
+  .principe strong{color:var(--rose-profond);}
+  .matin{
+    background:#fff;border:1px solid #eedce4;
+    border-radius:14px;padding:8px 28px 26px;margin:30px 0;
+    box-shadow:0 2px 14px rgba(139,58,98,.06);
+  }
+  .matin.corrections{
+    background:repeating-linear-gradient(135deg,#fff,#fff 14px,#fbf2f6 14px,#fbf2f6 28px);
+    border:1px dashed var(--rose-moyen);
+  }
+  .tag{
+    display:inline-block;background:var(--rose-profond);color:#fff;
+    font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+    padding:4px 12px;border-radius:20px;font-weight:700;
+    margin:18px 0 0;font-family:ui-monospace,monospace;
+  }
+  .tag.wip{background:var(--or);}
+  .geste{
+    font-style:italic;color:var(--rose-profond);
+    background:var(--rose-clair);padding:3px 8px;border-radius:6px;
+  }
+  .flux{
+    background:var(--rose-clair);border:1px solid #ecd6e0;
+    border-radius:10px;padding:16px 20px;margin:16px 0;
+  }
+  .flux .q{font-style:italic;color:var(--rose-profond);font-weight:600;}
+  .issues{list-style:none;padding:0;margin:12px 0 0;}
+  .issues li{margin:7px 0;padding-left:26px;position:relative;}
+  .issues li::before{
+    position:absolute;left:0;font-weight:700;
+    font-family:ui-monospace,monospace;font-size:.85rem;
+  }
+  .issues li.oui::before{content:'→';color:var(--or);}
+  .issues li.non::before{content:'↓';color:var(--rose-moyen);}
+  .issues li.stop::before{content:'■';color:var(--rose-profond);font-size:.7rem;top:5px;}
+  .repere{
+    border-top:1px dotted #d9c3cf;margin-top:20px;padding-top:14px;
+    font-size:.92rem;color:var(--gris-doux);
+  }
+  .repere b{color:var(--rose-profond);}
+  .levier{
+    background:#fff;border:1px solid var(--or);border-radius:10px;
+    padding:14px 18px;margin:14px 0;font-size:.95rem;
+  }
+  .levier b{color:var(--or);}
+  .chemin{
+    background:var(--rose-profond);color:#fff;border-radius:14px;
+    padding:24px 28px;margin:34px 0;font-size:1.02rem;
+  }
+  .chemin h2{color:#fff;margin-top:0;}
+  .chemin .lvl{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:9px 0;border-bottom:1px solid rgba(255,255,255,.18);
+  }
+  .chemin .lvl:last-child{border-bottom:none;}
+  .chemin .lvl .n{color:var(--or);font-family:ui-monospace,monospace;font-size:.82rem;letter-spacing:.1em;}
+  .chemin small{display:block;opacity:.8;margin-top:14px;font-size:.85rem;}
+  .garde{
+    background:#fff;border:2px solid var(--rose-moyen);border-radius:14px;
+    padding:22px 26px;margin:34px 0;
+  }
+  .garde h2{margin-top:0;}
+  footer.doc{
+    margin-top:56px;border-top:3px solid var(--or);padding-top:18px;
+    font-size:.78rem;color:var(--gris-doux);
+    font-family:ui-monospace,monospace;line-height:1.8;
+  }
+  .note-med{
+    font-size:.85rem;color:var(--gris-doux);font-style:italic;
+    background:var(--rose-clair);padding:12px 18px;border-radius:8px;margin:24px 0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc">
+    <p class="eyebrow">SVLBH · Auto-soin matinal · Espace gated</p>
+    <h1>La Colonne des 5 matins</h1>
+    <p class="sub">Cycle d'auto-soin chromatique sur 5 matins — un bouchon de lumière par jour, lu de bas en haut.</p>
+    <p class="meta">Document v0.1.0 · usage interne référentes · priv.svlbh.com</p>
+  </header>
+
+  <div class="intro">
+    <p>Le soin se vit comme <strong>une colonne d'eau qui contient des bouchons de liège</strong>. Chaque matin, un seul bouchon se présente à la surface et se laisse saisir. La nuit suivante, les vaisseaux extraordinaires <strong>Ren Mai, Du Mai, Chong Mai</strong> réorganisent la colonne&nbsp;: le bouchon suivant remontera, mais pas avant le prochain matin. On ne force jamais&nbsp;: on saisit ce qui se présente, et on laisse la nuit faire le reste.</p>
+  </div>
+
+  <div class="principe">
+    <p><strong>Trois règles qui tiennent tout le cycle&nbsp;:</strong></p>
+    <p>1. <strong>Une vraie question, trois issues.</strong> Chaque validation au flux se répond <span class="geste">OUI / NON / je ne sais pas</span>. Aucun palier n'est «&nbsp;toujours OUI&nbsp;». Les paliers socles (frontière, souffle) répondent <em>très souvent</em> OUI — jamais <em>toujours</em>, pour que le corps garde le droit de dire NON.</p>
+    <p>2. <strong>Le OUI arrête le matin</strong> — le bouchon est saisi, la nuit travaille. Le <strong>NON</strong> fait descendre au palier suivant de la colonne, jusqu'au premier OUI.</p>
+    <p>3. <strong>La sortie «&nbsp;rien ce matin&nbsp;».</strong> Si l'on descend jusqu'au souffle et que même lui répond NON ou «&nbsp;je ne sais pas&nbsp;», la colonne n'a rien fait remonter cette nuit. On ne force pas, on revient demain. Le NON n'est pas un échec — c'est «&nbsp;pas cette porte, pas ce matin&nbsp;».</p>
+  </div>
+
+  <!-- LE CHEMIN -->
+  <div class="chemin">
+    <h2>Le chemin, lu de bas en haut</h2>
+    <div class="lvl"><span>Droit de regard</span><span class="n">RÉSULTAT DES 5 JOURS</span></div>
+    <div class="lvl"><span>La reprise</span><span class="n">5ᵉ MATIN</span></div>
+    <div class="lvl"><span>Brouillage du désir</span><span class="n">PALIER SENSIBLE</span></div>
+    <div class="lvl"><span>Prise à témoin</span><span class="n">PALIER SENSIBLE</span></div>
+    <div class="lvl"><span>Réouverture</span><span class="n">250 %</span></div>
+    <div class="lvl"><span>La frontière</span><span class="n">280 % · très souvent OUI</span></div>
+    <div class="lvl"><span>Le souffle</span><span class="n">300 % · très souvent OUI · socle</span></div>
+    <small>On entre par le bas (souffle / frontière) et l'on monte. Le NON de la frontière saute la réouverture et va droit à la prise à témoin (décodage SVLBH&nbsp;: une frontière qui ne revient pas signe le fait d'avoir été rendue spectatrice). Le droit de regard n'est pas un matin de travail&nbsp;: c'est l'état de souveraineté retrouvée sur ce qui entre, vers lequel tout converge.</small>
+  </div>
+
+  <!-- 1er MATIN -->
+  <div class="matin">
+    <span class="tag">1ᵉʳ matin · le souffle — la base · 300 %</span>
+    <p>Au réveil, avant les écrans, avant les mots. Allongée ou assise, une main sur le sternum, une sur le ventre.</p>
+    <h3>L'écoute</h3>
+    <p>Trois respirations sans rien changer, juste pour sentir où ça bloque — haut, court, retenu. Le souffle dit où le corps est encore sur ses gardes.</p>
+    <h3>Le gradient de retour</h3>
+    <p>Elle laisse monter la couleur de relâchement (gradient validé en amont par la formatrice). Le mouvement va de la teinte de tension vers la pleine lumière, à mesure que l'expiration s'allonge. Une couleur vers laquelle on va, pas une couleur qu'on subit.</p>
+    <h3>La reprise</h3>
+    <p>Sur chaque expiration&nbsp;: <span class="geste">«&nbsp;je me redépose en moi&nbsp;»</span>. Quatre, cinq cycles, jusqu'à ce que le souffle descende seul dans le ventre.</p>
+    <div class="flux">
+      <p class="q">«&nbsp;Mon souffle est-il revenu chez moi ce matin — vaut-il 300&nbsp;%&nbsp;? OUI / NON / je ne sais pas&nbsp;»</p>
+      <ul class="issues">
+        <li class="oui">OUI&nbsp;: elle s'arrête — bouchon saisi, la nuit fera le reste.</li>
+        <li class="non">NON / je ne sais pas&nbsp;: elle reste une minute de plus dans le gradient, ou laisse la colonne retravailler et revient demain.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 2e MATIN -->
+  <div class="matin">
+    <span class="tag">2ᵉ matin · la frontière · 280 % · très souvent OUI</span>
+    <p>Debout ou assise bien droite — la frontière se sent mieux sur un axe vertical. Pieds posés, elle sent le sol.</p>
+    <h3>L'écoute</h3>
+    <p>Une main à plat sur le bas-ventre, l'autre dans le dos au même niveau, comme si elle tenait son périmètre entre ses paumes. Trois respirations pour repérer où sa limite passe — ou ne passe pas&nbsp;: un côté plus flou, une zone qu'elle ne sent pas, une porosité.</p>
+    <h3>Le gradient de retour</h3>
+    <p>La couleur de contour (gradient validé en amont) monte de la porosité vers la pleine lumière du périmètre net. Non pas un mur — une membrane qui respire et qui choisit.</p>
+    <h3>La reprise</h3>
+    <p>Sur l'expiration&nbsp;: <span class="geste">«&nbsp;ce qui est à moi reste à moi, ce qui n'est pas à moi ne rentre pas&nbsp;»</span>. Les mains peuvent retracer lentement le contour, du haut vers le bas.</p>
+    <div class="flux">
+      <p class="q">«&nbsp;Ma frontière est-elle revenue chez moi ce matin — vaut-elle 280&nbsp;%&nbsp;? OUI / NON / je ne sais pas&nbsp;»</p>
+      <ul class="issues">
+        <li class="oui">OUI (très souvent)&nbsp;: elle s'arrête — bouchon saisi.</li>
+        <li class="non">«&nbsp;Je ne sais pas&nbsp;»&nbsp;: elle redescend vérifier le souffle, puis remonte retester la frontière.</li>
+        <li class="non">NON&nbsp;: elle monte à la <b>prise à témoin</b> (le NON de la frontière saute la réouverture).</li>
+      </ul>
+    </div>
+    <div class="repere"><b>Repère référente.</b> Retracer le contour peut faire monter une émotion — colère saine, larmes. C'est bon signe tant que ça soulage. Le geste des mains ancre la limite dans le corps&nbsp;: c'est ce qui distingue un «&nbsp;non&nbsp;» qui tient d'un «&nbsp;non&nbsp;» qu'on se répète sans y croire.</div>
+  </div>
+
+  <!-- PRISE A TEMOIN -->
+  <div class="matin">
+    <span class="tag">Palier sensible · la prise à témoin</span>
+    <p><em>Atteinte par la branche NON de la frontière.</em> On commence par rétablir l'appui dans le dos — sentiment d'avoir été exposée sans protection.</p>
+
+    <div class="levier">
+      <p><b>Le levier GV4 – GV14</b> (les deux points fonctionnent comme un levier&nbsp;: pivot bas, bras haut).</p>
+      <p><b>Pivot bas — GV4 / Ming Men</b> (bas du dos, en face du nombril). Une main posée là, trois respirations dirigées&nbsp;: <span class="geste">«&nbsp;ce que je porte de mes lignées, je le redépose à sa source — je n'ai pas à le tenir sur mes épaules&nbsp;»</span>. Elle dépose le poids de ses lignées sur ce point — non pour le garder, mais pour le rendre à la racine qui sait le porter. Tant que l'appui ne se sent pas, on ne monte pas&nbsp;: le levier sans pivot ne lève rien.</p>
+      <p><b>Bras haut — GV14 / Dazhui</b> (base de la nuque, sous C7). Une fois la base sentie, l'autre main vient à la nuque&nbsp;; sur l'expiration, la nuque et les épaules cèdent vers le bas — le haut se relâche <em>parce que</em> le bas tient. La charge de l'exposition dorsale se décharge du haut vers la racine.</p>
+      <p><em>L'ordre soigne&nbsp;: pivot, puis bras. Base, puis libération. Attaquer GV14 sans poser GV4 peut recrisper la nuque.</em></p>
+    </div>
+
+    <h3>L'écoute</h3>
+    <p>Une main sur les yeux ou le front, sans appuyer. Trois respirations&nbsp;: souvent les yeux qui veulent se fermer, la nuque qui se crispe, un léger dégoût. Elle repère, sans corriger.</p>
+    <h3>Le gradient de retour</h3>
+    <p>La couleur de nettoyage du regard (gradient validé en amont) lave ce qui a été imposé aux yeux et restaure le droit de choisir ce qu'on laisse entrer&nbsp;; elle va de la teinte de ce qui colle vers la pleine lumière du regard libre.</p>
+    <h3>La reprise</h3>
+    <p>Sur l'expiration&nbsp;: <span class="geste">«&nbsp;ce que mes yeux ont vu sans le choisir ne m'appartient pas — je rends, je ne garde que ce que je choisis&nbsp;»</span>. Les mains peuvent balayer doucement devant le visage, du centre vers l'extérieur, comme on dégage un voile.</p>
+    <div class="flux">
+      <p class="q">«&nbsp;Mon regard m'est-il revenu libre ce matin — OUI / NON / je ne sais pas&nbsp;»</p>
+      <ul class="issues">
+        <li class="oui">OUI&nbsp;: elle s'arrête — bouchon saisi.</li>
+        <li class="non">NON / je ne sais pas&nbsp;: elle reste dans le gradient, ou laisse la colonne retravailler et revient demain.</li>
+      </ul>
+    </div>
+    <div class="repere"><b>Repère référente — palier le plus sensible.</b> C'est la porte où peut remonter le plus de charge — parfois une image, une émotion forte. Si une femme bascule dans la détresse plutôt que dans le relâchement (pleurs qui ne s'arrêtent pas, sensation de revivre plutôt que de relâcher), <b>ce palier ne se travaille pas seule&nbsp;: la référente passe la main vers un accompagnement.</b></div>
+  </div>
+
+  <!-- REOUVERTURE + GORGE -->
+  <div class="matin">
+    <span class="tag">3ᵉ matin · réouverture · 250 % — chakra de la gorge</span>
+    <p><em>La femme dont la prise à témoin a répondu NON la veille.</em> Allongée, détendue. Une main sur la gorge sans appuyer, l'autre sur le sternum.</p>
+    <h3>L'écoute</h3>
+    <p>Trois respirations pour sentir la gorge — serrée, nouée, un poids qui empêche le son de monter. Siège de la vérité qu'on n'a pas pu dire.</p>
+    <h3>Le gradient — Palette de Lumière</h3>
+    <p>Elle ouvre la <strong>Palette de Lumière</strong> (priv.svlbh.com) et décode sa suite de teintes qui libèrent la gorge — sa suite à elle, validée au flux, qui monte vers le blanc <strong>#FFFFFF</strong>, la pleine lumière. Le mouvement va de la teinte qui bloque l'expression vers le blanc qui la libère, pendant qu'elle respire dans la gorge.</p>
+    <h3>La reprise</h3>
+    <p>Sur l'expiration&nbsp;: <span class="geste">«&nbsp;ma vérité a le droit de monter et de sortir — ce qui retenait ma voix n'est plus à moi&nbsp;»</span>. Elle peut laisser monter un son, même léger, un soupir sonore.</p>
+    <div class="flux">
+      <p class="q">«&nbsp;Ma gorge s'est-elle rouverte ce matin — vaut-elle 250&nbsp;%&nbsp;? OUI / NON / je ne sais pas&nbsp;»</p>
+      <ul class="issues">
+        <li class="oui">OUI&nbsp;: elle s'arrête — bouchon saisi.</li>
+        <li class="non">NON / je ne sais pas&nbsp;: elle descend à la <b>frontière (280 %)</b>, puis au <b>souffle (300 %)</b>, en s'arrêtant au premier OUI.</li>
+        <li class="stop">Si même le souffle répond NON / je ne sais pas&nbsp;: <b>rien ce matin</b>. Elle revient demain. Si le souffle reste NON plusieurs matins de suite&nbsp;: ce travail demande un accompagnement, pas l'autonomie.</li>
+      </ul>
+    </div>
+    <div class="repere"><b>Repère référente.</b> La gorge qui se rouvre fait souvent monter larmes ou colère en même temps que la voix — la vérité retenue sort rarement neutre. Bon signe tant que ça soulage&nbsp;; si ça bascule dans la détresse, la référente passe la main.</div>
+  </div>
+
+  <!-- BROUILLAGE DU DESIR -->
+  <div class="matin">
+    <span class="tag">Palier sensible · le brouillage du désir</span>
+    <p>Allongée, détendue, rien à tenir. Palier le plus délicat&nbsp;: on ne va pas chercher le désir, on rétablit seulement la <em>possibilité</em> de la sensation.</p>
+    <h3>L'écoute</h3>
+    <p>Une main sur le bas-ventre, sans intention. Le signe est souvent une absence&nbsp;: du plat, du vide, un endroit qui ne répond pas. Elle constate, sans se juger. <em>Ne rien sentir est une information, pas un échec.</em></p>
+    <h3>Le gradient de retour</h3>
+    <p>La couleur de réchauffement (gradient validé en amont) ranime la circulation de la sensation — pas le désir lui-même&nbsp;: la vie qui revient dans une zone engourdie, comme le sang dans un membre resté immobile. Lent, par paliers&nbsp;; un membre qui se réveille trop vite picote.</p>
+    <h3>La reprise</h3>
+    <p>Sur l'expiration&nbsp;: <span class="geste">«&nbsp;ma sensation m'appartient, elle revient à mon rythme, pour moi seule&nbsp;»</span>. Pour elle, pas pour répondre à une attente.</p>
+    <div class="flux">
+      <p class="q">«&nbsp;La sensation est-elle en train de revenir chez moi ce matin — OUI / NON / je ne sais pas&nbsp;»</p>
+      <ul class="issues">
+        <li class="oui">OUI&nbsp;: elle s'arrête — bouchon saisi.</li>
+        <li class="non">NON / je ne sais pas&nbsp;: elle ne force surtout pas. Elle laisse la colonne retravailler et revient demain.</li>
+      </ul>
+    </div>
+    <div class="repere"><b>Repère référente — le plus vif du chemin.</b> Réveiller la sensation dans une zone anesthésiée pour se protéger peut faire remonter ce contre quoi l'anesthésie protégeait. <b>Si ça ramène à la scène au lieu de ramener à elle, ce palier n'est pas pour l'autonomie matinale&nbsp;: il se travaille accompagné.</b></div>
+  </div>
+
+  <!-- 4e MATIN — CORRECTIONS (WIP) -->
+  <div class="matin corrections">
+    <span class="tag wip">4ᵉ matin · Corrections — à valider radiesthésiquement</span>
+    <p>Matin dédié à <strong>rectifier ce qui a été mal saisi, mal validé, ou laissé en suspens</strong> les trois premiers matins — la seconde chance du flux pour une femme qui aurait validé un OUI trop vite ou raté un palier.</p>
+    <p style="color:var(--rose-profond);"><em>Mécanique de relecture à définir. À regarder radiesthésiquement&nbsp;: ce matin reste-t-il nécessaire tel quel, ou une possibilité de «&nbsp;picky-bagging&nbsp;» (regroupement / report souple des paliers entre les jours) est-elle ouverte&nbsp;?</em></p>
+    <p class="meta">Section laissée volontairement ouverte — v0.1.0.</p>
+  </div>
+
+  <!-- 5e MATIN — LA REPRISE -->
+  <div class="matin">
+    <span class="tag">5ᵉ matin · la reprise</span>
+    <p>Le dernier geste actif&nbsp;: elle ne défait plus quelque chose, elle <em>reprend</em> ce qui est à elle. Assise, l'axe droit, les deux mains ouvertes sur le haut des cuisses, paumes vers le haut — une posture qui reçoit et qui tient.</p>
+    <h3>L'écoute</h3>
+    <p>Trois respirations pour sentir ce qui, en elle, est encore parti ailleurs — donné, capté, laissé chez quelqu'un. Sensation de manque, de morceau de soi resté dehors. Elle repère, sans tirer dessus.</p>
+    <h3>Le gradient de retour</h3>
+    <p>La couleur de rassemblement (gradient validé en amont) ramène à soi ce qui était dispersé, vers la pleine lumière. Ce qui était sorti d'elle revient se déposer dans ses paumes ouvertes, puis vers le centre du corps.</p>
+    <h3>La reprise</h3>
+    <p>Sur l'<strong>inspiration</strong> cette fois — seul palier où le geste se fait en recevant&nbsp;: <span class="geste">«&nbsp;je reprends ce qui est à moi, je le ramène chez moi&nbsp;»</span>. Les mains se referment doucement et viennent sur le cœur ou le ventre.</p>
+    <div class="flux">
+      <p class="q">«&nbsp;Ce qui est à moi m'est-il revenu ce matin — OUI / NON / je ne sais pas&nbsp;»</p>
+      <ul class="issues">
+        <li class="oui">OUI&nbsp;: elle s'arrête — bouchon saisi.</li>
+        <li class="non">NON / je ne sais pas&nbsp;: elle redescend la colonne (brouillage → prise à témoin → frontière → souffle), au premier OUI.</li>
+        <li class="stop">Si même le souffle répond NON / je ne sais pas&nbsp;: <b>rien ce matin</b>. Elle revient demain.</li>
+      </ul>
+    </div>
+    <div class="repere"><b>Repère référente.</b> La reprise peut faire ressurgir un chagrin plutôt qu'une plénitude&nbsp;: ramener à soi ce qu'on avait laissé chez un autre, c'est aussi reconnaître qu'on l'avait perdu. Bon signe tant que ça soulage&nbsp;; si ça enferme dans le manque, la référente passe la main.</div>
+  </div>
+
+  <!-- DROIT DE REGARD -->
+  <div class="chemin">
+    <h2>Le droit de regard — le résultat des 5 jours</h2>
+    <p>Le droit de regard n'est pas un sixième matin ni un exercice. C'est <strong>l'état dans lequel elle ressort du cycle</strong>&nbsp;: la souveraineté retrouvée sur ce qui entre et ce qui n'entre pas. Quand les bouchons sont remontés un à un, la surface est libre — cette liberté retrouvée <em>est</em> le droit de regard. Il se constate, il ne se force pas. La <strong>consolidation</strong>, sur la fin du cycle lunaire complet, vient l'ancrer.</p>
+  </div>
+
+  <!-- GARDE-FOU REFERENTES -->
+  <div class="garde">
+    <h2>Repère de vigilance — référentes des groupes</h2>
+    <p>Le screening en amont (Rose des Vents) écarte les profils pour qui le groupe ne serait pas juste. Mais aucun tri d'entrée n'attrape tout&nbsp;: une bascule peut survenir <strong>en cours de cycle</strong>. La vigilance de la référente reste donc nécessaire pendant les 5 jours.</p>
+    <p><strong>Signes qu'une femme déborde&nbsp;:</strong> un message qui change de ton&nbsp;; quelqu'un qui se met à raconter la scène plutôt que la sensation&nbsp;; un silence soudain après un palier sensible&nbsp;; des mots de détresse.</p>
+    <p><strong>Le geste&nbsp;:</strong> sortir cette femme du fil collectif vers un échange individuel, suspendre le palier pour elle, ne pas la laisser dans le flux du groupe à ce moment-là. Les paliers <em>prise à témoin</em> et <em>brouillage du désir</em> ne se mènent pas en collectif ouvert.</p>
+    <div class="note-med">L'approche SVLBH est complémentaire et ne remplace pas un traitement médical. Lorsqu'une situation dépasse ce que l'accompagnement énergétique peut porter, l'orientation vers un professionnel du soin fait partie du juste accompagnement.</div>
+  </div>
+
+  <footer class="doc">
+    Colonne des 5 matins · SVLBH · v0.1.0<br>
+    Document de travail interne — espace gated priv.svlbh.com<br>
+    4ᵉ matin (Corrections) laissé ouvert · picky-bagging à étudier radiesthésiquement<br>
+    Charte&nbsp;: rose profond #8B3A62 · rose moyen #C27894 · beige #F5EDE4 · or #B8965A
+  </footer>
+
+</div>
+</body>
+</html>
