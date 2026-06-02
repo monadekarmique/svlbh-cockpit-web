@@ -161,6 +161,37 @@
   .chemin .lvl .quand a:hover{color:var(--or);text-decoration-style:solid;}
   /* Offset pour scroll vers ancres (évite que le contenu se cache sous le header). */
   .matin{scroll-margin-top:20px;}
+  /* Récap synthétique en tête. */
+  table.recap{
+    background:#fff;border:2px solid var(--rose-moyen);border-radius:14px;
+    padding:18px 22px;margin:26px 0;border-collapse:separate;border-spacing:0 6px;
+    width:100%;
+  }
+  table.recap caption{
+    text-align:left;font-weight:700;color:var(--rose-profond);
+    font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;
+  }
+  table.recap th{
+    text-align:left;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--gris-doux);font-weight:600;padding:4px 12px;
+  }
+  table.recap td{padding:8px 12px;vertical-align:top;}
+  table.recap td:first-child{white-space:nowrap;color:var(--rose-profond);}
+  table.recap a{color:var(--rose-profond);text-decoration:underline dotted;text-underline-offset:3px;}
+  table.recap a:hover{text-decoration-style:solid;}
+  /* Lien retour au bas de chaque section matin. */
+  .back-chemin{text-align:right;margin-top:14px;font-size:.85rem;}
+  .back-chemin a{
+    color:var(--gris-doux);text-decoration:none;
+    border-bottom:1px dotted var(--gris-doux);padding-bottom:1px;
+  }
+  .back-chemin a:hover{color:var(--rose-profond);border-bottom-style:solid;}
+  /* CTA Palette de Lumière inline. */
+  .cta-palette{
+    text-decoration:none;border-bottom:2px solid var(--or);padding-bottom:1px;
+    transition:background .15s;
+  }
+  .cta-palette:hover{background:rgba(214,166,72,.12);}
 </style>
 </head>
 <body>
@@ -182,8 +213,22 @@
     <p>2. <strong>La sortie «&nbsp;rien ce matin&nbsp;».</strong> Si l'on descend jusqu'au souffle et que même lui répond NON, la colonne n'a rien fait remonter cette nuit. On ne force pas, on revient demain. Le NON n'est pas un échec — c'est «&nbsp;pas cette porte, pas ce matin&nbsp;».</p>
   </div>
 
+  <!-- RÉCAP SYNTHÉTIQUE — vue d'ensemble en un coup d'œil -->
+  <table class="recap">
+    <caption>Arc du cycle — vue d'ensemble</caption>
+    <thead>
+      <tr><th scope="col">Matin</th><th scope="col">Paliers</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><a href="#matin-1"><strong>1ᵉʳ matin</strong></a></td><td>Le souffle · La frontière</td></tr>
+      <tr><td><a href="#matin-2"><strong>2ᵉ matin</strong></a></td><td>Le droit de regard · La prise à témoin</td></tr>
+      <tr><td><a href="#matin-3"><strong>3ᵉ matin</strong></a></td><td>Le brouillage du désir</td></tr>
+      <tr><td><a href="#matin-4"><strong>4ᵉ matin</strong> <em>(si possible)</em></a></td><td>Réouverture · Prise à témoin · Brouillage du désir · La reprise</td></tr>
+    </tbody>
+  </table>
+
   <!-- LE CHEMIN -->
-  <div class="chemin">
+  <div class="chemin" id="chemin">
     <h2>Le chemin, lu de bas en haut</h2>
     <div class="lvl step-1"><span class="p">Droit de regard</span><span class="quand"><a href="#matin-2">2ᵉ matin</a></span><span class="n"></span></div>
     <div class="lvl step-2"><span class="p">La reprise</span><span class="quand"><a href="#matin-4">4ᵉ matin (si possible)</a></span><span class="n"></span></div>
@@ -212,6 +257,7 @@
         <li class="non">NON / je ne sais pas&nbsp;: elle reste une minute de plus dans le gradient, ou laisse la colonne retravailler et revient demain.</li>
       </ul>
     </div>
+      <p class="back-chemin"><a href="#chemin">↑ Retour au chemin</a></p>
   </div>
 
   <!-- 2e MATIN -->
@@ -243,6 +289,7 @@
     <p>Assise, axe droit, regard porté loin sans fixer. Trois respirations pour sentir si la surface est libre — ou si quelque chose y colle encore. Elle ne corrige pas&nbsp;: elle constate.</p>
     <h3>La reprise</h3>
     <p>Sur l'expiration&nbsp;: <span class="geste">«&nbsp;ce qui m'appartient revient — je vois ce que je porte&nbsp;»</span>. La consolidation se fait sur la fin du cycle lunaire complet.</p>
+      <p class="back-chemin"><a href="#chemin">↑ Retour au chemin</a></p>
   </div>
 
   <!-- PRISE A TEMOIN -->
@@ -280,7 +327,7 @@
     <h3>L'écoute</h3>
     <p>Trois respirations pour sentir la gorge — serrée, nouée, un poids qui empêche le son de monter. Siège de la vérité qu'on n'a pas pu dire.</p>
     <h3>Le gradient — Palette de Lumière</h3>
-    <p>Elle ouvre la <strong>Palette de Lumière</strong> et décode sa suite de teintes qui libèrent la gorge — sa suite à elle, validée au flux, qui monte vers le blanc <strong>#FFFFFF</strong>, la pleine lumière. Le mouvement va de la teinte qui bloque l'expression vers le blanc qui la libère, pendant qu'elle respire dans la gorge.</p>
+    <p>Elle ouvre la <a href="https://priv.svlbh.com/palette" target="_blank" rel="noopener" class="cta-palette"><strong>Palette de Lumière</strong></a> et décode sa suite de teintes qui libèrent la gorge — sa suite à elle, validée au flux, qui monte vers le blanc <strong>#FFFFFF</strong>, la pleine lumière. Le mouvement va de la teinte qui bloque l'expression vers le blanc qui la libère, pendant qu'elle respire dans la gorge.</p>
     <h3>La reprise</h3>
     <p>Sur l'expiration&nbsp;: <span class="geste">«&nbsp;ma vérité a le droit de monter et de sortir — ce qui retenait ma voix n'est plus à moi&nbsp;»</span>. Elle peut laisser monter un son, même léger, un soupir sonore.</p>
     <div class="flux">
@@ -292,6 +339,7 @@
       </ul>
     </div>
     <div class="repere"><b>Repère référente.</b> La gorge qui se rouvre fait souvent monter larmes ou colère en même temps que la voix — la vérité retenue sort rarement neutre. Bon signe tant que ça soulage&nbsp;; si ça bascule dans la détresse, la référente passe la main.</div>
+      <p class="back-chemin"><a href="#chemin">↑ Retour au chemin</a></p>
   </div>
 
   <!-- BROUILLAGE DU DESIR -->
@@ -312,6 +360,7 @@
       </ul>
     </div>
     <div class="repere"><b>Repère référente — le plus vif du chemin.</b> Réveiller la sensation dans une zone anesthésiée pour se protéger peut faire remonter ce contre quoi l'anesthésie protégeait. <b>Si ça ramène à la scène au lieu de ramener à elle, ce palier n'est pas pour l'autonomie matinale&nbsp;: il se travaille accompagné.</b></div>
+      <p class="back-chemin"><a href="#chemin">↑ Retour au chemin</a></p>
   </div>
 
   <!-- 5e MATIN — LA REPRISE -->
