@@ -33,7 +33,7 @@ export default async function RoutinesPage() {
         </p>
       </header>
 
-      {/* Outil Colonne des 5 matins — HTML statique (DEC Patrick 2026-06-02). */}
+      {/* Outil Colonne des 4 matins — HTML statique (DEC Patrick 2026-06-02). */}
       <a
         href="/routines/colonne-des-5-matins-v0.1.0.html"
         className="block rounded-xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 p-5 shadow-sm transition hover:border-amber-400 hover:shadow-md active:scale-[0.99]"
@@ -42,13 +42,13 @@ export default async function RoutinesPage() {
           <div className="text-3xl" aria-hidden>🌅</div>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2">
-              <span className="text-base font-bold text-amber-900">Colonne des 5 matins</span>
+              <span className="text-base font-bold text-amber-900">Colonne des 4 matins</span>
               <span className="rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900">
-                v0.1.0
+                ST4+
               </span>
             </div>
             <p className="mt-1 text-sm text-neutral-700">
-              Plans transverses des matins · grille de lecture quotidienne du Cercle.
+              Un bouchon de lumière par jour, lu de bas en haut.
             </p>
           </div>
           <span className="text-amber-700">→</span>
