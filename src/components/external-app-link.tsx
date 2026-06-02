@@ -19,7 +19,7 @@ export function ExternalAppLink({
       target="_blank"
       rel="noopener noreferrer"
       title={title}
-      className="inline-flex flex-col items-center gap-0 rounded-lg bg-white px-2 py-1 shadow-sm ring-1 ring-black/5 transition hover:shadow-md"
+      className="inline-flex flex-col items-center gap-0 rounded-lg bg-white px-2 py-1 transition hover:bg-neutral-50"
     >
       {/* Compass SVG — équivalent SF Symbol "safari.fill" iPad */}
       <svg

@@ -84,7 +84,7 @@ export default function BenshenPage() {
       new Date(Date.UTC(pillars.parts.year, pillars.parts.month - 1, pillars.parts.day)),
       pillars.parts.hour,
     );
-    return { correction, tlt, pillars, bafa };
+    return { offset, correction, tlt, pillars, bafa };
   }, [configured, place]);
 
   if (!configured || !computed) {
@@ -98,7 +98,7 @@ export default function BenshenPage() {
     );
   }
 
-  const { correction, tlt, pillars, bafa } = computed;
+  const { offset, correction, tlt, pillars, bafa } = computed;
   const pillarsOrdered: Pillar[] = [pillars.hour, pillars.day, pillars.month, pillars.year];
 
   const selectedOrgan = ORGAN_MERIDIANS.find((m) => m.code === meridianKey);
@@ -175,9 +175,42 @@ export default function BenshenPage() {
               year: "numeric",
             })}
           </p>
-          <p className="mt-1 font-mono text-[10px] text-amber-700">
-            Correction = lon/15·3600 = {formatCorrection(correction)}
-          </p>
+          {/* Décomposition pédagogique du calcul.
+              DEC Patrick 2026-06-02 : éviter la confusion « 09:31 → 07:59 ». */}
+          <div className="mt-2 space-y-0.5 border-t border-amber-300 pt-2 font-mono text-[10px] text-amber-800">
+            <p>
+              Heure configurée :{" "}
+              <span className="font-semibold">
+                {configured.toLocaleTimeString("fr-CH", {
+                  timeZone: place.timeZone,
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </span>{" "}
+              ({place.timeZone}, UTC{offset >= 0 ? "+" : ""}
+              {(offset / 3600).toFixed(0)})
+            </p>
+            <p>
+              → UTC :{" "}
+              <span className="font-semibold">
+                {configured.toLocaleTimeString("fr-CH", {
+                  timeZone: "UTC",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </span>
+            </p>
+            <p>
+              + correction longitude (lon {place.longitude.toFixed(2)}°/15) ={" "}
+              <span className="font-semibold">{formatCorrection(correction)}</span>
+            </p>
+            <p className="text-amber-700">
+              = vrai temps solaire à {place.label.split(" · ")[0]} (utilisé pour
+              les 4 piliers Bazi).
+            </p>
+          </div>
         </div>
       </section>
 
