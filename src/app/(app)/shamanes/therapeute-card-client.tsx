@@ -90,6 +90,37 @@ function CerclesAkashiquesChips({
   );
 }
 
+// Pastille radiesthésique (charte VLBH v0.1.0 §X — tokens --rad-signature-*).
+// Encart diagnostique explicitement balisé : pastille primaire RVB pure +
+// code hex en légende, visuellement isolé du chrome de marque. Les primaires
+// pures (#FF0000/#00FF00/#0000FF) sont RÉSERVÉES à la lecture radiesthésique
+// et exclues du design VLBH par construction.
+const RAD_SIGNATURE_META = {
+  aube:       { hex: "#FF0000", label: "signature d'aube",       fn: "réactivation du terrain" },
+  nuit:       { hex: "#00FF00", label: "signature de nuit",      fn: "récupération du système" },
+  "fin-jour": { hex: "#0000FF", label: "signature de fin de jour", fn: "drainage interne légitime" },
+} as const;
+
+function RadSignatureBadge({ sig }: { sig: "aube" | "nuit" | "fin-jour" | null }) {
+  if (!sig) return null;
+  const meta = RAD_SIGNATURE_META[sig];
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-md border border-neutral-300 bg-white px-1.5 py-0.5 font-mono text-[10px] text-neutral-700"
+      title={`Lecture radiesthésique — ${meta.label} ${meta.hex} (${meta.fn})`}
+    >
+      <span
+        aria-hidden
+        className="inline-block h-2 w-2 rounded-full"
+        // Token radiesthésique — JAMAIS utilisé comme couleur de design.
+        style={{ backgroundColor: meta.hex }}
+      />
+      <span>{meta.label}</span>
+      <span className="text-neutral-400">{meta.hex}</span>
+    </span>
+  );
+}
+
 function DynamiquesChips({ dynamiques }: { dynamiques: DynamiqueChip[] }) {
   if (!dynamiques || dynamiques.length === 0) return null;
   return (
@@ -179,6 +210,11 @@ export function TherapeuteCardClient({
               {isMe ? <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-900">moi</span> : null}
               {t.cercle_lumiere_sr ? <span className="ml-1 text-[10px]" title="Cercle SR">◉</span> : null}
             </p>
+            {t.rad_signature ? (
+              <div className="mt-1">
+                <RadSignatureBadge sig={t.rad_signature} />
+              </div>
+            ) : null}
             {t.code_praticien != null ? (
               <p className="font-mono text-[10px] text-neutral-400">
                 #{String(t.code_praticien).padStart(5, "0")}

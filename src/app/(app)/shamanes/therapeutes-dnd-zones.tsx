@@ -26,6 +26,8 @@ export type DnDTherapeute = {
   guides_lumiere: number;
   /** Timestamp version pour OCC (saisie absolue GL). DEC Patrick 2026-05-29. */
   guides_lumiere_updated_at: string;
+  /** Signature radiesthésique cyclique (charte VLBH v0.1.0 §X). */
+  rad_signature: "aube" | "nuit" | "fin-jour" | null;
   /** Timestamp version pour OCC NSB thérapeute (praticienne_daily_status). */
   daily_status_updated_at: string | null;
 };

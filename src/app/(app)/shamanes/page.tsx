@@ -61,6 +61,7 @@ type Therapeute = {
   guides_lumiere: number;
   guides_lumiere_updated_at: string;
   daily_status_updated_at: string | null;
+  rad_signature: "aube" | "nuit" | "fin-jour" | null;
 };
 
 // Si updated_at < today (Europe/Zurich), on considère un reset implicite
@@ -103,7 +104,7 @@ export default async function ShamanesPage() {
   //    avec droit de veto Patrick (colonne cercle_veto).
   const { data: therapeutesRaw } = await sb
     .from("praticienne_profile")
-    .select("svlbh_id, first_name, last_name, code_praticien, stx, tx, capacity_anchor, cercle_lumiere_sr, desa_active, guides_lumiere, guides_lumiere_updated_at")
+    .select("svlbh_id, first_name, last_name, code_praticien, stx, tx, capacity_anchor, cercle_lumiere_sr, desa_active, guides_lumiere, guides_lumiere_updated_at, rad_signature")
     .eq("pro_status", "ACTIVE")
     .eq("cercle_lumiere_sr", true)
     .eq("cercle_veto", false)
@@ -218,6 +219,7 @@ export default async function ShamanesPage() {
     desa_active: boolean | null;
     guides_lumiere: number | null;
     guides_lumiere_updated_at: string | null;
+    rad_signature: "aube" | "nuit" | "fin-jour" | null;
   }>).map((p) => {
     const d = dailyMap.get(p.svlbh_id);
     const somme = niveauxSomme.get(p.svlbh_id) ?? 0;
@@ -243,6 +245,7 @@ export default async function ShamanesPage() {
       guides_lumiere: p.guides_lumiere ?? 0,
       guides_lumiere_updated_at: p.guides_lumiere_updated_at ?? new Date().toISOString(),
       daily_status_updated_at: d?.updated_at ?? null,
+      rad_signature: p.rad_signature,
     };
   });
 
