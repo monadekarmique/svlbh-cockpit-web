@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cockpit Onboarding ST1 — SVLBH</title>
+<style>
+:root{ color-scheme: light; }
+*{ box-sizing:border-box; }
+body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:#f7f7f5; color:#1f1f1d; font-size:14px; line-height:1.4; }
+.wrap{ padding:18px 20px 40px; max-width:1560px; margin:0 auto; }
+h1{ font-size:20px; margin:0 0 2px; font-weight:650; }
+.sub{ color:#6b6b66; font-size:12.5px; margin:0 0 4px; }
+.note{ color:#8a8a83; font-size:11.5px; margin:0 0 16px; font-style:italic; }
+code{ background:#efefea; padding:1px 5px; border-radius:5px; font-size:12px; }
+.controls{ display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;
+  background:#fff; border:1px solid #e6e6e1; border-radius:12px; padding:12px 14px; margin-bottom:14px; }
+.ctrl{ display:flex; flex-direction:column; gap:3px; }
+.ctrl label{ font-size:11px; color:#6b6b66; font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+.ctrl input[type=number]{ width:72px; padding:6px 8px; border:1px solid #d8d8d2; border-radius:8px; font-size:14px; }
+.ctrl input[type=text]{ width:150px; padding:6px 8px; border:1px solid #d8d8d2; border-radius:8px; font-size:13px; }
+.ctrl small{ color:#a0a099; font-size:10px; }
+.spacer{ flex:1 1 auto; }
+.btn{ padding:7px 12px; border:1px solid #d8d8d2; background:#fff; border-radius:8px; font-size:12.5px; cursor:pointer; color:#3a3a36; }
+.btn:hover{ background:#f0f0ec; }
+.summary{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.chip{ display:flex; align-items:center; gap:7px; background:#fff; border:1px solid #e6e6e1;
+  border-radius:999px; padding:5px 12px 5px 9px; font-size:12.5px; }
+.dot{ width:10px; height:10px; border-radius:50%; flex:none; }
+.chip b{ font-weight:650; }
+.board{ display:flex; gap:12px; overflow-x:auto; padding-bottom:8px; align-items:flex-start; }
+.col{ flex:1 1 0; min-width:236px; background:#fff; border:1px solid #e6e6e1; border-radius:12px; display:flex; flex-direction:column; }
+.col-head{ padding:11px 12px 9px; border-bottom:1px solid #efefea; }
+.col-title{ display:flex; align-items:center; gap:8px; font-weight:650; font-size:13px; }
+.col-count{ margin-left:auto; background:#f0f0ec; border-radius:999px; padding:1px 9px; font-size:12px; color:#555; }
+.col-action{ font-size:11px; color:#6b6b66; margin-top:4px; }
+.col-body{ padding:9px; display:flex; flex-direction:column; gap:8px; min-height:40px; }
+.empty{ color:#b4b4ac; font-size:12px; text-align:center; padding:14px 6px; }
+.card{ border:1px solid #eaeae4; border-radius:10px; padding:9px 10px; background:#fcfcfb; }
+.card-top{ display:flex; align-items:baseline; gap:8px; }
+.nm{ font-weight:700; font-size:13.5px; }
+.code{ font-size:10.5px; color:#8a8a83; margin-left:auto; font-variant:tabular-nums; }
+.badges{ display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
+.badge{ font-size:10px; padding:2px 7px; border-radius:999px; border:1px solid transparent; white-space:nowrap; }
+.b-theme{ background:#eef1fb; color:#33408a; border-color:#dbe1f5; }
+.b-pay-PAID{ background:#eaf6ec; color:#1f6b32; border-color:#cfe9d4; }
+.b-pay-PENDING_PAYMENT{ background:#fef4e6; color:#9a6516; border-color:#f3e2c2; }
+.b-pay-PENDING_SOUL_COUNT{ background:#f1f1ee; color:#6b6b66; border-color:#e2e2da; }
+.b-pay-EXPIRED{ background:#fdeceb; color:#a3281e; border-color:#f3d2cd; }
+.b-sup{ background:#f3eefb; color:#5b3a8a; border-color:#e6dbf5; }
+.b-vibe{ background:#fdeceb; color:#a3281e; border-color:#f3d2cd; }
+.scores{ display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+.score{ display:flex; flex-direction:column; align-items:center; border-radius:7px; padding:3px 7px; min-width:44px; border:1px solid transparent; }
+.score .k{ font-size:9px; opacity:.8; }
+.score .v{ font-weight:700; font-size:12.5px; }
+.s-pass{ background:#eaf6ec; color:#1f6b32; border-color:#cfe9d4; }
+.s-fail{ background:#fdeceb; color:#a3281e; border-color:#f3d2cd; }
+.s-na{ background:#f1f1ee; color:#9a9a92; border-color:#e6e6df; }
+.unscored{ margin-top:8px; font-size:10.5px; color:#9a9a92; font-style:italic; }
+.cohorte{ margin-top:6px; font-size:10.5px; color:#a0a099; }
+.legend{ font-size:11px; color:#8a8a83; margin-top:14px; line-height:1.6; }
+.legend b{ color:#6b6b66; }
+.snap{ font-size:11px; color:#b4b4ac; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Cockpit Onboarding · Visiteuses ST1</h1>
+  <p class="sub">Répartition des visiteuses ST1 dans les 5 groupes de travail selon le routage SVLBH.</p>
+  <p class="note">Outil d'organisation interne reflétant vos propres critères de routage — n'établit pas de diagnostic médical.</p>
+
+  <div class="controls">
+    <div class="ctrl"><label>Seuil SLA</label><input type="number" id="th-sla" min="0" max="300" step="1"><small>azimut ≥ seuil</small></div>
+    <div class="ctrl"><label>Seuil SLSA</label><input type="number" id="th-slsa" min="0" max="300" step="1"><small>Sur-Âme</small></div>
+    <div class="ctrl"><label>Seuil SLM</label><input type="number" id="th-slm" min="0" max="300" step="1"><small>Monade</small></div>
+    <div class="ctrl"><label>Filtrer prénom</label><input type="text" id="filter" placeholder="ex. Anne"></div>
+    <div class="spacer"></div>
+    <button class="btn" id="reset">Réinitialiser seuils</button>
+  </div>
+
+  <div class="summary" id="summary"></div>
+  <div id="content"></div>
+
+  <p class="legend">
+    <b>Règle de routage</b> (premier critère qui s'applique) — vibe check non approuvé ou compte d'âmes en attente → <b>À qualifier</b> ·
+    sinon, si les 3 scores existent : 3/3 ≥ seuil → <b>Routine Autonome</b>, 2/3 → <b>Routine + Coaching</b>, ≤1/3 → <b>Accompagnement Patrick</b> ·
+    sinon routage par <code>supervision_mode</code> : NONE → Autonome, COACHING_FIRST → Coaching, PATRICK_ONLY → Patrick ·
+    aucun score &amp; mode non défini → <b>À scorer</b>.
+  </p>
+  <p class="snap">Instantané des données SVLBH au 02.06.2026 — page statique. Pour un rafraîchissement automatique, utilisez la version artefact en direct dans Cowork.</p>
+</div>
+
+<script>
+// ---- Instantané des 12 visiteuses ST1 (Supabase svlbh-pro-1-dev, 02.06.2026) ----
+const DATA = [
+ {first_name:"Anne",st1_short_code:"ANB-GLY0",st1_theme:"GLYCEMIE",st1_payment_status:"PENDING_PAYMENT",st1_cohorte_date:"2026-05-12",vibe_check_status:"APPROVED",supervision_mode:"COACHING_FIRST",sla:null,slsa:null,slm:null},
+ {first_name:"Anne-Marie",st1_short_code:"ANB-GLY0",st1_theme:"GLYCEMIE",st1_payment_status:"PENDING_PAYMENT",st1_cohorte_date:"2026-05-12",vibe_check_status:"APPROVED",supervision_mode:"NONE",sla:null,slsa:null,slm:null},
+ {first_name:"Augusta",st1_short_code:"ANB-GLY0",st1_theme:"GLYCEMIE",st1_payment_status:"PENDING_PAYMENT",st1_cohorte_date:"2026-05-12",vibe_check_status:"APPROVED",supervision_mode:"COACHING_FIRST",sla:null,slsa:null,slm:null},
+ {first_name:"Geneviève",st1_short_code:"DAF-SCL0",st1_theme:"SCLEROSE",st1_payment_status:"PENDING_PAYMENT",st1_cohorte_date:"2026-05-12",vibe_check_status:"APPROVED",supervision_mode:"PATRICK_ONLY",sla:null,slsa:null,slm:null},
+ {first_name:"Henriette",st1_short_code:"ANB-GLY0",st1_theme:"GLYCEMIE",st1_payment_status:"PENDING_PAYMENT",st1_cohorte_date:"2026-05-12",vibe_check_status:"APPROVED",supervision_mode:"NONE",sla:null,slsa:null,slm:null},
+ {first_name:"Jade",st1_short_code:"DAF-SCL0",st1_theme:"SCLEROSE",st1_payment_status:"PENDING_PAYMENT",st1_cohorte_date:"2026-05-12",vibe_check_status:"APPROVED",supervision_mode:"COACHING_FIRST",sla:null,slsa:null,slm:null},
+ {first_name:"Luca",st1_short_code:"DAF-SCL0",st1_theme:"SCLEROSE",st1_payment_status:"PENDING_PAYMENT",st1_cohorte_date:"2026-05-12",vibe_check_status:"APPROVED",supervision_mode:"PATRICK_ONLY",sla:null,slsa:null,slm:null},
+ {first_name:"Maman",st1_short_code:"ANB-GLY0",st1_theme:"GLYCEMIE",st1_payment_status:"PENDING_PAYMENT",st1_cohorte_date:"2026-05-12",vibe_check_status:"APPROVED",supervision_mode:"PATRICK_ONLY",sla:null,slsa:null,slm:null},
+ {first_name:"Soeur de Geneviève",st1_short_code:"DAF-SCL0",st1_theme:"SCLEROSE",st1_payment_status:"PENDING_PAYMENT",st1_cohorte_date:"2026-05-12",vibe_check_status:"APPROVED",supervision_mode:"PATRICK_ONLY",sla:null,slsa:null,slm:null},
+ {first_name:"Caroline",st1_short_code:null,st1_theme:"SCLEROSE",st1_payment_status:"PENDING_SOUL_COUNT",st1_cohorte_date:null,vibe_check_status:"APPROVED",supervision_mode:"NONE",sla:null,slsa:null,slm:null},
+ {first_name:"Mathilde",st1_short_code:null,st1_theme:"PEUR_MOURIR",st1_payment_status:"PENDING_SOUL_COUNT",st1_cohorte_date:null,vibe_check_status:"APPROVED",supervision_mode:"NONE",sla:null,slsa:null,slm:null},
+ {first_name:"Sandrine",st1_short_code:null,st1_theme:"BESOIN_CONSEIL",st1_payment_status:"PENDING_SOUL_COUNT",st1_cohorte_date:null,vibe_check_status:"APPROVED",supervision_mode:"NONE",sla:null,slsa:null,slm:null}
+];
+
+const GROUPS = {
+  1:{ name:"Routine Autonome",       color:"#2f9e44", action:"Conditions azimutes garanties → routine matinale autonome" },
+  2:{ name:"Routine + Coaching",     color:"#1c9aa8", action:"Routine avec coaching d'abord" },
+  3:{ name:"Accompagnement Patrick", color:"#d6452a", action:"Accompagnement personnel avec Patrick" },
+  4:{ name:"À qualifier",            color:"#e8a317", action:"Vibe check / compte d'âmes à finaliser" },
+  5:{ name:"À scorer",               color:"#9a9a92", action:"En attente de scoring SLA/SLSA/SLM" }
+};
+const THEME = { ENDO_REGLES:"Endo / Règles", SCLEROSE:"Sclérose", CANCER:"Cancer", GLYCEMIE:"Glycémie",
+  ALZHEIMER:"Alzheimer", PANCREAS:"Pancréas", AUTRE:"Autre", PEUR_MOURIR:"Peur de mourir", BESOIN_CONSEIL:"Besoin conseil" };
+const PAY = { PENDING_SOUL_COUNT:"Compte d'âmes en attente", PENDING_PAYMENT:"Paiement en attente", PAID:"Payé", EXPIRED:"Expiré" };
+const SUP = { NONE:"Autonome", COACHING_FIRST:"Coaching d'abord", PATRICK_ONLY:"Patrick uniquement" };
+
+const DEFAULT_TH = { sla:78, slsa:32, slm:25 };
+let TH = {...DEFAULT_TH};
+
+function routeGroup(r){
+  if(r.vibe_check_status && r.vibe_check_status !== 'APPROVED') return 4;
+  if(r.st1_payment_status === 'PENDING_SOUL_COUNT') return 4;
+  const has = r.sla!=null && r.slsa!=null && r.slm!=null;
+  if(has){ let p=0; if(r.sla>=TH.sla)p++; if(r.slsa>=TH.slsa)p++; if(r.slm>=TH.slm)p++; return p===3?1:p===2?2:3; }
+  if(r.supervision_mode==='NONE') return 1;
+  if(r.supervision_mode==='COACHING_FIRST') return 2;
+  if(r.supervision_mode==='PATRICK_ONLY') return 3;
+  return 5;
+}
+function esc(s){ return (s==null?"":String(s)).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function scoreCell(k,v,seuil){ let cls="s-na",disp="—"; if(v!=null){disp=v;cls=v>=seuil?"s-pass":"s-fail";}
+  return '<div class="score '+cls+'"><span class="k">'+k+'</span><span class="v">'+disp+'</span></div>'; }
+function cardHtml(r){
+  let h='<div class="card"><div class="card-top"><span class="nm">'+esc(r.first_name||"—")+'</span>';
+  if(r.st1_short_code) h+='<span class="code">'+esc(r.st1_short_code)+'</span>';
+  h+='</div><div class="badges">';
+  if(r.st1_theme) h+='<span class="badge b-theme">'+esc(THEME[r.st1_theme]||r.st1_theme)+'</span>';
+  if(r.st1_payment_status) h+='<span class="badge b-pay-'+esc(r.st1_payment_status)+'">'+esc(PAY[r.st1_payment_status]||r.st1_payment_status)+'</span>';
+  if(r.supervision_mode && r.supervision_mode!=='NONE') h+='<span class="badge b-sup">'+esc(SUP[r.supervision_mode]||r.supervision_mode)+'</span>';
+  if(r.vibe_check_status && r.vibe_check_status!=='APPROVED') h+='<span class="badge b-vibe">vibe: '+esc(r.vibe_check_status)+'</span>';
+  h+='</div>';
+  if(r.sla!=null||r.slsa!=null||r.slm!=null){
+    h+='<div class="scores">'+scoreCell("SLA",r.sla,TH.sla)+scoreCell("SLSA",r.slsa,TH.slsa)+scoreCell("SLM",r.slm,TH.slm)+'</div>';
+  } else { h+='<div class="unscored">non scorée — routage par mode de supervision</div>'; }
+  if(r.st1_cohorte_date) h+='<div class="cohorte">Cohorte : '+esc(r.st1_cohorte_date)+'</div>';
+  h+='</div>'; return h;
+}
+function render(){
+  const filt=(document.getElementById("filter").value||"").trim().toLowerCase();
+  const buckets={1:[],2:[],3:[],4:[],5:[]};
+  DATA.forEach(r=>{ if(filt && !((r.first_name||"").toLowerCase().includes(filt))) return; buckets[routeGroup(r)].push(r); });
+  const total=Object.values(buckets).reduce((a,b)=>a+b.length,0);
+  let sh='<div class="chip"><b>'+total+'</b>&nbsp;visiteuses ST1</div>';
+  [1,2,3,4,5].forEach(g=>{ sh+='<div class="chip"><span class="dot" style="background:'+GROUPS[g].color+'"></span><b>'+buckets[g].length+'</b>&nbsp;'+esc(GROUPS[g].name)+'</div>'; });
+  document.getElementById("summary").innerHTML=sh;
+  let bh='<div class="board">';
+  [1,2,3,4,5].forEach(g=>{ const list=buckets[g];
+    bh+='<div class="col"><div class="col-head"><div class="col-title"><span class="dot" style="background:'+GROUPS[g].color+'"></span>'+esc(GROUPS[g].name)+'<span class="col-count">'+list.length+'</span></div><div class="col-action">'+esc(GROUPS[g].action)+'</div></div><div class="col-body">';
+    bh+= list.length ? list.map(cardHtml).join("") : '<div class="empty">—</div>';
+    bh+='</div></div>'; });
+  bh+='</div>'; document.getElementById("content").innerHTML=bh;
+}
+function syncInputs(){ document.getElementById("th-sla").value=TH.sla; document.getElementById("th-slsa").value=TH.slsa; document.getElementById("th-slm").value=TH.slm; }
+["sla","slsa","slm"].forEach(k=>document.addEventListener("DOMContentLoaded",()=>{}));
+document.getElementById("th-sla").addEventListener("input",e=>{const v=parseInt(e.target.value,10);if(!isNaN(v)){TH.sla=v;render();}});
+document.getElementById("th-slsa").addEventListener("input",e=>{const v=parseInt(e.target.value,10);if(!isNaN(v)){TH.slsa=v;render();}});
+document.getElementById("th-slm").addEventListener("input",e=>{const v=parseInt(e.target.value,10);if(!isNaN(v)){TH.slm=v;render();}});
+document.getElementById("filter").addEventListener("input",render);
+document.getElementById("reset").addEventListener("click",()=>{ TH={...DEFAULT_TH}; syncInputs(); render(); });
+syncInputs(); render();
+</script>
+</body>
+</html>
