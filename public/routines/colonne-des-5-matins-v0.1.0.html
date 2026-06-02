@@ -156,6 +156,11 @@
     font-size:.85rem;color:var(--gris-doux);font-style:italic;
     background:var(--rose-clair);padding:12px 18px;border-radius:8px;margin:24px 0;
   }
+  /* Liens cliquables dans la colonne Quand → ancres matin-N. */
+  .chemin .lvl .quand a{color:#fff;text-decoration:underline dotted;text-underline-offset:3px;}
+  .chemin .lvl .quand a:hover{color:var(--or);text-decoration-style:solid;}
+  /* Offset pour scroll vers ancres (évite que le contenu se cache sous le header). */
+  .matin{scroll-margin-top:20px;}
 </style>
 </head>
 <body>
@@ -180,19 +185,19 @@
   <!-- LE CHEMIN -->
   <div class="chemin">
     <h2>Le chemin, lu de bas en haut</h2>
-    <div class="lvl step-1"><span class="p">Droit de regard</span><span class="quand">Résultat des 3-4 matins</span><span class="n">RÉSULTAT</span></div>
-    <div class="lvl step-2"><span class="p">La reprise</span><span class="quand">3ᵉ matin (si déjà possible)</span><span class="n">PALIER ULTIME</span></div>
-    <div class="lvl step-3"><span class="p">Brouillage du désir</span><span class="quand">3ᵉ matin</span><span class="n">PALIER SENSIBLE</span></div>
-    <div class="lvl step-4"><span class="p">Prise à témoin</span><span class="quand">2ᵉ matin</span><span class="n">PALIER SENSIBLE</span></div>
-    <div class="lvl step-5"><span class="p">Réouverture</span><span class="quand">2ᵉ matin</span><span class="n">250 %</span></div>
-    <div class="lvl step-6"><span class="p">La frontière</span><span class="quand">1ᵉʳ matin</span><span class="n">280 % · très souvent OUI</span></div>
-    <div class="lvl step-7"><span class="p">Le souffle</span><span class="quand">1ᵉʳ matin</span><span class="n">300 % · très souvent OUI · socle</span></div>
+    <div class="lvl step-1"><span class="p">Droit de regard</span><span class="quand"><a href="#matin-2">2ᵉ matin</a></span><span class="n">PALIER</span></div>
+    <div class="lvl step-2"><span class="p">La reprise</span><span class="quand"><a href="#matin-4">4ᵉ matin (si possible)</a></span><span class="n">PALIER ULTIME</span></div>
+    <div class="lvl step-3"><span class="p">Brouillage du désir</span><span class="quand"><a href="#matin-3">3ᵉ matin</a> · <a href="#matin-4">4ᵉ</a></span><span class="n">PALIER SENSIBLE</span></div>
+    <div class="lvl step-4"><span class="p">Prise à témoin</span><span class="quand"><a href="#matin-2">2ᵉ matin</a> · <a href="#matin-4">4ᵉ</a></span><span class="n">PALIER SENSIBLE</span></div>
+    <div class="lvl step-5"><span class="p">Réouverture</span><span class="quand"><a href="#matin-4">4ᵉ matin (si possible)</a></span><span class="n">250 %</span></div>
+    <div class="lvl step-6"><span class="p">La frontière</span><span class="quand"><a href="#matin-1">1ᵉʳ matin</a></span><span class="n">280 % · très souvent OUI</span></div>
+    <div class="lvl step-7"><span class="p">Le souffle</span><span class="quand"><a href="#matin-1">1ᵉʳ matin</a></span><span class="n">300 % · très souvent OUI · socle</span></div>
     <small>On entre par le bas (souffle / frontière) et l'on monte. Le NON de la frontière saute la réouverture et va droit à la prise à témoin (décodage SVLBH&nbsp;: une frontière qui ne revient pas signe le fait d'avoir été rendue spectatrice). Le droit de regard n'est pas un matin de travail&nbsp;: c'est l'état de souveraineté retrouvée sur ce qui entre, vers lequel tout converge.</small>
   </div>
 
   <!-- 1er MATIN -->
-  <div class="matin">
-    <span class="tag">1ᵉʳ matin · le souffle — la base · 300 %</span>
+  <div class="matin" id="matin-1">
+    <span class="tag">1ᵉʳ matin · le souffle (1/2) — la base · 300 %</span>
     <p>Au réveil, avant les écrans, avant les mots. Allongée ou assise, une main sur le sternum, une sur le ventre.</p>
     <h3>L'écoute</h3>
     <p>Trois respirations sans rien changer, juste pour sentir où ça bloque — haut, court, retenu. Le souffle dit où le corps est encore sur ses gardes.</p>
@@ -211,7 +216,7 @@
 
   <!-- 2e MATIN -->
   <div class="matin">
-    <span class="tag">2ᵉ matin · la frontière · 280 % · très souvent OUI</span>
+    <span class="tag">1ᵉʳ matin · la frontière (2/2) · 280 % · très souvent OUI</span>
     <p>Debout ou assise bien droite — la frontière se sent mieux sur un axe vertical. Pieds posés, elle sent le sol.</p>
     <h3>L'écoute</h3>
     <p>Une main à plat sur le bas-ventre, l'autre dans le dos au même niveau, comme si elle tenait son périmètre entre ses paumes. Trois respirations pour repérer où sa limite passe — ou ne passe pas&nbsp;: un côté plus flou, une zone qu'elle ne sent pas, une porosité.</p>
@@ -230,9 +235,19 @@
     <div class="repere"><b>Repère référente.</b> Retracer le contour peut faire monter une émotion — colère saine, larmes. C'est bon signe tant que ça soulage. Le geste des mains ancre la limite dans le corps&nbsp;: c'est ce qui distingue un «&nbsp;non&nbsp;» qui tient d'un «&nbsp;non&nbsp;» qu'on se répète sans y croire.</div>
   </div>
 
+  <!-- DROIT DE REGARD (2ᵉ matin, 1/2) -->
+  <div class="matin" id="matin-2">
+    <span class="tag">2ᵉ matin · le droit de regard (1/2)</span>
+    <p>Premier geste du 2ᵉ matin&nbsp;: elle constate ce qui est revenu d'elle. <strong>Le droit de regard</strong> n'est pas un exercice, c'est <em>l'état dans lequel elle ressort</em> du cycle&nbsp;: la souveraineté retrouvée sur ce qui entre et ce qui n'entre pas. Une fois ce regard pris, elle peut entrer dans la prise à témoin sans s'y perdre.</p>
+    <h3>L'écoute</h3>
+    <p>Assise, axe droit, regard porté loin sans fixer. Trois respirations pour sentir si la surface est libre — ou si quelque chose y colle encore. Elle ne corrige pas&nbsp;: elle constate.</p>
+    <h3>La reprise</h3>
+    <p>Sur l'expiration&nbsp;: <span class="geste">«&nbsp;ce qui m'appartient revient — je vois ce que je porte&nbsp;»</span>. La consolidation se fait sur la fin du cycle lunaire complet.</p>
+  </div>
+
   <!-- PRISE A TEMOIN -->
   <div class="matin">
-    <span class="tag">Palier sensible · la prise à témoin</span>
+    <span class="tag">2ᵉ matin · la prise à témoin (2/2) · palier sensible</span>
     <p><em>Atteinte par la branche NON de la frontière.</em> On commence par rétablir l'appui dans le dos — sentiment d'avoir été exposée sans protection.</p>
 
     <div class="levier">
@@ -259,8 +274,8 @@
   </div>
 
   <!-- REOUVERTURE + GORGE -->
-  <div class="matin">
-    <span class="tag">3ᵉ matin · réouverture · 250 % — chakra de la gorge</span>
+  <div class="matin" id="matin-4">
+    <span class="tag">4ᵉ matin (si possible) · la réouverture (1/4) · 250 % — chakra de la gorge</span>
     <p><em>La femme dont la prise à témoin a répondu NON la veille.</em> Allongée, détendue. Une main sur la gorge sans appuyer, l'autre sur le sternum.</p>
     <h3>L'écoute</h3>
     <p>Trois respirations pour sentir la gorge — serrée, nouée, un poids qui empêche le son de monter. Siège de la vérité qu'on n'a pas pu dire.</p>
@@ -280,8 +295,8 @@
   </div>
 
   <!-- BROUILLAGE DU DESIR -->
-  <div class="matin">
-    <span class="tag">Palier sensible · le brouillage du désir</span>
+  <div class="matin" id="matin-3">
+    <span class="tag">3ᵉ matin · le brouillage du désir · palier sensible</span>
     <p>Allongée, détendue, rien à tenir. Palier le plus délicat&nbsp;: on ne va pas chercher le désir, on rétablit seulement la <em>possibilité</em> de la sensation.</p>
     <h3>L'écoute</h3>
     <p>Une main sur le bas-ventre, sans intention. Le signe est souvent une absence&nbsp;: du plat, du vide, un endroit qui ne répond pas. Elle constate, sans se juger. <em>Ne rien sentir est une information, pas un échec.</em></p>
@@ -299,17 +314,9 @@
     <div class="repere"><b>Repère référente — le plus vif du chemin.</b> Réveiller la sensation dans une zone anesthésiée pour se protéger peut faire remonter ce contre quoi l'anesthésie protégeait. <b>Si ça ramène à la scène au lieu de ramener à elle, ce palier n'est pas pour l'autonomie matinale&nbsp;: il se travaille accompagné.</b></div>
   </div>
 
-  <!-- 4e MATIN — CORRECTIONS (WIP) -->
-  <div class="matin corrections">
-    <span class="tag wip">4ᵉ matin · Corrections — à valider radiesthésiquement</span>
-    <p>Matin dédié à <strong>rectifier ce qui a été mal saisi, mal validé, ou laissé en suspens</strong> les trois premiers matins — la seconde chance du flux pour une femme qui aurait validé un OUI trop vite ou raté un palier.</p>
-    <p style="color:var(--rose-profond);"><em>Mécanique de relecture à définir. À regarder radiesthésiquement&nbsp;: ce matin reste-t-il nécessaire tel quel, ou une possibilité de «&nbsp;picky-bagging&nbsp;» (regroupement / report souple des paliers entre les jours) est-elle ouverte&nbsp;?</em></p>
-    <p class="meta">Section laissée volontairement ouverte.</p>
-  </div>
-
   <!-- 5e MATIN — LA REPRISE -->
   <div class="matin">
-    <span class="tag">5ᵉ matin · la reprise</span>
+    <span class="tag">4ᵉ matin (si possible) · la reprise (4/4)</span>
     <p>Le dernier geste actif&nbsp;: elle ne défait plus quelque chose, elle <em>reprend</em> ce qui est à elle. Assise, l'axe droit, les deux mains ouvertes sur le haut des cuisses, paumes vers le haut — une posture qui reçoit et qui tient.</p>
     <h3>L'écoute</h3>
     <p>Trois respirations pour sentir ce qui, en elle, est encore parti ailleurs — donné, capté, laissé chez quelqu'un. Sensation de manque, de morceau de soi resté dehors. Elle repère, sans tirer dessus.</p>
@@ -326,12 +333,6 @@
       </ul>
     </div>
     <div class="repere"><b>Repère référente.</b> La reprise peut faire ressurgir un chagrin plutôt qu'une plénitude&nbsp;: ramener à soi ce qu'on avait laissé chez un autre, c'est aussi reconnaître qu'on l'avait perdu. Bon signe tant que ça soulage&nbsp;; si ça enferme dans le manque, la référente passe la main.</div>
-  </div>
-
-  <!-- DROIT DE REGARD -->
-  <div class="chemin">
-    <h2>Le droit de regard — le résultat des 5 jours</h2>
-    <p>Le droit de regard n'est pas un sixième matin ni un exercice. C'est <strong>l'état dans lequel elle ressort du cycle</strong>&nbsp;: la souveraineté retrouvée sur ce qui entre et ce qui n'entre pas. Quand les bouchons sont remontés un à un, la surface est libre — cette liberté retrouvée <em>est</em> le droit de regard. Il se constate, il ne se force pas. La <strong>consolidation</strong>, sur la fin du cycle lunaire complet, vient l'ancrer.</p>
   </div>
 
   <!-- GARDE-FOU REFERENTES -->
