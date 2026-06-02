@@ -114,30 +114,32 @@
   }
   .chemin h2{color:#fff;margin-top:0;}
   .chemin .lvl{
-    display:grid;grid-template-columns:1fr auto auto;gap:1em;align-items:baseline;
+    display:flex;align-items:baseline;gap:1em;
     padding:9px 0;border-bottom:1px solid rgba(255,255,255,.18);
-    transition:padding-left .25s ease;
   }
   .chemin .lvl:last-child{border-bottom:none;}
-  .chemin .lvl .p{font-weight:600;}
-  .chemin .lvl .quand{color:rgba(255,255,255,.78);font-style:italic;font-size:.88rem;text-align:center;}
-  .chemin .lvl .n{color:var(--or);font-family:ui-monospace,monospace;font-size:.82rem;letter-spacing:.1em;text-align:right;}
-  /* Effet escalier descendant : Droit de regard tout à gauche (step-1),
-     puis chaque palier en descendant le HTML se décale à droite (step-7 = Souffle). */
-  .chemin .lvl.step-1{padding-left:0;}
-  .chemin .lvl.step-2{padding-left:1em;}
-  .chemin .lvl.step-3{padding-left:2em;}
-  .chemin .lvl.step-4{padding-left:3em;}
-  .chemin .lvl.step-5{padding-left:4em;}
-  .chemin .lvl.step-6{padding-left:5em;}
-  .chemin .lvl.step-7{padding-left:6em;}
+  /* Col 1 (Quand) : aligné à gauche sous le h du h2, largeur fixe.
+     Col 2 (palier .p) : milieu, padding-left = escalier.
+     Col 3 (état .n) : droite, fixe. */
+  .chemin .lvl .quand{order:1;color:rgba(255,255,255,.78);font-style:italic;font-size:.88rem;text-align:left;width:11em;flex-shrink:0;}
+  .chemin .lvl .p{order:2;font-weight:600;flex:1;}
+  .chemin .lvl .n{order:3;color:var(--or);font-family:ui-monospace,monospace;font-size:.82rem;letter-spacing:.1em;text-align:right;flex-shrink:0;}
+  /* Escalier : décale uniquement le palier (.p) ; Quand et état restent alignés. */
+  .chemin .lvl.step-1 .p{padding-left:0;}
+  .chemin .lvl.step-2 .p{padding-left:1em;}
+  .chemin .lvl.step-3 .p{padding-left:2em;}
+  .chemin .lvl.step-4 .p{padding-left:3em;}
+  .chemin .lvl.step-5 .p{padding-left:4em;}
+  .chemin .lvl.step-6 .p{padding-left:5em;}
+  .chemin .lvl.step-7 .p{padding-left:6em;}
   @media (max-width:640px){
-    .chemin .lvl.step-2{padding-left:.4em;}
-    .chemin .lvl.step-3{padding-left:.8em;}
-    .chemin .lvl.step-4{padding-left:1.2em;}
-    .chemin .lvl.step-5{padding-left:1.6em;}
-    .chemin .lvl.step-6{padding-left:2em;}
-    .chemin .lvl.step-7{padding-left:2.4em;}
+    .chemin .lvl .quand{width:7em;font-size:.78rem;}
+    .chemin .lvl.step-2 .p{padding-left:.4em;}
+    .chemin .lvl.step-3 .p{padding-left:.8em;}
+    .chemin .lvl.step-4 .p{padding-left:1.2em;}
+    .chemin .lvl.step-5 .p{padding-left:1.6em;}
+    .chemin .lvl.step-6 .p{padding-left:2em;}
+    .chemin .lvl.step-7 .p{padding-left:2.4em;}
   }
   .chemin small{display:block;opacity:.8;margin-top:14px;font-size:.85rem;}
   .garde{
