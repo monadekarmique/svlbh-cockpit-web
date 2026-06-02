@@ -82,6 +82,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/api/ping") || // Diagnostic RTT (mesure pure réseau)
     pathname.startsWith("/api/speedtest/") || // Diagnostic upload/download
     pathname.startsWith("/api/webhooks/postfinance/") || // Webhook PF (auth via token URL)
+    pathname.startsWith("/recherches/") || // Prototypes statiques internes (DEC Patrick 2026-06-02) — chaque fichier doit porter <meta robots="noindex,nofollow">
     pathname === "/";
 
   if (!user && !isPublic) {
