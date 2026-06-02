@@ -107,15 +107,21 @@ export const DEFAULT_PLACE = PLACES[0];
 // ── True Local Time ───────────────────────────────────────────────────────────
 
 /**
- * Correction (en secondes) entre l'heure de fuseau (heure de l'horloge) et le
- * vrai temps solaire local du lieu.
- *   correction = longitude/15*3600 − utcOffset   (port direct du Swift)
- * où utcOffset est le décalage du fuseau en secondes (positif à l'Est).
- * Port de trueLocalTimeCorrection() dans LingguiBafaView.swift.
+ * Correction (en secondes) à appliquer à un instant UTC pour obtenir le vrai
+ * temps solaire local du lieu, lu ensuite en UTC.
+ *
+ *   correction = longitude/15·3600   (secondes par rapport à Greenwich)
+ *
+ * NB : le port Swift original retournait `solarOffset − utcOffset` car Swift
+ * fournit l'instant déjà exprimé dans le fuseau local. En JS, `Date.getTime()`
+ * est toujours UTC, donc soustraire `utcOffset` faisait dériver l'affichage
+ * d'une heure entière (ex. Londres à 07:06 UTC affichait 06:06 au lieu de
+ * ~07:06). Le paramètre `_utcOffsetSecondsUnused` est conservé pour la signature
+ * publique mais n'entre plus dans le calcul.
  */
-export function trueLocalTimeCorrectionSeconds(longitude: number, utcOffsetSeconds: number): number {
+export function trueLocalTimeCorrectionSeconds(longitude: number, _utcOffsetSecondsUnused: number): number {
   const solarOffset = (longitude / 15) * 3600; // secondes par rapport à Greenwich
-  return Math.round(solarOffset - utcOffsetSeconds);
+  return Math.round(solarOffset);
 }
 
 /** Décalage UTC (en secondes) d'un fuseau IANA à une date donnée (gère l'heure d'été). */

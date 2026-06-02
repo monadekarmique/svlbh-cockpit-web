@@ -176,7 +176,7 @@ export default function BenshenPage() {
             })}
           </p>
           <p className="mt-1 font-mono text-[10px] text-amber-700">
-            Correction = lon/15·3600 − utcOffset = {formatCorrection(correction)}
+            Correction = lon/15·3600 = {formatCorrection(correction)}
           </p>
         </div>
       </section>
