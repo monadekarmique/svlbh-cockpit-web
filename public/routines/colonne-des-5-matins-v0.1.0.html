@@ -114,11 +114,29 @@
   }
   .chemin h2{color:#fff;margin-top:0;}
   .chemin .lvl{
-    display:flex;justify-content:space-between;align-items:baseline;
+    display:grid;grid-template-columns:1fr auto auto;gap:1em;align-items:baseline;
     padding:9px 0;border-bottom:1px solid rgba(255,255,255,.18);
+    transition:padding-left .25s ease;
   }
   .chemin .lvl:last-child{border-bottom:none;}
-  .chemin .lvl .n{color:var(--or);font-family:ui-monospace,monospace;font-size:.82rem;letter-spacing:.1em;}
+  .chemin .lvl .p{font-weight:600;}
+  .chemin .lvl .quand{color:rgba(255,255,255,.78);font-style:italic;font-size:.88rem;text-align:center;}
+  .chemin .lvl .n{color:var(--or);font-family:ui-monospace,monospace;font-size:.82rem;letter-spacing:.1em;text-align:right;}
+  /* Effet escalier indenté depuis « La reprise » (haut) vers « Le souffle » (bas).
+     step-6 = sommet (Droit de regard + La reprise) ; step-1 = base (Le souffle). */
+  .chemin .lvl.step-6{padding-left:5.5em;}
+  .chemin .lvl.step-5{padding-left:4.5em;}
+  .chemin .lvl.step-4{padding-left:3.5em;}
+  .chemin .lvl.step-3{padding-left:2.5em;}
+  .chemin .lvl.step-2{padding-left:1.5em;}
+  .chemin .lvl.step-1{padding-left:0;}
+  @media (max-width:640px){
+    .chemin .lvl.step-6{padding-left:2.5em;}
+    .chemin .lvl.step-5{padding-left:2em;}
+    .chemin .lvl.step-4{padding-left:1.5em;}
+    .chemin .lvl.step-3{padding-left:1em;}
+    .chemin .lvl.step-2{padding-left:.5em;}
+  }
   .chemin small{display:block;opacity:.8;margin-top:14px;font-size:.85rem;}
   .garde{
     background:#fff;border:2px solid var(--rose-moyen);border-radius:14px;
@@ -158,13 +176,13 @@
   <!-- LE CHEMIN -->
   <div class="chemin">
     <h2>Le chemin, lu de bas en haut</h2>
-    <div class="lvl"><span>Droit de regard</span><span class="n">RÉSULTAT DES 5 JOURS</span></div>
-    <div class="lvl"><span>La reprise</span><span class="n">5ᵉ MATIN</span></div>
-    <div class="lvl"><span>Brouillage du désir</span><span class="n">PALIER SENSIBLE</span></div>
-    <div class="lvl"><span>Prise à témoin</span><span class="n">PALIER SENSIBLE</span></div>
-    <div class="lvl"><span>Réouverture</span><span class="n">250 %</span></div>
-    <div class="lvl"><span>La frontière</span><span class="n">280 % · très souvent OUI</span></div>
-    <div class="lvl"><span>Le souffle</span><span class="n">300 % · très souvent OUI · socle</span></div>
+    <div class="lvl step-6"><span class="p">Droit de regard</span><span class="quand">Résultat des 3-4 matins</span><span class="n">RÉSULTAT</span></div>
+    <div class="lvl step-6"><span class="p">La reprise</span><span class="quand">3ᵉ matin (si déjà possible)</span><span class="n">PALIER ULTIME</span></div>
+    <div class="lvl step-5"><span class="p">Brouillage du désir</span><span class="quand">3ᵉ matin</span><span class="n">PALIER SENSIBLE</span></div>
+    <div class="lvl step-4"><span class="p">Prise à témoin</span><span class="quand">2ᵉ matin</span><span class="n">PALIER SENSIBLE</span></div>
+    <div class="lvl step-3"><span class="p">Réouverture</span><span class="quand">2ᵉ matin</span><span class="n">250 %</span></div>
+    <div class="lvl step-2"><span class="p">La frontière</span><span class="quand">1ᵉʳ matin</span><span class="n">280 % · très souvent OUI</span></div>
+    <div class="lvl step-1"><span class="p">Le souffle</span><span class="quand">1ᵉʳ matin</span><span class="n">300 % · très souvent OUI · socle</span></div>
     <small>On entre par le bas (souffle / frontière) et l'on monte. Le NON de la frontière saute la réouverture et va droit à la prise à témoin (décodage SVLBH&nbsp;: une frontière qui ne revient pas signe le fait d'avoir été rendue spectatrice). Le droit de regard n'est pas un matin de travail&nbsp;: c'est l'état de souveraineté retrouvée sur ce qui entre, vers lequel tout converge.</small>
   </div>
 
