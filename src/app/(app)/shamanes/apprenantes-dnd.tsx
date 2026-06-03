@@ -15,7 +15,7 @@ import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiq
 import type { DesaAtom } from "@/lib/cercle/desa";
 import { DesaEditModal } from "./desa-edit-modal";
 import { BdecGisantsModal } from "./bdec-gisants-modal";
-import { setApprenanteNSB, setApprenanteNSBFamilial } from "./nsb-action";
+import { setApprenanteNSB, setApprenanteNSBFamilial, setApprenanteNSBFamilialDescription } from "./nsb-action";
 import { addApprenanteCachee, removeApprenanteCachee, setApprenanteCacheeCount } from "./apprenante-cachee-action";
 import { ApprenanteCacheeCard, type CacheeData } from "./apprenante-cachee-card";
 
@@ -177,6 +177,7 @@ function ApprenanteCardInner({
   const [bdecOpen, setBdecOpen] = useState(false);
   const [nsbEditing, setNsbEditing] = useState(false);
   const [nsbFamEditing, setNsbFamEditing] = useState(false);
+  const [nsbFamDescEditing, setNsbFamDescEditing] = useState(false);
   const [cacheesEditing, setCacheesEditing] = useState(false);
   const cachees = a.cachees ?? [];
 
@@ -381,10 +382,59 @@ function ApprenanteCardInner({
             (DEC Patrick 2026-06-03) : valeur persistée apprenante_tier.nsb_familial_count,
             OCC sur updated_at, vide = retire l'override. Section déjà gatée Owner/Cercle SR. */}
         <div className="mt-1.5 flex flex-col gap-0.5">
-          {a.nsb_familial?.description ? (
-            <p className="text-[10px] font-medium text-emerald-700">
-              {a.nsb_familial.description}
-            </p>
+          {a.nsb_familial ? (
+            nsbFamDescEditing ? (
+              <form
+                action={setApprenanteNSBFamilialDescription}
+                onSubmit={() => setNsbFamDescEditing(false)}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <input type="hidden" name="name" value={a.name} />
+                <input type="hidden" name="expected_updated_at" value={a.apprenante_tier_updated_at ?? ""} />
+                <input
+                  type="text"
+                  name="value"
+                  defaultValue={a.nsb_familial.description}
+                  autoFocus
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onBlur={(e) => e.currentTarget.form?.requestSubmit()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.currentTarget.form?.requestSubmit();
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      setNsbFamDescEditing(false);
+                    }
+                  }}
+                  className="w-full rounded-md border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  placeholder="Libellé NSB famille"
+                />
+                <button type="submit" className="sr-only" tabIndex={-1}>
+                  Sauver
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNsbFamDescEditing(true);
+                }}
+                className={
+                  "w-fit text-left text-[10px] font-medium transition hover:underline " +
+                  (a.nsb_familial.description
+                    ? "text-emerald-700"
+                    : "italic text-emerald-400")
+                }
+                title="Cliquer pour modifier le libellé (vide = libellé statique)"
+              >
+                {a.nsb_familial.description || "+ libellé"}
+              </button>
+            )
           ) : null}
           {nsbFamEditing ? (
             <form

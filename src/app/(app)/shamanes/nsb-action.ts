@@ -137,6 +137,55 @@ export async function setApprenanteNSBFamilial(formData: FormData) {
   revalidatePath("/shamanes");
 }
 
+/** NSB famille — libellé (description) de la pastille verte. Override DB
+ *  apprenante_tier.nsb_familial_description, OCC sur updated_at, vide = retire
+ *  l'override (retombe sur le static). DEC Patrick 2026-06-03. */
+export async function setApprenanteNSBFamilialDescription(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) throw new Error("name requis");
+  const raw = String(formData.get("value") ?? "").trim();
+  const value = raw === "" ? null : raw;
+  const expected = String(formData.get("expected_updated_at") ?? "").trim();
+
+  const { sb, me } = await assertOwner();
+  const now = new Date().toISOString();
+
+  let q = sb
+    .from("apprenante_tier")
+    .update({
+      nsb_familial_description: value,
+      updated_at: now,
+      updated_by_svlbh_id: me.svlbh_id,
+    })
+    .eq("name", name);
+  if (expected) q = q.eq("updated_at", expected);
+  const { data: upd, error: updErr } = await q.select("name");
+  if (updErr) throw new Error(`NSB famille (libellé) : ${updErr.message}`);
+  if (!upd || upd.length === 0) {
+    const { data: exists } = await sb
+      .from("apprenante_tier")
+      .select("name")
+      .eq("name", name)
+      .maybeSingle();
+    if (exists && expected) {
+      revalidatePath("/shamanes");
+      throw new Error("CONFLIT : NSB famille modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
+    }
+    const staticTier = APPRENANTES.find((a) => a.name === name)?.tier ?? "formation";
+    const { error: insErr } = await sb
+      .from("apprenante_tier")
+      .insert({
+        name,
+        tier: staticTier,
+        nsb_familial_description: value,
+        updated_at: now,
+        updated_by_svlbh_id: me.svlbh_id,
+      });
+    if (insErr) throw new Error(`NSB famille (libellé) : ${insErr.message}`);
+  }
+  revalidatePath("/shamanes");
+}
+
 export async function setTherapeuteNSB(formData: FormData) {
   const svlbhId = String(formData.get("svlbh_id") ?? "").trim();
   if (!svlbhId) throw new Error("svlbh_id requis");
