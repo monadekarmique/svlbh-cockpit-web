@@ -129,22 +129,8 @@ export default async function CockpitLayout({
               title="Ouvrir priv.svlbh.com (PWA Priv-1)"
             />
             <CockpitNav groups={groupedNav({ includeOwner: isOwner })} />
-            <span className="text-neutral-400">·</span>
-            <span
-              className="hidden font-mono text-[10px] text-neutral-400 sm:inline"
-              title={`build ${process.env.NEXT_PUBLIC_BUILD_TIME ?? "n/a"}`}
-            >
-              build {appVersion}
-            </span>
-            {/* Commit court (à droite de l'email) — pour vérifier la version
-                déployée. RENDER_GIT_COMMIT est injecté par Render au build. */}
-            <span className="hidden text-neutral-400 sm:inline">·</span>
-            <span
-              className="hidden font-mono text-[10px] text-neutral-400 sm:inline"
-              title={`commit ${process.env.RENDER_GIT_COMMIT ?? "n/a"} · v${appVersion}`}
-            >
-              {process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? "dev"}
-            </span>
+            {/* Build retiré de la nav — désormais affiché par <PageBreadcrumb>
+                dans la bande doctrine sous la nav (DEC Patrick 2026-06-03). */}
             <UserMenu email={displayEmail} />
             {/* Pro link — convention iPad boussole magenta (DEC Patrick 2026-05-12) */}
             <ExternalAppLink
@@ -163,7 +149,7 @@ export default async function CockpitLayout({
         buildCommit={process.env.RENDER_GIT_COMMIT ?? ""}
       />
       <main
-        className="mx-auto max-w-6xl py-6"
+        className="mx-auto max-w-6xl pb-6"
         style={{
           paddingLeft: "max(1rem, env(safe-area-inset-left))",
           paddingRight: "max(1rem, env(safe-area-inset-right))",

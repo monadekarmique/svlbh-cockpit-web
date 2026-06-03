@@ -1,17 +1,18 @@
 /*
- * Doctrine cockpit — chrome unifié pour articles HTML statiques.
+ * Doctrine cockpit — fil d'Ariane posé dans le contenu pour articles HTML.
  *
  * Inclus dans tout article HTML servi depuis public/*.html via :
  *   <script src="/article-chrome.js" defer></script>
  *
- * Injecte en haut du <body> une bande sticky avec :
- *   - GAUCHE : audit trail (breadcrumb) actionnable depuis window.location.pathname
+ * Insère en tête du <body> un fil d'Ariane transparent (pas de fond, pas de
+ * border, juste un padding propre) avec :
+ *   - GAUCHE : audit trail (breadcrumb) actionnable
  *   - DROITE : build version + commit court
  *
  * Équivalent vanilla du composant React src/components/page-breadcrumb.tsx.
  * Source des labels : /api/cockpit-meta (qui expose COCKPIT_NAV).
  *
- * DEC Patrick 2026-06-03.
+ * DEC Patrick 2026-06-03 (v2 « fil d'Ariane posé dans le contenu »).
  */
 (async function () {
   "use strict";
@@ -63,21 +64,17 @@
 
     const bar = document.createElement("div");
     bar.id = "cockpit-chrome";
+    // Pas de background, pas de border : posé sur le fond de l'article.
     bar.style.cssText = [
-      "position:sticky",
-      "top:0",
-      "z-index:9999",
-      "background:rgba(255,255,255,.92)",
-      "-webkit-backdrop-filter:blur(8px)",
-      "backdrop-filter:blur(8px)",
-      "border-bottom:1px solid rgba(229,229,229,.7)",
+      "max-width:72rem",
+      "margin:0 auto",
+      "padding:16px max(1rem,env(safe-area-inset-right)) 4px max(1rem,env(safe-area-inset-left))",
       "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
       "font-size:12px",
-      "padding:8px max(1rem,env(safe-area-inset-right)) 8px max(1rem,env(safe-area-inset-left))",
       "display:flex",
       "align-items:center",
       "justify-content:space-between",
-      "gap:12px",
+      "gap:16px",
     ].join(";");
 
     const nav = document.createElement("nav");
@@ -89,14 +86,14 @@
       if (i > 0) {
         const sep = document.createElement("span");
         sep.textContent = "›";
-        sep.style.cssText = "color:#d4d4d4;flex-shrink:0;";
+        sep.style.cssText = "color:rgba(163,163,163,.7);flex-shrink:0;";
+        sep.setAttribute("aria-hidden", "true");
         nav.appendChild(sep);
       }
       if (it.isCurrent) {
         const cur = document.createElement("span");
         cur.textContent = it.label;
-        cur.style.cssText =
-          "font-weight:600;color:#262626;flex-shrink:0;";
+        cur.style.cssText = "font-weight:600;color:#262626;flex-shrink:0;";
         cur.setAttribute("aria-current", "page");
         nav.appendChild(cur);
       } else {
@@ -104,9 +101,9 @@
         a.href = it.href;
         a.textContent = it.label;
         a.style.cssText =
-          "color:#737373;text-decoration:none;flex-shrink:0;padding:2px 6px;margin:0 -2px;border-radius:4px;transition:background .12s,color .12s;";
+          "color:#737373;text-decoration:none;flex-shrink:0;padding:2px 6px;margin:0 -4px;border-radius:4px;transition:background .12s,color .12s;";
         a.addEventListener("mouseenter", function () {
-          a.style.background = "#f5f5f5";
+          a.style.background = "rgba(255,255,255,.5)";
           a.style.color = "#171717";
         });
         a.addEventListener("mouseleave", function () {
@@ -118,12 +115,10 @@
     });
 
     const build = document.createElement("span");
-    build.textContent =
-      "build " + meta.version + " · " + meta.commit;
+    build.textContent = "build " + meta.version + " · " + meta.commit;
     build.style.cssText =
       "font-family:ui-monospace,Menlo,Monaco,'SF Mono',monospace;font-size:10px;color:#a3a3a3;flex-shrink:0;white-space:nowrap;";
-    build.title =
-      "build " + meta.version + " · commit " + meta.commit;
+    build.title = "build " + meta.version + " · commit " + meta.commit;
 
     bar.appendChild(nav);
     bar.appendChild(build);
