@@ -15,7 +15,7 @@ import type { AkashiqueMembership, Dhatu, DhatuMeta } from "@/lib/cercle/akashiq
 import type { DesaAtom } from "@/lib/cercle/desa";
 import { DesaEditModal } from "./desa-edit-modal";
 import { BdecGisantsModal } from "./bdec-gisants-modal";
-import { setApprenanteNSB } from "./nsb-action";
+import { setApprenanteNSB, setApprenanteNSBFamilial } from "./nsb-action";
 import { addApprenanteCachee, removeApprenanteCachee, setApprenanteCacheeCount } from "./apprenante-cachee-action";
 import { ApprenanteCacheeCard, type CacheeData } from "./apprenante-cachee-card";
 
@@ -176,6 +176,7 @@ function ApprenanteCardInner({
   const [desaOpen, setDesaOpen] = useState(false);
   const [bdecOpen, setBdecOpen] = useState(false);
   const [nsbEditing, setNsbEditing] = useState(false);
+  const [nsbFamEditing, setNsbFamEditing] = useState(false);
   const [cacheesEditing, setCacheesEditing] = useState(false);
   const cachees = a.cachees ?? [];
 
@@ -376,19 +377,69 @@ function ApprenanteCardInner({
             Placée juste après les cercles akashiques pour s'afficher sous
             la pastille Māṁsa (ou autre cercle pertinent) côté Julie/Léa,
             ou sous la zone cercles (vide) pour Carine. DEC Patrick 2026-05-29. */}
-        {a.nsb_familial ? (
-          <div className="mt-1.5 flex flex-col gap-0.5">
+        {/* NSB famille — éditable inline, même technique que GL / niveaux_bloques
+            (DEC Patrick 2026-06-03) : valeur persistée apprenante_tier.nsb_familial_count,
+            OCC sur updated_at, vide = retire l'override. Section déjà gatée Owner/Cercle SR. */}
+        <div className="mt-1.5 flex flex-col gap-0.5">
+          {a.nsb_familial?.description ? (
             <p className="text-[10px] font-medium text-emerald-700">
               {a.nsb_familial.description}
             </p>
-            <span
-              className="inline-flex w-fit items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-700"
-              title={`NSB famille — ${a.nsb_familial.description}`}
+          ) : null}
+          {nsbFamEditing ? (
+            <form
+              action={setApprenanteNSBFamilial}
+              onSubmit={() => setNsbFamEditing(false)}
+              onPointerDown={(e) => e.stopPropagation()}
             >
-              NSB famille · {a.nsb_familial.count}
-            </span>
-          </div>
-        ) : null}
+              <input type="hidden" name="name" value={a.name} />
+              <input type="hidden" name="expected_updated_at" value={a.apprenante_tier_updated_at ?? ""} />
+              <input
+                type="number"
+                name="value"
+                defaultValue={a.nsb_familial?.count ?? ""}
+                min={0}
+                autoFocus
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onFocus={(e) => e.currentTarget.select()}
+                onBlur={(e) => e.currentTarget.form?.requestSubmit()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.currentTarget.form?.requestSubmit();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setNsbFamEditing(false);
+                  }
+                }}
+                className="w-20 rounded-md border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-center font-mono text-[11px] font-bold text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                placeholder="NSB fam."
+              />
+              <button type="submit" className="sr-only" tabIndex={-1}>
+                Sauver
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setNsbFamEditing(true);
+              }}
+              className={
+                "inline-flex w-fit items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-bold transition hover:ring-2 hover:ring-emerald-300 " +
+                (a.nsb_familial
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                  : "border-dashed border-emerald-200 bg-white text-emerald-400")
+              }
+              title="Cliquer pour saisir / modifier le NSB famille (vide = effacer)"
+            >
+              NSB famille · {a.nsb_familial?.count ?? "+"}
+            </button>
+          )}
+        </div>
         {a.description ? (
           <p className="mt-1.5 text-[10px] italic text-neutral-600">{a.description}</p>
         ) : null}

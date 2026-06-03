@@ -631,9 +631,9 @@ async function ApprenantesDnDSection({ canWriteCachees }: { canWriteCachees: boo
   }
   const { data } = await sb
     .from("apprenante_tier")
-    .select("name, tier, description, niveaux_bloques, updated_at");
+    .select("name, tier, description, niveaux_bloques, nsb_familial_count, updated_at");
   const dbByName = new Map(
-    ((data ?? []) as Array<{ name: string; tier: string; description: string | null; niveaux_bloques: number | null; updated_at: string }>).map((r) => [r.name, r]),
+    ((data ?? []) as Array<{ name: string; tier: string; description: string | null; niveaux_bloques: number | null; nsb_familial_count: number | null; updated_at: string }>).map((r) => [r.name, r]),
   );
   // Cachées par host_svlbh_id (incluant les svlbh_id synthétiques des apprenantes).
   const { data: cacheesRaw } = await sb
@@ -688,7 +688,15 @@ async function ApprenantesDnDSection({ canWriteCachees }: { canWriteCachees: boo
       stx: a.stx,
       nsb_links: a.nsb_links,
       nsb_followers: nsbFollowersByName[a.name] ?? [],
-      nsb_familial: a.nsb_familial,
+      // NSB famille dynamisé (DEC Patrick 2026-06-03, même technique que GL) :
+      // override DB nsb_familial_count > fallback statique. La description reste
+      // celle d'APPRENANTES (le compteur seul est éditable, comme GL).
+      nsb_familial: ((): { count: number; description: string } | undefined => {
+        const dbCount = db?.nsb_familial_count;
+        const count = dbCount != null ? dbCount : a.nsb_familial?.count;
+        if (count == null) return undefined;
+        return { count, description: a.nsb_familial?.description ?? "" };
+      })(),
       cachees: cacheesByHost[svlbhId] ?? [],
       apprenante_tier_updated_at: db?.updated_at ?? null,
     };

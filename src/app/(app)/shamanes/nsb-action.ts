@@ -86,6 +86,57 @@ export async function setApprenanteNSB(formData: FormData) {
   revalidatePath("/shamanes");
 }
 
+/** NSB famille — compteur de la branche transgénérationnelle propre de
+ *  l'apprenante (pastille verte « NSB famille · N »). Même technique que GL /
+ *  niveaux_bloques : valeur persistée en DB (apprenante_tier.nsb_familial_count),
+ *  éditable inline, OCC sur updated_at. Vide = retire l'override (retombe sur le
+ *  fallback statique APPRENANTES). DEC Patrick 2026-06-03. */
+export async function setApprenanteNSBFamilial(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) throw new Error("name requis");
+  const value = parseNSB(String(formData.get("value") ?? ""));
+  const expected = String(formData.get("expected_updated_at") ?? "").trim();
+
+  const { sb, me } = await assertOwner();
+  const now = new Date().toISOString();
+
+  // UPDATE conditionnel sur expected_updated_at (OCC). Row absente → INSERT.
+  let q = sb
+    .from("apprenante_tier")
+    .update({
+      nsb_familial_count: value,
+      updated_at: now,
+      updated_by_svlbh_id: me.svlbh_id,
+    })
+    .eq("name", name);
+  if (expected) q = q.eq("updated_at", expected);
+  const { data: upd, error: updErr } = await q.select("name");
+  if (updErr) throw new Error(`NSB famille : ${updErr.message}`);
+  if (!upd || upd.length === 0) {
+    const { data: exists } = await sb
+      .from("apprenante_tier")
+      .select("name")
+      .eq("name", name)
+      .maybeSingle();
+    if (exists && expected) {
+      revalidatePath("/shamanes");
+      throw new Error("CONFLIT : NSB famille modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
+    }
+    const staticTier = APPRENANTES.find((a) => a.name === name)?.tier ?? "formation";
+    const { error: insErr } = await sb
+      .from("apprenante_tier")
+      .insert({
+        name,
+        tier: staticTier,
+        nsb_familial_count: value,
+        updated_at: now,
+        updated_by_svlbh_id: me.svlbh_id,
+      });
+    if (insErr) throw new Error(`NSB famille : ${insErr.message}`);
+  }
+  revalidatePath("/shamanes");
+}
+
 export async function setTherapeuteNSB(formData: FormData) {
   const svlbhId = String(formData.get("svlbh_id") ?? "").trim();
   if (!svlbhId) throw new Error("svlbh_id requis");
