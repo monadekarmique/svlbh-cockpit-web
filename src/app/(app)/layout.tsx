@@ -105,7 +105,7 @@ export default async function CockpitLayout({
           restent collés en haut au scroll, empilés dans un même conteneur sticky. */}
       <div className="sticky top-0 z-40">
       <header
-        className="border-b border-neutral-200 bg-white/90 backdrop-blur"
+        className="relative z-20 border-b border-neutral-200 bg-white/90 backdrop-blur"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <div

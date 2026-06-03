@@ -39,41 +39,33 @@ export function PageBreadcrumb({
   const pathname = usePathname() ?? "";
   const segments = pathname.split("/").filter(Boolean);
 
+  // Doctrine v8 (DEC Patrick 2026-06-03) : PAS de fil d'Ariane sur une page de
+  // niveau nav (dashboard, racine, ou toute destination directe du menu — toutes
+  // mono-segment dans COCKPIT_NAV). Le fil n'apparaît qu'un niveau SOUS le menu.
+  if (segments.length <= 1) return null;
+
   type Item = {
     href: string;
     label: string;
     isCurrent: boolean;
     isRoot: boolean;
   };
-  const items: Item[] = [];
-
-  if (segments.length === 0 || segments[0] === "dashboard") {
+  // segments.length >= 2 ici : Cockpit (root cliquable) › … › current.
+  const items: Item[] = [
+    { href: "/", label: "Cockpit", isCurrent: false, isRoot: true },
+  ];
+  let accumulated = "";
+  segments.forEach((seg, i) => {
+    accumulated += "/" + seg;
+    const navMatch = COCKPIT_NAV.find((n) => n.href === accumulated);
+    const label = navMatch?.label ?? humanize(seg);
     items.push({
-      href: "/",
-      label: "Cockpit",
-      isCurrent: true,
-      isRoot: true,
+      href: accumulated,
+      label,
+      isCurrent: i === segments.length - 1,
+      isRoot: false,
     });
-  } else {
-    items.push({
-      href: "/",
-      label: "Cockpit",
-      isCurrent: false,
-      isRoot: true,
-    });
-    let accumulated = "";
-    segments.forEach((seg, i) => {
-      accumulated += "/" + seg;
-      const navMatch = COCKPIT_NAV.find((n) => n.href === accumulated);
-      const label = navMatch?.label ?? humanize(seg);
-      items.push({
-        href: accumulated,
-        label,
-        isCurrent: i === segments.length - 1,
-        isRoot: false,
-      });
-    });
-  }
+  });
 
   const shortCommit =
     buildCommit && buildCommit !== "n/a" ? buildCommit.slice(0, 7) : "dev";
