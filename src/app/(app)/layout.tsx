@@ -2,8 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { groupedNav } from "@/lib/cockpit-nav";
-import { CockpitNav } from "@/components/cockpit-nav";
 import { UserMenu } from "@/components/user-menu";
 import { SupportRealtimeNotifier } from "@/components/support-realtime-notifier";
 import { autoRelinkProfile } from "@/lib/auto-relink-profile";
@@ -89,7 +87,9 @@ export default async function CockpitLayout({
         .eq("supabase_user_id", user.id)
         .maybeSingle()
     : { data: null as { svlbh_id: string | null; stx: string | null; cercle_lumiere_sr: boolean | null; email: string | null } | null };
-  const isOwner = navProfile?.stx === "ST6" || navProfile?.cercle_lumiere_sr === true;
+  // isOwner n'est plus utilisé ici (DEC Patrick 2026-06-03 v3, menu nav retiré).
+  // Le gate Owner reste appliqué page par page via requireOwner sur les routes
+  // /admin, /compliance, /facturation, /statutspostfinance.
   // ST5+ reçoit le toast notifier Realtime quand une praticienne démarre une session.
   const showSupportNotifier = navProfile?.stx === "ST5" || navProfile?.stx === "ST6";
   // Privilégie l'email DB praticienne_profile (vrai email) sur user.email
@@ -119,27 +119,25 @@ export default async function CockpitLayout({
           >
             SVLBH Cockpit
           </Link>
-          <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-600">
-            {/* Priv link — convention iPad boussole jaune doré (DEC Patrick 2026-05-12).
-                À gauche de Dashboard (premier item de la nav). */}
+          {/* Menu nav cockpit retiré (DEC Patrick 2026-06-03 v3) — le fil
+              d'Ariane suffit pour naviguer : clic sur 'SVLBH Cockpit' dans
+              le breadcrumb → Dashboard → tiles. Seuls Priv / email / Pro
+              restent dans le header. */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-600">
             <ExternalAppLink
               href="https://priv.svlbh.com"
               label="Priv"
               color="#F2BF1A"
               title="Ouvrir priv.svlbh.com (PWA Priv-1)"
             />
-            <CockpitNav groups={groupedNav({ includeOwner: isOwner })} />
-            {/* Build retiré de la nav — désormais affiché par <PageBreadcrumb>
-                dans la bande doctrine sous la nav (DEC Patrick 2026-06-03). */}
             <UserMenu email={displayEmail} />
-            {/* Pro link — convention iPad boussole magenta (DEC Patrick 2026-05-12) */}
             <ExternalAppLink
               href="https://pwa.app.svlbh.com"
               label="Pro"
               color="#DB338C"
               title="Ouvrir pwa.app.svlbh.com (PWA Pro 1)"
             />
-          </nav>
+          </div>
         </div>
       </header>
       {/* Doctrine cockpit (DEC Patrick 2026-06-03) : sous la nav, sur TOUTE page,

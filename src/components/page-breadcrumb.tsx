@@ -30,9 +30,9 @@ export function PageBreadcrumb({
   const items: { href: string; label: string; isCurrent: boolean }[] = [];
 
   if (segments.length === 0 || segments[0] === "dashboard") {
-    items.push({ href: "/dashboard", label: "Dashboard", isCurrent: true });
+    items.push({ href: "/dashboard", label: "SVLBH Cockpit", isCurrent: true });
   } else {
-    items.push({ href: "/dashboard", label: "Dashboard", isCurrent: false });
+    items.push({ href: "/dashboard", label: "SVLBH Cockpit", isCurrent: false });
     let accumulated = "";
     segments.forEach((seg, i) => {
       accumulated += "/" + seg;

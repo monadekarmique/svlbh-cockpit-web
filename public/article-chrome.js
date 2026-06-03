@@ -31,7 +31,7 @@
     if (segments.length === 0 || segments[0] === "dashboard") {
       items.push({
         href: "/dashboard",
-        label: "Dashboard",
+        label: "SVLBH Cockpit",
         isCurrent: true,
       });
       return items;
