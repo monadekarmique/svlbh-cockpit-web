@@ -101,8 +101,11 @@ export default async function CockpitLayout({
       {showSupportNotifier && (
         <SupportRealtimeNotifier selfSvlbhId={navProfile?.svlbh_id ?? null} />
       )}
+      {/* Shell sticky : header (titre + Priv/email/Pro) + fil d'Ariane (doctrine)
+          restent collés en haut au scroll, empilés dans un même conteneur sticky. */}
+      <div className="sticky top-0 z-40">
       <header
-        className="sticky top-0 z-10 border-b border-neutral-200 bg-white/90 backdrop-blur"
+        className="border-b border-neutral-200 bg-white/90 backdrop-blur"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <div
@@ -146,6 +149,7 @@ export default async function CockpitLayout({
         buildVersion={appVersion}
         buildCommit={process.env.RENDER_GIT_COMMIT ?? ""}
       />
+      </div>
       <main
         className="mx-auto max-w-6xl pb-6"
         style={{

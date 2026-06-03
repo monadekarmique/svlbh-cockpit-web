@@ -1,21 +1,31 @@
 "use client";
 
-// Doctrine cockpit — fil d'Ariane posé dans le flow du contenu (DEC Patrick
-// 2026-06-03, v2 « fil d'Ariane posé dans le contenu »).
+// Doctrine cockpit — fil d'Ariane avec charte topnav Palette de Lumière
+// (DEC Patrick 2026-06-03 v4 « structure du fil d'Ariane + charte topnav »).
 //
-// Style fil d'Ariane Notion/Linear : pas de bande séparée, pas de fond, pas de
-// border. Le breadcrumb se pose sur le gradient bleuté de la page, comme s'il
-// faisait partie du contenu. Le build flotte top-right.
+// Structure : SVLBH Cockpit › <Module> › <Article> (chaque segment cliquable
+// sauf le current) + build version + commit court à droite.
 //
-//   - GAUCHE : audit trail actionnable depuis usePathname(). Labels résolus
-//     via COCKPIT_NAV quand l'URL matche un module, sinon humanisation du slug.
-//   - DROITE : build version + commit court.
+// Charte graphique (reprise de palette-de-lumiere-presentation.html .topnav) :
+//   - Sticky top, fond crème translucide #F5EDE4 / blur 10px / sat 180%
+//   - Border-bottom plum à 15%
+//   - DM Sans 0.88rem pour les segments réguliers (var --font-dm-sans)
+//   - Crimson Pro 700 1.05rem pour le root (segment SVLBH Cockpit)
+//   - Liens couleur plum #8B3A62 bold 600, hover opacity .75
 //
-// Pendant vanilla pour les articles HTML statiques : public/article-chrome.js.
+// Source des labels : COCKPIT_NAV (src/lib/cockpit-nav.ts).
+// Pendant vanilla pour articles HTML statiques : public/article-chrome.js.
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { COCKPIT_NAV } from "@/lib/cockpit-nav";
+
+const TOK = {
+  cream: "rgba(245,237,228,.94)",
+  plum: "#8B3A62",
+  plumBorder: "rgba(139,58,98,.15)",
+  inkSoft: "#5b4a6b",
+} as const;
 
 export function PageBreadcrumb({
   buildVersion,
@@ -27,12 +37,28 @@ export function PageBreadcrumb({
   const pathname = usePathname() ?? "";
   const segments = pathname.split("/").filter(Boolean);
 
-  const items: { href: string; label: string; isCurrent: boolean }[] = [];
+  type Item = {
+    href: string;
+    label: string;
+    isCurrent: boolean;
+    isRoot: boolean;
+  };
+  const items: Item[] = [];
 
   if (segments.length === 0 || segments[0] === "dashboard") {
-    items.push({ href: "/dashboard", label: "SVLBH Cockpit", isCurrent: true });
+    items.push({
+      href: "/dashboard",
+      label: "SVLBH Cockpit",
+      isCurrent: true,
+      isRoot: true,
+    });
   } else {
-    items.push({ href: "/dashboard", label: "SVLBH Cockpit", isCurrent: false });
+    items.push({
+      href: "/dashboard",
+      label: "SVLBH Cockpit",
+      isCurrent: false,
+      isRoot: true,
+    });
     let accumulated = "";
     segments.forEach((seg, i) => {
       accumulated += "/" + seg;
@@ -42,6 +68,7 @@ export function PageBreadcrumb({
         href: accumulated,
         label,
         isCurrent: i === segments.length - 1,
+        isRoot: false,
       });
     });
   }
@@ -51,34 +78,69 @@ export function PageBreadcrumb({
 
   return (
     <div
-      className="mx-auto flex max-w-6xl items-center justify-between gap-4 pt-4 pb-1 text-xs"
+      className="flex items-center justify-between gap-4"
       style={{
-        paddingLeft: "max(1rem, env(safe-area-inset-left))",
-        paddingRight: "max(1rem, env(safe-area-inset-right))",
+        background: TOK.cream,
+        WebkitBackdropFilter: "saturate(180%) blur(10px)",
+        backdropFilter: "saturate(180%) blur(10px)",
+        borderBottom: `1px solid ${TOK.plumBorder}`,
+        padding:
+          "10px max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left))",
+        fontFamily: "var(--font-dm-sans), system-ui, sans-serif",
+        fontSize: ".88rem",
       }}
     >
       <nav
         aria-label="Audit trail"
-        className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto text-neutral-500"
+        className="flex min-w-0 flex-1 items-center gap-[.55em] overflow-x-auto"
       >
         {items.map((it, i) => (
-          <span key={it.href} className="flex shrink-0 items-center gap-1.5">
+          <span key={it.href} className="flex shrink-0 items-center gap-[.55em]">
             {i > 0 && (
-              <span className="text-neutral-400/70" aria-hidden>
+              <span
+                aria-hidden
+                style={{ color: TOK.plumBorder, fontSize: "1.1em" }}
+                className="shrink-0"
+              >
                 ›
               </span>
             )}
             {it.isCurrent ? (
               <span
                 aria-current="page"
-                className="font-semibold text-neutral-800"
+                style={{
+                  color: TOK.plum,
+                  ...(it.isRoot
+                    ? {
+                        fontFamily:
+                          "var(--font-crimson-pro), Georgia, serif",
+                        fontWeight: 700,
+                        fontSize: "1.05rem",
+                        letterSpacing: ".01em",
+                      }
+                    : { fontWeight: 600 }),
+                }}
+                className="shrink-0"
               >
                 {it.label}
               </span>
             ) : (
               <Link
                 href={it.href}
-                className="-mx-1 rounded px-1 hover:bg-white/50 hover:text-neutral-900"
+                style={{
+                  color: TOK.plum,
+                  textDecoration: "none",
+                  ...(it.isRoot
+                    ? {
+                        fontFamily:
+                          "var(--font-crimson-pro), Georgia, serif",
+                        fontWeight: 700,
+                        fontSize: "1.05rem",
+                        letterSpacing: ".01em",
+                      }
+                    : { fontWeight: 600 }),
+                }}
+                className="shrink-0 whitespace-nowrap transition-opacity hover:opacity-75"
               >
                 {it.label}
               </Link>
@@ -87,7 +149,12 @@ export function PageBreadcrumb({
         ))}
       </nav>
       <span
-        className="shrink-0 font-mono text-[10px] text-neutral-400"
+        className="shrink-0 whitespace-nowrap font-mono"
+        style={{
+          fontSize: ".68rem",
+          color: TOK.inkSoft,
+          opacity: 0.7,
+        }}
         title={`build ${buildVersion} · commit ${buildCommit || "n/a"}`}
       >
         build {buildVersion} · {shortCommit}

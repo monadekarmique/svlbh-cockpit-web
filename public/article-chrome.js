@@ -1,21 +1,35 @@
 /*
- * Doctrine cockpit — fil d'Ariane posé dans le contenu pour articles HTML.
+ * Doctrine cockpit — fil d'Ariane pour articles HTML statiques.
  *
- * Inclus dans tout article HTML servi depuis public/*.html via :
- *   <script src="/article-chrome.js" defer></script>
+ * Inclus via : <script src="/article-chrome.js" defer></script> dans <head>.
  *
- * Insère en tête du <body> un fil d'Ariane transparent (pas de fond, pas de
- * border, juste un padding propre) avec :
- *   - GAUCHE : audit trail (breadcrumb) actionnable
- *   - DROITE : build version + commit court
+ * Structure : SVLBH Cockpit › <Module> › <Article> (chaque segment cliquable
+ * sauf le dernier) + build version + commit à droite.
  *
- * Équivalent vanilla du composant React src/components/page-breadcrumb.tsx.
+ * Charte graphique : reprend celle de la topnav de la Palette de Lumière
+ * (DEC Patrick 2026-06-03 v4 « structure du fil d'Ariane + charte topnav »).
+ *   - Sticky top, fond crème translucide #F5EDE4 / blur 10px / sat 180%
+ *   - Border-bottom plum à 15%
+ *   - DM Sans pour le reste, Crimson Pro pour le root (segment SVLBH Cockpit)
+ *   - Liens couleur plum #8B3A62 bold 600
+ *
  * Source des labels : /api/cockpit-meta (qui expose COCKPIT_NAV).
- *
- * DEC Patrick 2026-06-03 (v2 « fil d'Ariane posé dans le contenu »).
+ * Équivalent React : src/components/page-breadcrumb.tsx.
  */
 (async function () {
   "use strict";
+
+  // Palette de Lumière — design tokens topnav (référence).
+  const TOK = {
+    cream: "rgba(245,237,228,.94)",
+    plum: "#8B3A62",
+    plumBorder: "rgba(139,58,98,.15)",
+    plumHover: "rgba(139,58,98,.75)",
+    ink: "#26183a",
+    inkSoft: "#5b4a6b",
+    sans: "'DM Sans',system-ui,-apple-system,BlinkMacSystemFont,sans-serif",
+    serif: "'Crimson Pro',Georgia,serif",
+  };
 
   function humanize(slug) {
     let s = slug.replace(/\.html?$/i, "");
@@ -33,13 +47,15 @@
         href: "/dashboard",
         label: "SVLBH Cockpit",
         isCurrent: true,
+        isRoot: true,
       });
       return items;
     }
     items.push({
       href: "/dashboard",
-      label: "Dashboard",
+      label: "SVLBH Cockpit",
       isCurrent: false,
+      isRoot: true,
     });
     let accumulated = "";
     segments.forEach(function (seg, i) {
@@ -52,6 +68,7 @@
         href: accumulated,
         label: label,
         isCurrent: i === segments.length - 1,
+        isRoot: false,
       });
     });
     return items;
@@ -64,36 +81,48 @@
 
     const bar = document.createElement("div");
     bar.id = "cockpit-chrome";
-    // Pas de background, pas de border : posé sur le fond de l'article.
     bar.style.cssText = [
-      "max-width:72rem",
-      "margin:0 auto",
-      "padding:16px max(1rem,env(safe-area-inset-right)) 4px max(1rem,env(safe-area-inset-left))",
-      "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
-      "font-size:12px",
+      "position:sticky",
+      "top:0",
+      "z-index:50",
+      "background:" + TOK.cream,
+      "-webkit-backdrop-filter:saturate(180%) blur(10px)",
+      "backdrop-filter:saturate(180%) blur(10px)",
+      "border-bottom:1px solid " + TOK.plumBorder,
+      "padding:10px max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left))",
       "display:flex",
       "align-items:center",
       "justify-content:space-between",
       "gap:16px",
+      "font-family:" + TOK.sans,
+      "font-size:.88rem",
     ].join(";");
 
     const nav = document.createElement("nav");
     nav.setAttribute("aria-label", "Audit trail");
     nav.style.cssText =
-      "display:flex;align-items:center;gap:6px;color:#737373;overflow-x:auto;flex:1;min-width:0;";
+      "display:flex;align-items:center;gap:.55em;overflow-x:auto;flex:1;min-width:0;";
 
     items.forEach(function (it, i) {
       if (i > 0) {
         const sep = document.createElement("span");
         sep.textContent = "›";
-        sep.style.cssText = "color:rgba(163,163,163,.7);flex-shrink:0;";
+        sep.style.cssText =
+          "color:" + TOK.plumBorder + ";flex-shrink:0;font-size:1.1em;";
         sep.setAttribute("aria-hidden", "true");
         nav.appendChild(sep);
       }
+      const isRoot = it.isRoot;
+      const sharedRoot = isRoot
+        ? "font-family:" +
+          TOK.serif +
+          ";font-weight:700;font-size:1.05rem;letter-spacing:.01em;"
+        : "font-weight:600;";
       if (it.isCurrent) {
         const cur = document.createElement("span");
         cur.textContent = it.label;
-        cur.style.cssText = "font-weight:600;color:#262626;flex-shrink:0;";
+        cur.style.cssText =
+          sharedRoot + "color:" + TOK.plum + ";flex-shrink:0;";
         cur.setAttribute("aria-current", "page");
         nav.appendChild(cur);
       } else {
@@ -101,14 +130,15 @@
         a.href = it.href;
         a.textContent = it.label;
         a.style.cssText =
-          "color:#737373;text-decoration:none;flex-shrink:0;padding:2px 6px;margin:0 -4px;border-radius:4px;transition:background .12s,color .12s;";
+          sharedRoot +
+          "color:" +
+          TOK.plum +
+          ";text-decoration:none;flex-shrink:0;white-space:nowrap;transition:opacity .12s;";
         a.addEventListener("mouseenter", function () {
-          a.style.background = "rgba(255,255,255,.5)";
-          a.style.color = "#171717";
+          a.style.opacity = ".75";
         });
         a.addEventListener("mouseleave", function () {
-          a.style.background = "";
-          a.style.color = "#737373";
+          a.style.opacity = "";
         });
         nav.appendChild(a);
       }
@@ -117,7 +147,9 @@
     const build = document.createElement("span");
     build.textContent = "build " + meta.version + " · " + meta.commit;
     build.style.cssText =
-      "font-family:ui-monospace,Menlo,Monaco,'SF Mono',monospace;font-size:10px;color:#a3a3a3;flex-shrink:0;white-space:nowrap;";
+      "font-family:ui-monospace,Menlo,Monaco,'SF Mono',monospace;font-size:.68rem;color:" +
+      TOK.inkSoft +
+      ";flex-shrink:0;white-space:nowrap;opacity:.7;";
     build.title = "build " + meta.version + " · commit " + meta.commit;
 
     bar.appendChild(nav);
