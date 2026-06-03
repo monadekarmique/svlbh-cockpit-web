@@ -1,7 +1,8 @@
-// Pas de home publique — cockpit réservé T4/T5 + T3 whitelist.
-// / → /login (Apple Sign-In). Si déjà auth → /dashboard via le layout.
+// Racine cockpit.svlbh.com → /dashboard.
+// Le layout (app)/layout.tsx redirige vers /login si pas d'auth.
+// Cette racine est aussi la cible du fil d'Ariane « Cockpit » (DEC Patrick 2026-06-03).
 import { redirect } from "next/navigation";
 
 export default function Home() {
-  redirect("/login");
+  redirect("/dashboard");
 }

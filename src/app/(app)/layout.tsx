@@ -116,7 +116,7 @@ export default async function CockpitLayout({
           }}
         >
           <Link
-            href="/dashboard"
+            href="/"
             className="font-semibold tracking-tight"
             style={{ color: "#000099" }}
           >

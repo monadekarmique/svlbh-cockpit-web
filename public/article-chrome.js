@@ -44,8 +44,8 @@
     const items = [];
     if (segments.length === 0 || segments[0] === "dashboard") {
       items.push({
-        href: "/dashboard",
-        label: "SVLBH Cockpit",
+        href: "/",
+        label: "Cockpit",
         isCurrent: true,
         isRoot: true,
       });
