@@ -8,6 +8,7 @@ import { UserMenu } from "@/components/user-menu";
 import { SupportRealtimeNotifier } from "@/components/support-realtime-notifier";
 import { autoRelinkProfile } from "@/lib/auto-relink-profile";
 import { ExternalAppLink } from "@/components/external-app-link";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { version as appVersion } from "../../../package.json";
 
 // DEC Patrick 2026-05-12 — doctrine ST. Cockpit accessible à ST3+ (Certifiée
@@ -155,6 +156,12 @@ export default async function CockpitLayout({
           </nav>
         </div>
       </header>
+      {/* Doctrine cockpit (DEC Patrick 2026-06-03) : sous la nav, sur TOUTE page,
+          audit trail actionnable à gauche + build à droite. Voir page-breadcrumb.tsx. */}
+      <PageBreadcrumb
+        buildVersion={appVersion}
+        buildCommit={process.env.RENDER_GIT_COMMIT ?? ""}
+      />
       <main
         className="mx-auto max-w-6xl py-6"
         style={{

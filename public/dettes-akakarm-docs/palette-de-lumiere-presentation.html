@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000099">
-<meta name="description" content="La Palette de Lumière SVLBH — présentation, symbolique et mode d'emploi. Outil de décodage chromatique transgénérationnel porté depuis l'app SVLBH Routines Cercle Lum.">
+<meta name="description" content="La Palette de Lumière SVLBH — présentation, symbolique et mode d'emploi. Outil de décodage chromatique transgénérationnel, né en cabinet sous forme de palette statique, décliné en app native iOS (2026) puis porté sur le web.">
 <title>La Palette de Lumière — SVLBH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -88,7 +88,7 @@ blockquote{margin:18px 0;padding:14px 18px;border-left:3px solid var(--plum);bac
 <header class="hero">
   <div class="kicker">Dettes AkaKarm · SVLBH Cockpit</div>
   <h1>La Palette de Lumière</h1>
-  <p class="lede">Outil de décodage chromatique symbolique, porté depuis l'app native SVLBH Routines Cercle Lum vers le web.</p>
+  <p class="lede">Outil de décodage chromatique symbolique — palette statique née en cabinet, déclinée en app native iOS (2026), puis portée sur le web.</p>
   <div class="rule"></div>
 </header>
 
@@ -98,7 +98,7 @@ blockquote{margin:18px 0;padding:14px 18px;border-left:3px solid var(--plum);bac
     <h2><span class="num">1</span>Origine</h2>
     <div class="card">
       <p>La Palette est née d'un besoin de mettre à disposition de mes consultantes en cabinet : en séance, elles parvenaient à identifier les <strong>couleurs des conflits</strong> qui, en s'accumulant, généraient des <strong>pathologies chroniques</strong>. L'usage de la <strong>palette statique</strong> permettait alors d'identifier les teintes qui les ramenaient au <strong>blanc</strong>.</p>
-      <p>La première app native <strong>Palette de Lumière</strong> a été bâtie en <strong>2026</strong> grâce à l'aide de <strong>Claude.ai</strong>. Elle propose un <strong>spectre hexagonal complet</strong> (du bleu marine ancestral au blanc rédempteur, en passant par toutes les teintes vives) destiné à la lecture transgénérationnelle des héritages. Le module SwiftUI <code>PDLPaletteView</code> est aujourd'hui porté dans l'app iOS <strong>SVLBH Routines Cercle Lum</strong> (anciennement SVLBH Panel / Bash).</p>
+      <p>La première app native <strong>Palette de Lumière</strong> a été bâtie en <strong>2026</strong> grâce à l'aide de <strong>Claude.ai</strong>. Elle propose un <strong>spectre hexagonal complet</strong> (du bleu marine ancestral au blanc rédempteur, en passant par toutes les teintes vives) destiné à la lecture transgénérationnelle des héritages, et a depuis été portée sur le web (<code>priv.svlbh.com/palette</code>) et embarquée dans l'app iOS <strong>SVLBH Routines Cercle Lum</strong> (anciennement SVLBH Panel / Bash).</p>
       <p>Son ancrage chromatique est le <strong style="color:var(--bleu-ancestral)">bleu marine #000099</strong> — l'<em>ancre ancestrale</em> du gradient — vers lequel toutes les couleurs choisies se voient harmoniser pour reconstituer le <em>gradient ancestral</em> du soin.</p>
     </div>
   </section>
@@ -122,7 +122,10 @@ blockquote{margin:18px 0;padding:14px 18px;border-left:3px solid var(--plum);bac
   <section>
     <h2><span class="num">3</span>Mode d'emploi</h2>
     <div class="card">
-      <h3>Mode simple</h3>
+      <h3>En cabinet — palette statique <span class="tag">origine</span></h3>
+      <p>La consultante, en séance, parcourt visuellement la planche et <strong>désigne les teintes</strong> qu'elle associe à ses conflits. La praticienne note les couleurs successives jusqu'à atteindre la teinte qui <strong>ramène au blanc</strong> — signe que le conflit chromatiquement codé a trouvé son chemin de rédemption.</p>
+
+      <h3>Mode simple <span class="tag">app · web</span></h3>
       <p>Tape une cellule hexagonale pour la <strong>sélectionner</strong>. Son code <code>HEX</code> et son <code>RGB</code> s'affichent dans la barre supérieure, et la couleur devient le second stop du gradient ancestral. La cellule est ajoutée aux <strong>20 box d'accumulation</strong> (clé de décodage) sous la palette — utile pour repérer les teintes-clés d'une lecture.</p>
 
       <h3>Mode Grouper <span class="tag">multi-select</span></h3>
@@ -158,10 +161,11 @@ blockquote{margin:18px 0;padding:14px 18px;border-left:3px solid var(--plum);bac
   <section>
     <h2><span class="num">5</span>Versions existantes</h2>
     <div class="card">
-      <p>La palette est actuellement disponible :</p>
+      <p>La palette existe sous trois formes, par ordre chronologique d'apparition :</p>
       <ul class="bullets">
-        <li><strong>iOS natif</strong> — <code>PDLPaletteView.swift</code> dans <code>SVLBH Panel/PaletteDeLumiere/</code> (app SVLBH Routines Cercle Lum)</li>
-        <li><strong>Web priv</strong> — <code>priv.svlbh.com/palette</code> (Next.js React, lien externe accessible depuis la liste Articles)</li>
+        <li><strong>Palette statique — cabinet</strong> (origine) · planche physique utilisée en séance avec les consultantes</li>
+        <li><strong>App native iOS</strong> (2026, bâtie avec Claude.ai) · <code>PDLPaletteView.swift</code> dans <code>SVLBH Panel/PaletteDeLumiere/</code>, aujourd'hui embarquée dans l'app <strong>SVLBH Routines Cercle Lum</strong></li>
+        <li><strong>Web priv</strong> · <code>priv.svlbh.com/palette</code> (Next.js React, lien externe accessible depuis la liste Articles)</li>
       </ul>
       <p>Depuis cockpit, la palette est accessible via le lien externe vers <code>priv.svlbh.com/palette</code>. L'authentification est partagée par le cookie <code>.svlbh.com</code> — la praticienne déjà connectée au cockpit y entre sans re-login.</p>
     </div>
