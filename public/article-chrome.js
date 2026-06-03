@@ -22,9 +22,9 @@
   // Palette de Lumière — design tokens topnav (référence).
   const TOK = {
     cream: "rgba(245,237,228,.94)",
-    plum: "#8B3A62",
-    plumBorder: "rgba(139,58,98,.15)",
-    plumHover: "rgba(139,58,98,.75)",
+    bordeaux: "#7A0F26",
+    bordeauxBorder: "rgba(122,15,38,.15)",
+    bordeauxHover: "rgba(122,15,38,.75)",
     ink: "#26183a",
     inkSoft: "#5b4a6b",
     sans: "'DM Sans',system-ui,-apple-system,BlinkMacSystemFont,sans-serif",
@@ -52,8 +52,8 @@
       return items;
     }
     items.push({
-      href: "/dashboard",
-      label: "SVLBH Cockpit",
+      href: "/",
+      label: "Cockpit",
       isCurrent: false,
       isRoot: true,
     });
@@ -88,7 +88,7 @@
       "background:" + TOK.cream,
       "-webkit-backdrop-filter:saturate(180%) blur(10px)",
       "backdrop-filter:saturate(180%) blur(10px)",
-      "border-bottom:1px solid " + TOK.plumBorder,
+      "border-bottom:1px solid " + TOK.bordeauxBorder,
       "padding:10px max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left))",
       "display:flex",
       "align-items:center",
@@ -108,7 +108,7 @@
         const sep = document.createElement("span");
         sep.textContent = "›";
         sep.style.cssText =
-          "color:" + TOK.plumBorder + ";flex-shrink:0;font-size:1.1em;";
+          "color:" + TOK.bordeauxBorder + ";flex-shrink:0;font-size:1.1em;";
         sep.setAttribute("aria-hidden", "true");
         nav.appendChild(sep);
       }
@@ -122,7 +122,7 @@
         const cur = document.createElement("span");
         cur.textContent = it.label;
         cur.style.cssText =
-          sharedRoot + "color:" + TOK.plum + ";flex-shrink:0;";
+          sharedRoot + "color:" + TOK.bordeaux + ";flex-shrink:0;";
         cur.setAttribute("aria-current", "page");
         nav.appendChild(cur);
       } else {
@@ -132,7 +132,7 @@
         a.style.cssText =
           sharedRoot +
           "color:" +
-          TOK.plum +
+          TOK.bordeaux +
           ";text-decoration:none;flex-shrink:0;white-space:nowrap;transition:opacity .12s;";
         a.addEventListener("mouseenter", function () {
           a.style.opacity = ".75";

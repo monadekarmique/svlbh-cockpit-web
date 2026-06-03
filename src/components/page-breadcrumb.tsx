@@ -20,10 +20,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { COCKPIT_NAV } from "@/lib/cockpit-nav";
 
+// Teinte bordeaux profond (DEC Patrick 2026-06-03 v6) — vrai vin rouge saturé,
+// pas le plum #8B3A62 qui tirait vers le rose/violet.
 const TOK = {
   cream: "rgba(245,237,228,.94)",
-  plum: "#8B3A62",
-  plumBorder: "rgba(139,58,98,.15)",
+  bordeaux: "#7A0F26",
+  bordeauxBorder: "rgba(122,15,38,.18)",
   inkSoft: "#5b4a6b",
 } as const;
 
@@ -83,7 +85,7 @@ export function PageBreadcrumb({
         background: TOK.cream,
         WebkitBackdropFilter: "saturate(180%) blur(10px)",
         backdropFilter: "saturate(180%) blur(10px)",
-        borderBottom: `1px solid ${TOK.plumBorder}`,
+        borderBottom: `1px solid ${TOK.bordeauxBorder}`,
         padding:
           "10px max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left))",
         fontFamily: "var(--font-dm-sans), system-ui, sans-serif",
@@ -99,7 +101,7 @@ export function PageBreadcrumb({
             {i > 0 && (
               <span
                 aria-hidden
-                style={{ color: TOK.plumBorder, fontSize: "1.1em" }}
+                style={{ color: TOK.bordeauxBorder, fontSize: "1.1em" }}
                 className="shrink-0"
               >
                 ›
@@ -109,7 +111,7 @@ export function PageBreadcrumb({
               <span
                 aria-current="page"
                 style={{
-                  color: TOK.plum,
+                  color: TOK.bordeaux,
                   ...(it.isRoot
                     ? {
                         fontFamily:
@@ -128,7 +130,7 @@ export function PageBreadcrumb({
               <Link
                 href={it.href}
                 style={{
-                  color: TOK.plum,
+                  color: TOK.bordeaux,
                   textDecoration: "none",
                   ...(it.isRoot
                     ? {
