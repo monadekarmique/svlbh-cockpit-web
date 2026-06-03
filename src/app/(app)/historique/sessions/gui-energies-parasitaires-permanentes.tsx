@@ -1,7 +1,24 @@
-// @ts-nocheck — composant porté tel quel, à typer dans une passe ultérieure
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
+
+type Lignee = "adam" | "eve";
+type GuiType = "actif" | "dormant" | "ancien";
+type ElementMtc = "Métal" | "Terre" | "Feu" | "Eau" | "Bois" | "Feu Min." | "Extra";
+
+type Gui = {
+  id: number;
+  dim: number;
+  chakra: number;
+  lignee: Lignee;
+  type: GuiType;
+  meridien: string;
+  generation: number;
+  intensite: number;
+};
+
+type Position = { x: number; y: number };
 
 // Session Gui 鬼 — Énergies Parasitaires Permanentes.
 // Visualisation hDOM × méridiens MTC × Gui (Adam/Eve propagation).
@@ -64,7 +81,7 @@ const MERIDIENS = [
   { code: "CV", name: "Vaisseau Conception", element: "Extra", yin: true },
 ];
 
-const ELEMENT_COLORS = {
+const ELEMENT_COLORS: Record<ElementMtc, string> = {
   Métal: "#C0C0C0",
   Terre: PALETTE.or,
   Feu: "#E74C3C",
@@ -75,8 +92,8 @@ const ELEMENT_COLORS = {
 };
 
 // Generate deterministic parasitic data
-function generateGuiData() {
-  const guis = [];
+function generateGuiData(): Gui[] {
+  const guis: Gui[] = [];
   let id = 0;
   const seed = [3,1,7,2,5,0,4,8,6,1,3,7,2,0,5,8,4,6,1,3,2,7,0,5,4,8,6,1,3,2,5,0,7];
   let si = 0;
@@ -85,9 +102,9 @@ function generateGuiData() {
   DIMENSIONS.forEach((dim) => {
     for (let c = 0; c < dim.chakras; c++) {
       if ((next() + dim.id + c) % 3 === 0) {
-        const lignee = (next() + c) % 2 === 0 ? "adam" : "eve";
-        const types = ["actif", "dormant", "ancien"];
-        const type = types[(next() + dim.id) % 3];
+        const lignee: Lignee = (next() + c) % 2 === 0 ? "adam" : "eve";
+        const types: GuiType[] = ["actif", "dormant", "ancien"];
+        const type: GuiType = types[(next() + dim.id) % 3];
         const mIdx = (next() * 2 + dim.id + c) % MERIDIENS.length;
         const gen = ((next() + c) % 7) + 1;
         guis.push({
@@ -108,7 +125,16 @@ function generateGuiData() {
 
 const GUI_DATA = generateGuiData();
 
-const GuiMarker = ({ gui, x, y, size, selected, onClick }) => {
+const GuiMarker = ({
+  gui, x, y, size, selected, onClick,
+}: {
+  gui: Gui;
+  x: number;
+  y: number;
+  size: number;
+  selected: boolean;
+  onClick: (g: Gui) => void;
+}) => {
   const color = gui.type === "actif" ? PALETTE.guiActive : gui.type === "dormant" ? PALETTE.guiDormant : PALETTE.guiAncien;
   const opacity = 0.4 + (gui.intensite / 100) * 0.6;
   const r = (size / 2) * (0.5 + (gui.intensite / 100) * 0.5);
@@ -124,8 +150,14 @@ const GuiMarker = ({ gui, x, y, size, selected, onClick }) => {
   );
 };
 
-const PropagationLines = ({ guis, getPos, cellSize }) => {
-  const lines = [];
+const PropagationLines = ({
+  guis, getPos,
+}: {
+  guis: Gui[];
+  getPos: (dim: number, chakra: number) => Position;
+  cellSize: number;
+}) => {
+  const lines: ReactNode[] = [];
   for (let i = 0; i < guis.length; i++) {
     for (let j = i + 1; j < guis.length; j++) {
       const a = guis[i], b = guis[j];
@@ -140,7 +172,13 @@ const PropagationLines = ({ guis, getPos, cellSize }) => {
   return <>{lines}</>;
 };
 
-const Tooltip = ({ gui, x, y }) => {
+const Tooltip = ({
+  gui, x, y,
+}: {
+  gui: Gui | null;
+  x: number;
+  y: number;
+}) => {
   if (!gui) return null;
   const m = MERIDIENS.find((m) => m.code === gui.meridien);
   const w = 220, h = 135;
@@ -162,13 +200,13 @@ const Tooltip = ({ gui, x, y }) => {
 };
 
 export function GuiEnergiesParasitairesPermanentesSession() {
-  const [selectedGui, setSelectedGui] = useState(null);
-  const [filterLignee, setFilterLignee] = useState("all");
-  const [filterMeridien, setFilterMeridien] = useState("all");
-  const [filterDim, setFilterDim] = useState("all");
+  const [selectedGui, setSelectedGui] = useState<Gui | null>(null);
+  const [filterLignee, setFilterLignee] = useState<"all" | Lignee>("all");
+  const [filterMeridien, setFilterMeridien] = useState<string>("all");
+  const [filterDim, setFilterDim] = useState<string>("all");
   const [showPropagation, setShowPropagation] = useState(true);
-  const [mode, setMode] = useState("grille");
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [mode, setMode] = useState<string>("grille");
+  const [mousePos, setMousePos] = useState<Position>({ x: 0, y: 0 });
 
   const MARGIN = { top: 60, left: 160, right: 30, bottom: 30 };
   const MAX_CHAKRAS = Math.max(...DIMENSIONS.map((d) => d.chakras));
@@ -176,7 +214,7 @@ export function GuiEnergiesParasitairesPermanentesSession() {
   const SVG_W = MARGIN.left + MAX_CHAKRAS * CELL_W + MARGIN.right + 100;
   const SVG_H = MARGIN.top + DIMENSIONS.length * CELL_H + MARGIN.bottom;
 
-  const getPos = useCallback((dim, chakra) => ({
+  const getPos = useCallback((dim: number, chakra: number): Position => ({
     x: MARGIN.left + chakra * CELL_W + CELL_W / 2,
     y: MARGIN.top + (dim - 1) * CELL_H + CELL_H / 2,
   }), []);
@@ -205,16 +243,25 @@ export function GuiEnergiesParasitairesPermanentesSession() {
     return MERIDIENS.filter((m) => set.has(m.code));
   }, [filteredGuis]);
 
-  const handleSvgMouseMove = (e) => {
+  const handleSvgMouseMove = (e: ReactMouseEvent<SVGSVGElement>) => {
     const svg = e.currentTarget;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
     const pt = svg.createSVGPoint();
     pt.x = e.clientX;
     pt.y = e.clientY;
-    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const svgP = pt.matrixTransform(ctm.inverse());
     setMousePos({ x: svgP.x, y: svgP.y });
   };
 
-  const Btn = ({ active, onClick, children, color }) => (
+  const Btn = ({
+  active, onClick, children, color,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  color?: string;
+}) => (
     <button onClick={onClick} style={{ padding: "5px 12px", borderRadius: 6, border: `1.5px solid ${active ? (color || PALETTE.roseProfond) : PALETTE.gridLine}`, background: active ? (color || PALETTE.roseProfond) : PALETTE.white, color: active ? PALETTE.white : PALETTE.text, fontSize: 12, fontWeight: active ? 600 : 400, cursor: "pointer", transition: "all .2s" }}>
       {children}
     </button>
@@ -237,8 +284,8 @@ export function GuiEnergiesParasitairesPermanentesSession() {
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
           <span style={{ fontSize: 11, color: PALETTE.textLight, marginRight: 4 }}>Lignée :</span>
           <Btn active={filterLignee === "all"} onClick={() => setFilterLignee("all")}>Toutes</Btn>
-          <Btn active={filterLignee === "adam"} onClick={() => setFilterLignee("adam")} color={PALETTE.roseProfond}>Adam ♂</Btn>
-          <Btn active={filterLignee === "eve"} onClick={() => setFilterLignee("eve")} color={PALETTE.roseMoyen}>Eve ♀</Btn>
+          <Btn active={filterLignee === "adam"} onClick={() => setFilterLignee("adam" as Lignee)} color={PALETTE.roseProfond}>Adam ♂</Btn>
+          <Btn active={filterLignee === "eve"} onClick={() => setFilterLignee("eve" as Lignee)} color={PALETTE.roseMoyen}>Eve ♀</Btn>
         </div>
         <div style={{ width: 1, background: PALETTE.gridLine, margin: "0 4px" }} />
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
@@ -362,11 +409,11 @@ export function GuiEnergiesParasitairesPermanentesSession() {
             return (
               <div key={m.code} onClick={() => setFilterMeridien(filterMeridien === m.code ? "all" : m.code)} style={{
                 padding: "6px 12px", borderRadius: 8, cursor: "pointer", transition: "all .2s",
-                background: affected ? `${ELEMENT_COLORS[m.element]}18` : PALETTE.bg,
-                border: `1.5px solid ${filterMeridien === m.code ? PALETTE.or : affected ? ELEMENT_COLORS[m.element] : PALETTE.gridLine}`,
+                background: affected ? `${ELEMENT_COLORS[m.element as ElementMtc]}18` : PALETTE.bg,
+                border: `1.5px solid ${filterMeridien === m.code ? PALETTE.or : affected ? ELEMENT_COLORS[m.element as ElementMtc] : PALETTE.gridLine}`,
                 opacity: affected ? 1 : 0.4,
               }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: ELEMENT_COLORS[m.element] }}>{m.code}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: ELEMENT_COLORS[m.element as ElementMtc] }}>{m.code}</div>
                 <div style={{ fontSize: 9, color: PALETTE.textLight }}>{m.name}</div>
                 <div style={{ fontSize: 9, color: PALETTE.textLight }}>{m.element} · {m.yin ? "Yin" : "Yang"}</div>
                 {affected && <div style={{ fontSize: 10, fontWeight: 700, color: PALETTE.guiActive, marginTop: 2 }}>{count} 鬼</div>}
