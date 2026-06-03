@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000099">
+<meta name="description" content="La Palette de Lumière SVLBH — présentation, symbolique et mode d'emploi. Outil de décodage chromatique transgénérationnel porté depuis l'app SVLBH Routines Cercle Lum.">
+<title>La Palette de Lumière — SVLBH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bleu-ancestral:#000099;
+  --plum:#8B3A62; --rose:#C27894; --cream:#F5EDE4; --gold:#B8965A;
+  --ink:#26183a; --ink-soft:#5b4a6b;
+  --serif:'Crimson Pro',Georgia,serif; --sans:'DM Sans',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--sans); color:var(--ink); line-height:1.65;
+  background:var(--cream);
+  background-image:
+    radial-gradient(circle at 8% 6%, rgba(0,0,153,.08), transparent 38%),
+    radial-gradient(circle at 92% 4%, rgba(194,120,148,.10), transparent 40%);
+  -webkit-font-smoothing:antialiased;
+}
+.topnav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(245,237,228,.94);
+  backdrop-filter:saturate(180%) blur(10px);
+  -webkit-backdrop-filter:saturate(180%) blur(10px);
+  border-bottom:1px solid rgba(139,58,98,.15);
+  padding:10px 20px;
+  display:flex;justify-content:space-between;align-items:center;gap:1rem;
+  font-size:.88rem;font-family:var(--sans);
+}
+.topnav a{color:var(--plum);text-decoration:none;font-weight:600;white-space:nowrap}
+.topnav a:hover{opacity:.75}
+.topnav .home{font-family:var(--serif);font-weight:700;font-size:1.05rem;letter-spacing:.01em}
+.topnav .back{display:inline-flex;align-items:center;gap:.3em}
+
+.wrap{max-width:880px;margin:0 auto;padding:24px 20px 80px}
+.hero{padding:32px 20px 24px;text-align:center}
+.kicker{font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--plum);font-weight:600;margin-bottom:14px}
+h1{font-family:var(--serif);font-weight:700;font-size:clamp(2rem,5.5vw,3.1rem);line-height:1.08;color:var(--bleu-ancestral);letter-spacing:-.01em}
+.lede{margin-top:14px;font-size:1.05rem;color:var(--ink-soft);font-style:italic;max-width:620px;margin-inline:auto}
+.rule{margin:22px auto 0;width:120px;height:2px;background:linear-gradient(90deg,transparent,var(--plum),transparent)}
+
+section{margin-top:36px}
+h2{font-family:var(--serif);font-size:1.9rem;color:var(--bleu-ancestral);font-weight:600;margin-bottom:8px;letter-spacing:-.01em;line-height:1.2}
+h2 .num{display:inline-block;width:1.6em;height:1.6em;line-height:1.6em;border-radius:50%;background:var(--bleu-ancestral);color:#fff;font-family:var(--sans);font-size:.78rem;font-weight:700;text-align:center;margin-right:.55em;vertical-align:middle}
+h3{font-family:var(--serif);font-size:1.34rem;color:var(--plum);font-weight:600;margin:18px 0 8px}
+.sub{color:var(--ink-soft);font-size:.92rem;margin-bottom:14px}
+
+.card{background:#fff;border-radius:18px;padding:22px 24px;box-shadow:0 1px 0 rgba(139,58,98,.06),0 8px 32px rgba(0,0,153,.06);margin:14px 0}
+.card p{margin-bottom:.65em}
+.card p:last-child{margin-bottom:0}
+
+ul.bullets{margin:8px 0 0 22px}
+ul.bullets li{margin:.4em 0;line-height:1.55}
+ul.bullets li strong{color:var(--plum)}
+
+.tag{display:inline-block;font:600 .68rem var(--sans);padding:.18em .55em;border-radius:6px;background:rgba(0,0,153,.08);color:var(--bleu-ancestral);margin-left:.4em;letter-spacing:.04em;text-transform:uppercase;vertical-align:.1em}
+
+.gradient-bar{height:18px;border-radius:9px;margin:14px 0 6px;background:linear-gradient(90deg,var(--bleu-ancestral) 0%,#3366cc 35%,#aac6ff 70%,#fff 100%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)}
+.gradient-label{font-size:.78rem;color:var(--ink-soft);font-style:italic;text-align:center}
+
+blockquote{margin:18px 0;padding:14px 18px;border-left:3px solid var(--plum);background:rgba(139,58,98,.05);font-style:italic;color:var(--ink);line-height:1.55;border-radius:0 8px 8px 0}
+
+.cta{margin-top:36px;padding:22px 24px;border-radius:18px;background:linear-gradient(135deg,rgba(0,0,153,.08),rgba(139,58,98,.08));border:1px solid rgba(0,0,153,.15);text-align:center}
+.cta a{display:inline-block;margin-top:8px;padding:.7em 1.4em;background:var(--bleu-ancestral);color:#fff;border-radius:10px;text-decoration:none;font-weight:600;font-family:var(--sans)}
+.cta a:hover{opacity:.9}
+
+.brand{text-align:center;font-size:.78rem;color:var(--ink-soft);margin-top:40px;font-style:italic}
+.brand strong{color:var(--plum);font-style:normal}
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Navigation principale">
+  <a href="/dettes-akakarm-articles" class="back">◀ Dettes AkaKarm — Articles</a>
+  <a href="/dashboard" class="home">SVLBH Cockpit</a>
+</nav>
+
+<header class="hero">
+  <div class="kicker">Dettes AkaKarm · SVLBH Cockpit</div>
+  <h1>La Palette de Lumière</h1>
+  <p class="lede">Outil de décodage chromatique symbolique, porté depuis l'app native SVLBH Routines Cercle Lum vers le web.</p>
+  <div class="rule"></div>
+</header>
+
+<div class="wrap">
+
+  <section>
+    <h2><span class="num">1</span>Origine</h2>
+    <div class="card">
+      <p>La Palette de Lumière est née dans l'app iOS native <strong>SVLBH Routines Cercle Lum</strong> (anciennement SVLBH Panel / Bash), comme module SwiftUI <code>PDLPaletteView</code>. Elle propose un <strong>spectre hexagonal complet</strong> (du bleu marine ancestral au blanc rédempteur, en passant par toutes les teintes vives) destiné à la lecture transgénérationnelle des héritages.</p>
+      <p>Son ancrage chromatique est le <strong style="color:var(--bleu-ancestral)">bleu marine #000099</strong> — l'<em>ancre ancestrale</em> du gradient — vers lequel toutes les couleurs choisies se voient harmoniser pour reconstituer le <em>gradient ancestral</em> du soin.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">2</span>Symbolique</h2>
+    <div class="card">
+      <p>Chaque hexagone porte une fréquence vibratoire. Le pavage hexagonal n'est pas décoratif — il reflète la <strong>structure cristalline du Cercle de Lumière</strong>, où chaque cellule est connectée à six voisines, comme le sont les âmes d'une lignée à leurs ascendantes immédiates.</p>
+      <p>Trois axes structurent la palette :</p>
+      <ul class="bullets">
+        <li><strong>Axe ancestral</strong> — bleu marine au centre haut, descend vers les verts (Bois) et bleus (Eau)</li>
+        <li><strong>Axe rédempteur</strong> — du blanc central vers les pâleurs périphériques</li>
+        <li><strong>Axe pulsionnel</strong> — rouges et orangés (Feu), magentas et violets (transmutation)</li>
+      </ul>
+      <p>Le <strong>gradient ancestral</strong> — affiché en bas de la palette — interpole linéairement entre le bleu marine et la dernière teinte touchée. Il représente le chemin chromatique du soin, du connu ancestral vers l'émergence singulière.</p>
+      <div class="gradient-bar"></div>
+      <p class="gradient-label">Exemple — gradient bleu ancestral → pâleur émergente</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">3</span>Mode d'emploi</h2>
+    <div class="card">
+      <h3>Mode simple</h3>
+      <p>Tape une cellule hexagonale pour la <strong>sélectionner</strong>. Son code <code>HEX</code> et son <code>RGB</code> s'affichent dans la barre supérieure, et la couleur devient le second stop du gradient ancestral. La cellule est ajoutée aux <strong>20 box d'accumulation</strong> (clé de décodage) sous la palette — utile pour repérer les teintes-clés d'une lecture.</p>
+
+      <h3>Mode Grouper <span class="tag">multi-select</span></h3>
+      <p>Active <strong>✦ Grouper</strong> pour poser des liserets jaunes sur plusieurs cellules. Chaque cellule liseretée devient un stop du gradient ancestral, créant un <strong>multi-gradient</strong> qui reconstitue l'arc chromatique complet du soin (ancre bleu marine → teinte 1 → teinte 2 → … → teinte finale).</p>
+
+      <h3>Champs annexes</h3>
+      <ul class="bullets">
+        <li><strong>Génération</strong> · <strong>Incarnation</strong> — entiers 0-999 (par défaut 0), témoins du périmètre transgénérationnel de la lecture</li>
+        <li><strong>Éclair ⚡</strong> — déclenche un drawer de gestes vibratoires associés à la couleur sélectionnée</li>
+        <li><strong>Nerfs</strong> · <strong>Grosseurs</strong> · <strong>Muscles</strong> — drawers anatomiques pour lier la couleur à un tissu ou un point</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">4</span>Lien avec les dettes akakarmiques</h2>
+    <div class="card">
+      <p>La palette n'est pas un simple sélecteur — elle est un <strong>instrument de lecture des dettes akakarmiques</strong>. Une dette akakarmique est une trace mémorielle dans la lignée monadique : une émotion non métabolisée, un serment non honoré, une transmission non descendue.</p>
+      <p>Chaque teinte sélectionnée code une <strong>vibration de la dette</strong> :</p>
+      <ul class="bullets">
+        <li>Les <strong>tons bleus profonds</strong> codent les dettes ancestrales fixées (≥ 7 générations)</li>
+        <li>Les <strong>verts</strong> codent les dettes liées au Bois (foie, vésicule biliaire — colères figées)</li>
+        <li>Les <strong>rouges</strong> codent les dettes liées au Feu (Cœur — joies non vécues, peurs)</li>
+        <li>Les <strong>jaunes-bruns</strong> codent les dettes liées à la Terre (Rate-Pancréas — ruminations)</li>
+        <li>Les <strong>blancs-gris</strong> codent les dettes liées au Métal (Poumons — deuils inachevés)</li>
+        <li>Les <strong>noirs</strong> codent les dettes liées à l'Eau (Reins — peurs profondes, survies)</li>
+        <li>Les <strong>magentas / violets</strong> codent la phase de <strong>transmutation</strong> en cours</li>
+      </ul>
+      <blockquote>Lire une dette akakarmique avec la palette, c'est offrir à l'héritage figé une <em>amorce de couleur</em> qui permet sa remise en mouvement vibratoire vers la rédemption (le blanc) ou vers la racine ancestrale (le bleu).</blockquote>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">5</span>Versions existantes</h2>
+    <div class="card">
+      <p>La palette est actuellement disponible :</p>
+      <ul class="bullets">
+        <li><strong>iOS natif</strong> — <code>PDLPaletteView.swift</code> dans <code>SVLBH Panel/PaletteDeLumiere/</code> (app SVLBH Routines Cercle Lum)</li>
+        <li><strong>Web priv</strong> — <code>priv.svlbh.com/palette</code> (Next.js React, lien externe accessible depuis la liste Articles)</li>
+        <li><strong>Web cockpit</strong> — port React natif <em>en cours</em> (à venir sous <code>cockpit.svlbh.com/dettes-akakarm-articles/palette</code>)</li>
+      </ul>
+      <p>Le port natif vers le cockpit permettra aux administratrices ST6 et au Cercle de Lumière SR d'utiliser la palette <strong>sans dépendre de l'auth priv.svlbh.com</strong>, dans le contexte compliance / supervision.</p>
+    </div>
+  </section>
+
+  <div class="cta">
+    <h3 style="color:var(--bleu-ancestral);margin:0">Ouvrir la palette interactive</h3>
+    <p style="margin:.5em 0">La version web complète est servie depuis priv.svlbh.com.</p>
+    <a href="https://priv.svlbh.com/palette" target="_blank" rel="noopener noreferrer">priv.svlbh.com/palette ↗</a>
+  </div>
+
+  <p class="brand"><strong>Digital Shaman Lab — VLBH</strong> · « Seul ce qui est radiesthésiquement vérifiable est vrai » v0.1.0</p>
+</div>
+</body>
+</html>

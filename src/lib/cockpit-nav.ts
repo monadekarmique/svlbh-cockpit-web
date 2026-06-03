@@ -4,7 +4,13 @@
 //   - src/app/(app)/layout.tsx (NAV header avec juste label)
 // Modifier l'ordre/ajouter/retirer un module ici met à jour les 2.
 
-export type CockpitNavGroup = "shamanes" | "routines" | "chakras" | "support" | "owner";
+export type CockpitNavGroup =
+  | "shamanes"
+  | "routines"
+  | "chakras"
+  | "akakarm"
+  | "support"
+  | "owner";
 
 export type CockpitNavItem = {
   href: string;
@@ -177,6 +183,17 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     color: "#2563EB",
     group: "support",
   },
+
+  // ── Bloc Dettes AkaKarm ──
+  {
+    href: "/dettes-akakarm-articles",
+    label: "Articles AkaKarm",
+    navLabel: "Articles",
+    icon: "📄",
+    desc: "Palette de Lumière (port), audits & lectures sur les dettes akakarmiques",
+    color: "#8B3A62",
+    group: "akakarm",
+  },
 ];
 
 /** Items du NAV header (label court, sans Dashboard car ajouté séparément). */
@@ -187,11 +204,12 @@ export function navItems(): { href: string; label: string }[] {
   }));
 }
 
-/** Métadonnées des 5 groupes affichés en dropdowns dans le NAV header. */
+/** Métadonnées des 6 groupes affichés en dropdowns dans le NAV header. */
 export const GROUP_LABELS: Record<CockpitNavGroup, string> = {
   shamanes: "Shamanes",
   routines: "Routines",
   chakras: "Chakras MTC",
+  akakarm: "Dettes AkaKarm",
   support: "Support",
   owner: "Owner",
 };
@@ -209,7 +227,7 @@ export function groupedNav(options?: { includeOwner?: boolean }): CockpitNavGrou
   const includeOwner = options?.includeOwner ?? false;
   // Owner (ST6) fusionné EN TÊTE du groupe Support — gate conservé via includeOwner
   // (les non-ST6 ne voient pas les items Owner ; les pages restent gatées par requireOwner).
-  const order: CockpitNavGroup[] = ["shamanes", "routines", "chakras", "support"];
+  const order: CockpitNavGroup[] = ["shamanes", "routines", "chakras", "akakarm", "support"];
   return order
     .map((id) => {
       let items = COCKPIT_NAV.filter((i) => i.group === id);
