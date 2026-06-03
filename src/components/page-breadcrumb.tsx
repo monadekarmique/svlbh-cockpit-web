@@ -80,18 +80,24 @@ export function PageBreadcrumb({
 
   return (
     <div
-      className="flex items-center justify-between gap-4"
       style={{
         background: TOK.cream,
         WebkitBackdropFilter: "saturate(180%) blur(10px)",
         backdropFilter: "saturate(180%) blur(10px)",
         borderBottom: `1px solid ${TOK.bordeauxBorder}`,
-        padding:
-          "10px max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left))",
         fontFamily: "var(--font-dm-sans), system-ui, sans-serif",
         fontSize: ".88rem",
       }}
     >
+      {/* Inner aligné max-w-6xl mx-auto comme le menu nav et le main (DEC
+          Patrick 2026-06-03 v7) — fond cream full-width, contenu centré. */}
+      <div
+        className="mx-auto flex max-w-6xl items-center justify-between gap-4"
+        style={{
+          padding:
+            "10px max(1rem,env(safe-area-inset-right)) 10px max(1rem,env(safe-area-inset-left))",
+        }}
+      >
       <nav
         aria-label="Audit trail"
         className="flex min-w-0 flex-1 items-center gap-[.55em] overflow-x-auto"
@@ -161,6 +167,7 @@ export function PageBreadcrumb({
       >
         build {buildVersion} · {shortCommit}
       </span>
+      </div>
     </div>
   );
 }

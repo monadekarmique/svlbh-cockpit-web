@@ -89,13 +89,21 @@
       "-webkit-backdrop-filter:saturate(180%) blur(10px)",
       "backdrop-filter:saturate(180%) blur(10px)",
       "border-bottom:1px solid " + TOK.bordeauxBorder,
-      "padding:10px max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left))",
+      "font-family:" + TOK.sans,
+      "font-size:.88rem",
+    ].join(";");
+
+    // Inner aligné max-w-6xl pour cohérence avec le menu nav cockpit (DEC
+    // Patrick 2026-06-03 v7) — fond cream full-width, contenu centré.
+    const inner = document.createElement("div");
+    inner.style.cssText = [
+      "max-width:72rem",
+      "margin:0 auto",
+      "padding:10px max(1rem,env(safe-area-inset-right)) 10px max(1rem,env(safe-area-inset-left))",
       "display:flex",
       "align-items:center",
       "justify-content:space-between",
       "gap:16px",
-      "font-family:" + TOK.sans,
-      "font-size:.88rem",
     ].join(";");
 
     const nav = document.createElement("nav");
@@ -152,8 +160,9 @@
       ";flex-shrink:0;white-space:nowrap;opacity:.7;";
     build.title = "build " + meta.version + " · commit " + meta.commit;
 
-    bar.appendChild(nav);
-    bar.appendChild(build);
+    inner.appendChild(nav);
+    inner.appendChild(build);
+    bar.appendChild(inner);
 
     if (document.body.firstChild) {
       document.body.insertBefore(bar, document.body.firstChild);
