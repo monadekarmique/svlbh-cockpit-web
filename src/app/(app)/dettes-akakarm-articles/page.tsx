@@ -1,10 +1,10 @@
 // Dettes AkaKarm — Articles. Section qui agrège les lectures, audits et
 // outils en lien avec les dettes akakarmiques. DEC Patrick 2026-06-03.
 //
-// Stratégie de "port depuis SVLBH Routines Cercle Lum" (DEC Patrick) :
+// Stratégie pour la palette ("porter depuis SVLBH Routines Cercle Lum") :
 //   1) Lien externe vers la palette priv.svlbh.com (Option 4) — actif.
 //   2) Article HTML descriptif sur la palette (Option 3) — actif.
-//   3) Port natif SwiftUI → React de PDLPaletteView (Option 2) — à venir.
+// Pas de port natif SwiftUI → React (DEC Patrick 2026-06-03 — annulé).
 
 export const dynamic = "force-dynamic";
 
@@ -114,11 +114,6 @@ export default function DettesAkaKarmArticlesPage() {
         })}
       </ul>
 
-      <p className="rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-3 text-xs text-neutral-500">
-        Port natif <code>PDLPaletteView.swift</code> → React (cockpit
-        natif, sans dépendre de priv.svlbh.com) : prévu — voir
-        <code> /dettes-akakarm-articles/palette </code> (à venir).
-      </p>
     </main>
   );
 }
