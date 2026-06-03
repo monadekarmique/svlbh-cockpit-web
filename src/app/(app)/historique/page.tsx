@@ -6,10 +6,21 @@ import {
   SESSION_META as LMASC_META,
   TypesDeLmascSession,
 } from "./sessions/types-de-lmasc-psychosomatique";
+import {
+  SESSION_META as GUI_META,
+  GuiEnergiesParasitairesPermanentesSession,
+} from "./sessions/gui-energies-parasitaires-permanentes";
 
 export const dynamic = "force-dynamic";
 
+// Ordre : la session la plus récente en haut. Gui (2026-06-03) précède
+// Types de Lmasc (2026-05-15). DEC Patrick 2026-06-03 — "avant session
+// documentée".
 const SESSIONS = [
+  {
+    meta: GUI_META,
+    Component: GuiEnergiesParasitairesPermanentesSession,
+  },
   {
     meta: LMASC_META,
     Component: TypesDeLmascSession,
