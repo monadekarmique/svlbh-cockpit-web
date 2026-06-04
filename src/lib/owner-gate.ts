@@ -56,3 +56,53 @@ export async function isOwner(): Promise<boolean> {
     (profile.stx === "ST6" || profile.cercle_lumiere_sr === true)
   );
 }
+
+// Gate /facturation — ST4+ peut saisir ses propres paiements manuels en
+// attendant l'intégration PostFinanceCheckout. DEC Patrick 2026-06-04 :
+// Owner = ST6 strict pour cette page (Cercle SR ne suffit PAS ici,
+// contrairement au reste du cockpit), cohérent avec la policy RLS
+// `invoice_st6_owner_all` basée sur is_owner_st6().
+// Conséquence : Cornelia/Flavia/Anne (ST4-5 + Cercle SR) voient leurs
+// propres factures uniquement.
+export type St4PlusGate = {
+  isOwner: boolean;
+  svlbhId: string | null;
+  stx: "ST4" | "ST5" | "ST6";
+};
+
+export async function requireSt4Plus(): Promise<St4PlusGate> {
+  const reqHeaders = await headers();
+  if (reqHeaders.get("x-svlbh-bearer-reader")) {
+    return { isOwner: true, svlbhId: null, stx: "ST6" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile } = await supabase
+    .from("praticienne_profile")
+    .select("svlbh_id, stx, pro_status")
+    .eq("supabase_user_id", user.id)
+    .maybeSingle();
+
+  if (!profile || profile.pro_status !== "ACTIVE") {
+    redirect("/dashboard");
+  }
+
+  const stx = profile.stx as string;
+  const allowed = stx === "ST4" || stx === "ST5" || stx === "ST6";
+  if (!allowed) {
+    redirect("/dashboard");
+  }
+
+  const isOwner = stx === "ST6";
+
+  return {
+    isOwner,
+    svlbhId: profile.svlbh_id as string,
+    stx: stx as "ST4" | "ST5" | "ST6",
+  };
+}
