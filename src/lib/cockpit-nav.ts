@@ -74,6 +74,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "routines",
   },
   {
+    href: "/traces",
+    label: "API Traces",
+    navLabel: "Traces",
+    icon: "📊",
+    desc: "Observabilité backend — requêtes, erreurs, latences",
+    color: "#6366F1",
+    group: "routines",
+  },
+  {
     href: "/tores",
     label: "Tores énergétiques",
     navLabel: "Tores",
