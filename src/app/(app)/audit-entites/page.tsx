@@ -283,6 +283,45 @@ export default function AuditEntitesPage() {
         )}
       </section>
 
+      {/* Signatures vibratoires — repositionné au milieu, avant Lignées CBS (DEC Patrick 2026-06-10) */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-bold tracking-tight text-blue-950">
+          Signatures Vibratoires Chromatiques
+        </h2>
+        {data.signatures.length === 0 ? (
+          <p className="text-sm text-neutral-500">Aucune signature enregistrée.</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {data.signatures.map((sig) => (
+              <article
+                key={sig.signature_id}
+                className="flex items-center gap-3 rounded-xl border bg-white p-4 shadow-sm"
+                style={{ borderLeftWidth: 4, borderLeftColor: sig.chromatic_key_color ?? "#6B3A8A" }}
+              >
+                {sig.chromatic_key_color && (
+                  <div
+                    className="h-10 w-10 shrink-0 rounded-full border-2 border-white shadow"
+                    style={{ backgroundColor: sig.chromatic_key_color }}
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-mono text-sm font-bold text-neutral-800">
+                    {sig.pattern ?? "Pattern non défini"}
+                  </p>
+                  <p className="text-[11px] text-neutral-500">
+                    Méridien : {sig.chromatic_key_meridian ?? "—"} · {new Date(sig.decoded_at).toLocaleDateString("fr-CH")}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+        {/* Sous-titre « Signatures Vibratoires Mu » sous les 4 signatures (DEC Patrick 2026-06-10) */}
+        <h3 className="pt-1 text-sm font-bold tracking-tight text-neutral-600">
+          Signatures Vibratoires Mu
+        </h3>
+      </section>
+
       {/* Section 5 : Lignées CBS transgénérationnel */}
       <section className="space-y-3">
         <h2 className="text-lg font-bold tracking-tight text-blue-950">
@@ -337,40 +376,6 @@ export default function AuditEntitesPage() {
         )}
       </section>
 
-      {/* Section 6 : Signatures vibratoires */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-bold tracking-tight text-blue-950">
-          Signatures Vibratoires Chromatiques
-        </h2>
-        {data.signatures.length === 0 ? (
-          <p className="text-sm text-neutral-500">Aucune signature enregistrée.</p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {data.signatures.map((sig) => (
-              <article
-                key={sig.signature_id}
-                className="flex items-center gap-3 rounded-xl border bg-white p-4 shadow-sm"
-                style={{ borderLeftWidth: 4, borderLeftColor: sig.chromatic_key_color ?? "#6B3A8A" }}
-              >
-                {sig.chromatic_key_color && (
-                  <div
-                    className="h-10 w-10 shrink-0 rounded-full border-2 border-white shadow"
-                    style={{ backgroundColor: sig.chromatic_key_color }}
-                  />
-                )}
-                <div className="min-w-0">
-                  <p className="truncate font-mono text-sm font-bold text-neutral-800">
-                    {sig.pattern ?? "Pattern non défini"}
-                  </p>
-                  <p className="text-[11px] text-neutral-500">
-                    Méridien : {sig.chromatic_key_meridian ?? "—"} · {new Date(sig.decoded_at).toLocaleDateString("fr-CH")}
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }
