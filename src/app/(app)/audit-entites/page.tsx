@@ -26,6 +26,17 @@ export default function AuditEntitesPage() {
   const [data, setData] = useState<AuditData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // État de travail LOCAL (pas de persistance DB) : marque NSB / catégories
+  // comme « travaillées » pendant la session.
+  const [worked, setWorked] = useState<Set<string>>(new Set());
+  function toggleWorked(key: string) {
+    setWorked((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -83,10 +94,10 @@ export default function AuditEntitesPage() {
 
       {/* Section 1 : KPIs globaux */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Relations" value={data.relations.length} color="#8B3A62" />
-        <KpiCard label="Scores sessions" value={data.scores.length} color="#C28D43" />
-        <KpiCard label="Lignées CBS" value={data.lignees.length} color="#2B5EA7" />
-        <KpiCard label="Signatures vibr." value={data.signatures.length} color="#6B3A8A" />
+        <KpiCard label="Relations" initial={data.relations.length} color="#8B3A62" />
+        <KpiCard label="Scores sessions" initial={data.scores.length} color="#C28D43" />
+        <KpiCard label="Lignées CBS" initial={data.lignees.length} color="#2B5EA7" />
+        <KpiCard label="Signatures vibr." initial={data.signatures.length} color="#6B3A8A" />
       </section>
 
       {/* Section 2 : Relations familiales */}
@@ -122,18 +133,43 @@ export default function AuditEntitesPage() {
                     </span>
                   </div>
                 )}
-                {r.niveau_shamanique_bloques != null && (
-                  <p className="mt-1 text-[11px] text-neutral-500">
-                    Niveaux shamaniques bloqués : <strong>{r.niveau_shamanique_bloques}</strong>
-                  </p>
-                )}
+                {r.niveau_shamanique_bloques != null && (() => {
+                  const k = `nsb:${r.relation_id}`;
+                  const done = worked.has(k);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => toggleWorked(k)}
+                      className="mt-1 block text-left text-[11px] text-neutral-500 hover:text-neutral-900"
+                      style={done ? { textDecoration: "line-through", opacity: 0.5 } : undefined}
+                      title="Cliquer pour marquer comme travaillé"
+                    >
+                      Niveaux shamaniques bloqués : <strong>{r.niveau_shamanique_bloques}</strong>{done ? " ✓" : ""}
+                    </button>
+                  );
+                })()}
                 {r.categories.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {r.categories.map((c) => (
-                      <span key={c} className="rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-medium text-rose-700">
-                        {c}
-                      </span>
-                    ))}
+                    {r.categories.map((c) => {
+                      const k = `cat:${r.relation_id}:${c}`;
+                      const done = worked.has(k);
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => toggleWorked(k)}
+                          className={
+                            "rounded-full px-2 py-0.5 text-[9px] font-medium transition " +
+                            (done
+                              ? "bg-green-100 text-green-700 line-through"
+                              : "bg-rose-50 text-rose-700 hover:bg-rose-100")
+                          }
+                          title="Cliquer pour marquer comme travaillé"
+                        >
+                          {c}{done ? " ✓" : ""}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </article>
@@ -153,25 +189,36 @@ export default function AuditEntitesPage() {
         <div className="overflow-x-auto rounded-xl border bg-white p-4 shadow-sm">
           {DIMENSIONS.filter((d) => d.chakras.length > 0).map((dim) => (
             <div key={dim.id} className="mb-3">
-              <p className="mb-1 text-[10px] font-bold text-neutral-500">{dim.name}</p>
+              <button
+                type="button"
+                onClick={() => dim.chakras.forEach((ck) => toggleWorked(`chakra:${dim.id}:${ck}`))}
+                className="mb-1 block text-left text-[10px] font-bold text-neutral-500 hover:text-blue-700"
+                title="Cliquer la dimension : basculer tous ses chakras (travaillé)"
+              >
+                {dim.name}
+              </button>
               <div className="flex flex-wrap gap-1.5">
                 {dim.chakras.map((ck) => {
-                  const cleaned = data.chakras.some(
+                  const k = `chakra:${dim.id}:${ck}`;
+                  const cleanedDb = data.chakras.some(
                     (sc) => sc.chakra_key === String(ck) && sc.cleaned,
                   );
+                  const cleaned = cleanedDb || worked.has(k);
                   return (
-                    <div
+                    <button
                       key={ck}
-                      className="flex h-9 min-w-[70px] items-center justify-center rounded-lg border text-[10px] font-mono font-bold"
+                      type="button"
+                      onClick={() => toggleWorked(k)}
+                      className="flex h-9 min-w-[70px] items-center justify-center rounded-lg border text-[10px] font-mono font-bold transition"
                       style={{
                         backgroundColor: cleaned ? "#DCFCE7" : "#F5F5F5",
                         borderColor: cleaned ? "#16A34A" : "#E5E5E5",
                         color: cleaned ? "#166534" : "#A3A3A3",
                       }}
-                      title={`C${ck} — ${CHAKRA_NAMES[ck] ?? ""}`}
+                      title={`C${ck} — ${CHAKRA_NAMES[ck] ?? ""} (cliquer = travaillé)`}
                     >
                       C{ck}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -204,10 +251,20 @@ export default function AuditEntitesPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.scores.map((s) => (
-                  <tr key={s.session_id} className="border-b last:border-0 hover:bg-neutral-50">
-                    <td className="px-3 py-2 font-mono text-neutral-400">
-                      {s.session_id.slice(0, 8)}
+                {data.scores.map((s) => {
+                  const k = `session:${s.session_id}`;
+                  const open = worked.has(k);
+                  return (
+                  <tr key={s.session_id} className={"border-b last:border-0 " + (open ? "bg-amber-50" : "hover:bg-neutral-50")}>
+                    <td className="px-3 py-2 font-mono">
+                      <button
+                        type="button"
+                        onClick={() => toggleWorked(k)}
+                        className="text-blue-700 hover:underline"
+                        title="Cliquer : id complet de la session + marquer SLA vérifié"
+                      >
+                        {open ? s.session_id : s.session_id.slice(0, 8)}{open ? " · ✓ vérifié" : ""}
+                      </button>
                     </td>
                     <ScoreCell value={s.sla} seuil={78} />
                     <ScoreCell value={s.slsa} seuil={32} />
@@ -218,7 +275,8 @@ export default function AuditEntitesPage() {
                     <ScoreCell value={s.slsa_s5} />
                     <ScoreCell value={s.slm} seuil={100} />
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -319,16 +377,23 @@ export default function AuditEntitesPage() {
 
 // ── Composants utilitaires ──
 
-function KpiCard({ label, value, color }: { label: string; value: number; color: string }) {
+function KpiCard({ label, initial, color }: { label: string; initial: number; color: string }) {
+  // Saisissable localement (override de travail, pas de persistance DB).
+  const [val, setVal] = useState<string>(String(initial));
   return (
     <article
       className="rounded-xl border bg-white p-4 shadow-sm"
       style={{ borderLeftWidth: 4, borderLeftColor: color }}
     >
       <p className="text-[11px] text-neutral-500">{label}</p>
-      <p className="font-mono text-2xl font-extrabold" style={{ color }}>
-        {value}
-      </p>
+      <input
+        type="number"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        className="w-full bg-transparent font-mono text-2xl font-extrabold outline-none"
+        style={{ color }}
+        aria-label={`Saisir ${label}`}
+      />
     </article>
   );
 }
