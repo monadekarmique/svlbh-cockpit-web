@@ -5,7 +5,7 @@
 // session_chakra, lineage_vibrational_signatures depuis Supabase.
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   DIMENSIONS,
@@ -29,6 +29,8 @@ export default function AuditEntitesPage() {
   // État de travail LOCAL (pas de persistance DB) : marque NSB / catégories
   // comme « travaillées » pendant la session.
   const [worked, setWorked] = useState<Set<string>>(new Set());
+  // Payloads de session chargés à la demande (clic sur l'id session) — local.
+  const [payloads, setPayloads] = useState<Record<string, unknown>>({});
   function toggleWorked(key: string) {
     setWorked((prev) => {
       const next = new Set(prev);
@@ -36,6 +38,31 @@ export default function AuditEntitesPage() {
       else next.add(key);
       return next;
     });
+  }
+  async function openSession(sessionId: string, scoresRow: unknown) {
+    const k = `session:${sessionId}`;
+    const willOpen = !worked.has(k);
+    toggleWorked(k);
+    if (willOpen && !(sessionId in payloads)) {
+      setPayloads((p) => ({ ...p, [sessionId]: "loading" }));
+      try {
+        const sb = supaClient();
+        const { data: row, error } = await sb
+          .from("session")
+          .select("*")
+          .eq("session_id", sessionId)
+          .maybeSingle();
+        setPayloads((p) => ({
+          ...p,
+          [sessionId]: { session: error ? `erreur: ${error.message}` : row, scores: scoresRow },
+        }));
+      } catch (e) {
+        setPayloads((p) => ({
+          ...p,
+          [sessionId]: { error: e instanceof Error ? e.message : String(e), scores: scoresRow },
+        }));
+      }
+    }
   }
 
   useEffect(() => {
@@ -254,16 +281,18 @@ export default function AuditEntitesPage() {
                 {data.scores.map((s) => {
                   const k = `session:${s.session_id}`;
                   const open = worked.has(k);
+                  const payload = payloads[s.session_id];
                   return (
-                  <tr key={s.session_id} className={"border-b last:border-0 " + (open ? "bg-amber-50" : "hover:bg-neutral-50")}>
+                  <Fragment key={s.session_id}>
+                  <tr className={"border-b " + (open ? "border-amber-200 bg-amber-50" : "last:border-0 hover:bg-neutral-50")}>
                     <td className="px-3 py-2 font-mono">
                       <button
                         type="button"
-                        onClick={() => toggleWorked(k)}
+                        onClick={() => openSession(s.session_id, s)}
                         className="text-blue-700 hover:underline"
-                        title="Cliquer : id complet de la session + marquer SLA vérifié"
+                        title="Cliquer : voir le payload complet de la session"
                       >
-                        {open ? s.session_id : s.session_id.slice(0, 8)}{open ? " · ✓ vérifié" : ""}
+                        {open ? `${s.session_id} ▾` : `${s.session_id.slice(0, 8)} ▸`}
                       </button>
                     </td>
                     <ScoreCell value={s.sla} seuil={78} />
@@ -275,6 +304,23 @@ export default function AuditEntitesPage() {
                     <ScoreCell value={s.slsa_s5} />
                     <ScoreCell value={s.slm} seuil={100} />
                   </tr>
+                  {open && (
+                    <tr className="border-b border-amber-200 bg-amber-50">
+                      <td colSpan={9} className="px-3 pb-3">
+                        <div className="text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                          Payload session
+                        </div>
+                        <pre className="mt-1 max-h-96 overflow-auto rounded-lg bg-neutral-900 p-3 text-[10px] leading-relaxed text-emerald-200">
+{payload === "loading"
+  ? "Chargement du payload…"
+  : payload === undefined
+  ? "—"
+  : JSON.stringify(payload, null, 2)}
+                        </pre>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                   );
                 })}
               </tbody>
