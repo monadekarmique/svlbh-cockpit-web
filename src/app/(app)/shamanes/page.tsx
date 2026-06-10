@@ -42,6 +42,19 @@ import { setFeltCount, toggleFeltLike } from "./felt-actions";
 
 const WHATSAPP_CERCLE_HREF = "https://wa.me/41799302800";
 
+// Catégories de soins du Cercle de Lumière — glossaire affiché en tête de la
+// section "Soins en commun". Extensible : ajouter une entrée ici. DEC Patrick 2026-06-10.
+const SOIN_CATEGORIES: ReadonlyArray<{ term: string; description?: string }> = [
+  {
+    term: "Présence de mémoires non actualisées",
+    description:
+      "demande de soin reçue d'ancêtres décédés qui ont besoin de libérer leurs consciences pour augmenter leur vibration.",
+  },
+  { term: "Proche torpillant" },
+  { term: "Proche aidant" },
+  { term: "Conversations avec les mémoires invisibles ICD-11 accumulées" },
+];
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -489,6 +502,17 @@ export default async function ShamanesPage() {
         <h2 className="text-base font-semibold text-emerald-900">
           🌿 Soins en commun des thérapeutes du Cercle de Lumière ({soinsCommuns.length})
         </h2>
+        <p className="text-xs italic text-emerald-800/80">
+          Des personnes qui s&apos;appuient sur des énergies mystérieuses pour soigner des corps et des Âmes.
+        </p>
+        <ul className="space-y-1 text-xs text-emerald-800/80">
+          {SOIN_CATEGORIES.map((c) => (
+            <li key={c.term}>
+              <strong className="font-semibold">{c.term}{c.description ? " :" : ""}</strong>
+              {c.description ? ` ${c.description}` : null}
+            </li>
+          ))}
+        </ul>
         <SoinsCommunsList
           items={soinsCommuns as SoinCommun[]}
           allTherapeutes={therapeutes.map((t) => ({
