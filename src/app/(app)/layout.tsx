@@ -9,6 +9,7 @@ import { SupportRealtimeNotifier } from "@/components/support-realtime-notifier"
 import { autoRelinkProfile } from "@/lib/auto-relink-profile";
 import { ExternalAppLink } from "@/components/external-app-link";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { IdInspectorToggle } from "@/components/id-inspector";
 import { version as appVersion } from "../../../package.json";
 
 // DEC Patrick 2026-05-12 — doctrine ST. Cockpit accessible à ST3+ (Certifiée
@@ -132,6 +133,7 @@ export default async function CockpitLayout({
               title="Ouvrir priv.svlbh.com (PWA Priv-1)"
             />
             <CockpitNav groups={groupedNav({ includeOwner: isOwner })} />
+            {isOwner && <IdInspectorToggle />}
             <span className="text-neutral-400">·</span>
             <span
               className="hidden font-mono text-[10px] text-neutral-400 sm:inline"

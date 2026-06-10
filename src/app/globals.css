@@ -43,3 +43,22 @@ body {
     page-break-inside: avoid;
   }
 }
+
+/* ST6 — inspecteur d'IDs Supabase (toggle header « 🔢 IDs »). Caché par défaut. */
+.svid {
+  display: none;
+}
+body[data-show-ids] .svid {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: #eef2ff;
+  color: #6366f1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  line-height: 1.5;
+  vertical-align: middle;
+  user-select: all;
+  cursor: text;
+}

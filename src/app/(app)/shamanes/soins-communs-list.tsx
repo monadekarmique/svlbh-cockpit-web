@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 import { addContributorsToSoin } from "./soin-contribs-actions";
+import { SupabaseId } from "@/components/supabase-id";
 
 export type SoinCommun = {
   kind: "relation" | "energie";
@@ -96,6 +97,8 @@ function SoinItem({
             </span>
           );
         })()}
+        <SupabaseId id={item.ref_id} label={item.kind} />
+        <SupabaseId id={item.owner_svlbh_id} label="owner" />
         {item.kind === "relation" && item.relation_state ? (
           <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700">
             {item.relation_state}
@@ -131,6 +134,7 @@ function SoinItem({
               {c.code_praticien != null ? (
                 <span className="font-mono opacity-60">#{String(c.code_praticien).padStart(5, "0")}</span>
               ) : null}
+              <SupabaseId id={c.svlbh_id} />
             </span>
           ))}
           {canEdit ? (
