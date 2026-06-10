@@ -10,6 +10,7 @@ import { autoRelinkProfile } from "@/lib/auto-relink-profile";
 import { ExternalAppLink } from "@/components/external-app-link";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { IdInspectorToggle } from "@/components/id-inspector";
+import { NumberInputSelectAll } from "@/components/number-input-select-all";
 import { version as appVersion } from "../../../package.json";
 
 // DEC Patrick 2026-05-12 — doctrine ST. Cockpit accessible à ST3+ (Certifiée
@@ -99,6 +100,7 @@ export default async function CockpitLayout({
 
   return (
     <div className="min-h-dvh bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <NumberInputSelectAll />
       {showSupportNotifier && (
         <SupportRealtimeNotifier selfSvlbhId={navProfile?.svlbh_id ?? null} />
       )}

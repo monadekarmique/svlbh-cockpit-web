@@ -395,6 +395,7 @@ function KpiCard({ label, initial, color }: { label: string; initial: number; co
         type="number"
         value={val}
         onChange={(e) => setVal(e.target.value)}
+        onFocus={(e) => e.currentTarget.select()}
         className="w-full bg-transparent font-mono text-2xl font-extrabold outline-none"
         style={{ color }}
         aria-label={`Saisir ${label}`}
