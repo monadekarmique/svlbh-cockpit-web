@@ -75,45 +75,6 @@ export default async function RoutinesPage() {
             />
           </section>
 
-          <section className="space-y-2">
-            <h2 className="text-base font-semibold text-blue-900">
-              Certifiées ({checks.certifiees.length})
-            </h2>
-            <ul className="space-y-2">
-              {checks.certifiees.map((q) => (
-                <li
-                  key={q.id}
-                  className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm"
-                >
-                  <span className="text-xl">{q.indicateur}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-neutral-900">{q.nom}</p>
-                    <p className="font-mono text-[11px] text-neutral-500">
-                      Code {q.id}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-mono text-base font-bold text-blue-900 tabular-nums">
-                      {q.compteur} / {q.max}
-                    </p>
-                    <p className="text-[11px] text-neutral-500">
-                      Quota libre :{" "}
-                      <span
-                        className={
-                          q.quotaLibre >= 0
-                            ? "font-bold text-emerald-700"
-                            : "font-bold text-rose-700"
-                        }
-                      >
-                        {q.quotaLibre}
-                      </span>
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-
           {checks.patrick ? (
             <section className="rounded-xl border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-violet-50 p-4 shadow-sm">
               <h2 className="text-sm font-bold text-purple-900">
