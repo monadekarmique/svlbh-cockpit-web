@@ -20,11 +20,23 @@ const PLATON_SOLIDS = [
 
 type PlatonSolidId = (typeof PLATON_SOLIDS)[number]["id"];
 
+const AUTRES_NOMS_TYPES = [
+  "Autre nom", "Nom à double canon", "Nom d'adoption", "Nom de famille",
+  "Nom de naissance", "Nom de scène", "Nom famille de fécondation adultère caché",
+  "Nom marital", "Nom officiel", "Nom professionnel", "Nom religieux",
+  "Surnom", "Titre", "Variation du nom",
+] as const;
+
+type AutreNom = { id: string; type: string; value: string };
+type CardMedia = { id: string; url: string; title: string; order: number };
+
 type LocalCard = {
   id: string;
   template: RelationCardTemplate;
   niveau: number; // freely editable; drives canvas row position
   xOrder: number; // horizontal sort order within a niveau band
+  autresNoms: AutreNom[];
+  medias: CardMedia[];
   purpose: string;
   state: string;
   sla: number | null;
@@ -217,6 +229,229 @@ function bezierPath(
   const y2 = lower.cy - CARD_SZ / 2;
   const my = (y1 + y2) / 2;
   return `M ${upper.cx} ${y1} C ${upper.cx} ${my}, ${lower.cx} ${my}, ${lower.cx} ${y2}`;
+}
+
+// ── Edit Person Panel ──────────────────────────────────────────────────────
+
+function EditPersonPanel({
+  card,
+  onUpdate,
+  sectionBg,
+  inputBg,
+  textColor,
+}: {
+  card: LocalCard;
+  onUpdate: (updates: Partial<LocalCard>) => void;
+  sectionBg: string;
+  inputBg: string;
+  textColor: string;
+}) {
+  const [diaporamaIdx, setDiaporamaIdx] = useState<number | null>(null);
+
+  // ── Autres noms ──
+  const addAutreNom = () =>
+    onUpdate({
+      autresNoms: [
+        ...card.autresNoms,
+        { id: `nom-${Date.now()}`, type: AUTRES_NOMS_TYPES[0], value: "" },
+      ],
+    });
+
+  const updateAutreNom = (id: string, field: "type" | "value", val: string) =>
+    onUpdate({
+      autresNoms: card.autresNoms.map((n) =>
+        n.id === id ? { ...n, [field]: val } : n,
+      ),
+    });
+
+  const removeAutreNom = (id: string) =>
+    onUpdate({ autresNoms: card.autresNoms.filter((n) => n.id !== id) });
+
+  // ── Médias ──
+  const addMedia = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    const newMedias = files.map((f, i) => ({
+      id: `media-${Date.now()}-${i}`,
+      url: URL.createObjectURL(f),
+      title: f.name.replace(/\.[^.]+$/, ""),
+      order: card.medias.length + i,
+    }));
+    onUpdate({ medias: [...card.medias, ...newMedias] });
+    e.target.value = "";
+  };
+
+  const removeMedia = (id: string) =>
+    onUpdate({ medias: card.medias.filter((m) => m.id !== id) });
+
+  const moveMedia = (id: string, dir: "left" | "right") => {
+    const sorted = [...card.medias].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex((m) => m.id === id);
+    const swapIdx = dir === "left" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const a = sorted[idx], b = sorted[swapIdx];
+    onUpdate({
+      medias: card.medias.map((m) => {
+        if (m.id === a.id) return { ...m, order: b.order };
+        if (m.id === b.id) return { ...m, order: a.order };
+        return m;
+      }),
+    });
+  };
+
+  const sortedMedias = [...card.medias].sort((a, b) => a.order - b.order);
+
+  return (
+    <>
+      {/* Autres noms */}
+      <div className="mt-4 rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
+        <p className="mb-2 flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
+          <span className="flex h-5 w-5 items-center justify-center rounded bg-blue-500 text-[10px]">👤+</span>
+          Autres noms ({card.autresNoms.length})
+        </p>
+        <div className="space-y-2">
+          {card.autresNoms.map((n) => (
+            <div key={n.id} className="rounded p-2" style={{ backgroundColor: inputBg }}>
+              <div className="mb-1 flex items-center gap-1">
+                <select
+                  value={n.type}
+                  onChange={(e) => updateAutreNom(n.id, "type", e.target.value)}
+                  className="flex-1 rounded px-1.5 py-0.5 text-[10px]"
+                  style={{ backgroundColor: darken(inputBg, 0.1), color: textColor }}
+                >
+                  {AUTRES_NOMS_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => removeAutreNom(n.id)}
+                  className="text-red-400 hover:text-red-300 text-xs px-1"
+                >✕</button>
+              </div>
+              <input
+                type="text"
+                value={n.value}
+                onChange={(e) => updateAutreNom(n.id, "value", e.target.value)}
+                placeholder="Valeur…"
+                className="w-full rounded px-2 py-1 text-xs"
+                style={{ backgroundColor: darken(inputBg, 0.08), color: textColor }}
+              />
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={addAutreNom}
+          className="mt-2 w-full rounded py-1 text-[10px] text-cyan-300 transition hover:brightness-110"
+          style={{ backgroundColor: inputBg }}
+        >
+          + Ajouter un nom
+        </button>
+      </div>
+
+      {/* Médias */}
+      <div className="mt-4 rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
+            <span className="flex h-5 w-5 items-center justify-center rounded bg-blue-500 text-[10px]">🖼</span>
+            Médias ({card.medias.length})
+          </p>
+          <div className="flex gap-1">
+            {sortedMedias.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setDiaporamaIdx(0)}
+                className="rounded px-2 py-0.5 text-[9px] transition hover:brightness-110"
+                style={{ backgroundColor: inputBg, color: textColor }}
+              >
+                ▶ Diaporama
+              </button>
+            )}
+            <label className="cursor-pointer rounded px-2 py-0.5 text-[9px] text-cyan-300 transition hover:brightness-110"
+              style={{ backgroundColor: inputBg }}>
+              + Ajouter
+              <input type="file" accept="image/*" multiple className="hidden" onChange={addMedia} />
+            </label>
+          </div>
+        </div>
+
+        {sortedMedias.length === 0 ? (
+          <p className="py-4 text-center text-[10px]" style={{ color: textColor, opacity: 0.4 }}>
+            Aucun média — cliquez + Ajouter
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5">
+            {sortedMedias.map((m, i) => (
+              <div key={m.id} className="group relative rounded overflow-hidden"
+                style={{ backgroundColor: darken(inputBg, 0.1) }}>
+                <img
+                  src={m.url}
+                  alt={m.title}
+                  className="h-20 w-full object-cover"
+                />
+                {/* Overlay controls */}
+                <div className="absolute inset-0 flex flex-col justify-between p-1 opacity-0 transition group-hover:opacity-100"
+                  style={{ background: "rgba(0,0,0,0.55)" }}>
+                  <div className="flex justify-end">
+                    <button type="button" onClick={() => removeMedia(m.id)}
+                      className="rounded bg-red-700/80 px-1 text-[9px] text-white">✕</button>
+                  </div>
+                  <div>
+                    <p className="truncate text-[8px] text-white">{m.title}</p>
+                    <div className="mt-0.5 flex gap-0.5">
+                      <button type="button" onClick={() => moveMedia(m.id, "left")}
+                        disabled={i === 0}
+                        className="rounded bg-white/20 px-1.5 text-[9px] text-white disabled:opacity-30">←</button>
+                      <button type="button" onClick={() => moveMedia(m.id, "right")}
+                        disabled={i === sortedMedias.length - 1}
+                        className="rounded bg-white/20 px-1.5 text-[9px] text-white disabled:opacity-30">→</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Diaporama overlay */}
+      {diaporamaIdx !== null && sortedMedias[diaporamaIdx] && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.92)" }}
+          onClick={() => setDiaporamaIdx(null)}
+        >
+          <img
+            src={sortedMedias[diaporamaIdx].url}
+            alt={sortedMedias[diaporamaIdx].title}
+            className="max-h-[80vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <p className="mt-3 text-sm text-white/70">{sortedMedias[diaporamaIdx].title}</p>
+          <div className="mt-4 flex items-center gap-4">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setDiaporamaIdx((i) => Math.max(0, (i ?? 0) - 1)); }}
+              disabled={diaporamaIdx === 0}
+              className="rounded-full bg-white/10 px-4 py-2 text-white transition hover:bg-white/20 disabled:opacity-30"
+            >←</button>
+            <span className="text-xs text-white/50">{diaporamaIdx + 1} / {sortedMedias.length}</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setDiaporamaIdx((i) => Math.min(sortedMedias.length - 1, (i ?? 0) + 1)); }}
+              disabled={diaporamaIdx === sortedMedias.length - 1}
+              className="rounded-full bg-white/10 px-4 py-2 text-white transition hover:bg-white/20 disabled:opacity-30"
+            >→</button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDiaporamaIdx(null)}
+            className="mt-4 text-xs text-white/40 hover:text-white/70"
+          >Fermer le diaporama</button>
+        </div>
+      )}
+    </>
+  );
 }
 
 // ── Sephiroth Tree overlay ─────────────────────────────────────────────────
@@ -504,6 +739,7 @@ export function FamilyCanvas() {
   const [addProcheOpen, setAddProcheOpen] = useState(false);
   const [openConnId, setOpenConnId] = useState<string | null>(null);
   const [showSephiroth, setShowSephiroth] = useState(false);
+  const [editPersonOpen, setEditPersonOpen] = useState(false);
 
   const textColor = useMemo(() => textOnColor(canvasColor), [canvasColor]);
   const sectionBg = useMemo(() => darken(canvasColor, 0.18), [canvasColor]);
@@ -533,6 +769,8 @@ export function FamilyCanvas() {
         sexe: tpl.gender,
         shape: tpl.gender === "F" ? "circle" : "cube",
         evenements: [],
+        autresNoms: [],
+        medias: [],
       };
       const newConns: Connection[] = [];
       const mkConn = (a: string, b: string): Connection => ({
@@ -571,6 +809,7 @@ export function FamilyCanvas() {
 
   const toggleCard = useCallback((cardId: string) => {
     setOpenCardId((prev) => (prev === cardId ? null : cardId));
+    setEditPersonOpen(false);
   }, []);
 
   const updateCard = useCallback((cardId: string, updates: Partial<LocalCard>) => {
@@ -955,8 +1194,11 @@ export function FamilyCanvas() {
                 <UserPlus className="h-5 w-5" />
                 Ajouter co-acteurs
               </button>
-              <button className="flex flex-col items-center gap-1 rounded-lg p-2 text-[10px] text-cyan-300 transition hover:brightness-110"
-                style={{ backgroundColor: inputBg }}>
+              <button
+                onClick={() => setEditPersonOpen((v) => !v)}
+                className="flex flex-col items-center gap-1 rounded-lg p-2 text-[10px] text-cyan-300 transition hover:brightness-110"
+                style={{ backgroundColor: editPersonOpen ? darken(inputBg, 0.1) : inputBg }}
+              >
                 <Pencil className="h-5 w-5" />
                 Éditer la personne
               </button>
@@ -1164,6 +1406,17 @@ export function FamilyCanvas() {
               + Ajouter un événement
             </button>
           </div>
+
+          {/* Autres noms + Médias (mode édition) */}
+          {editPersonOpen && (
+            <EditPersonPanel
+              card={openCard}
+              onUpdate={(updates) => updateCard(openCard.id, updates)}
+              sectionBg={sectionBg}
+              inputBg={inputBg}
+              textColor={textColor}
+            />
+          )}
 
           <button
             onClick={() => setOpenCardId(null)}
