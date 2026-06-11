@@ -95,7 +95,24 @@ type LocalCard = {
   layer: string; // id du calque (GraphLayer) — "F" par défaut
   favori?: boolean;
   attachments?: CardAttachment[];
+  /** Position libre (drag & drop) — prioritaire sur le layout par niveaux */
+  pos?: { x: number; y: number } | null;
 };
+
+// Rose des Vents — 16 directions (sens horaire depuis le Nord), même
+// sémantique que fiche_consultante (azimut radi du lien).
+const ROSE_DIRECTIONS = [
+  "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+  "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO",
+] as const;
+
+function azimutOf(from: { cx: number; cy: number }, to: { cx: number; cy: number }): { deg: number; dir: string } {
+  // 0° = Nord (vers le haut du canvas), sens horaire
+  const deg = (Math.atan2(to.cx - from.cx, -(to.cy - from.cy)) * 180) / Math.PI;
+  const norm = (deg + 360) % 360;
+  const idx = Math.round(norm / 22.5) % 16;
+  return { deg: Math.round(norm * 10) / 10, dir: ROSE_DIRECTIONS[idx] };
+}
 
 // Modes de la page (façon MacFamilyTree) — DEC Patrick 2026-06-11.
 const PAGE_MODES = [
@@ -132,6 +149,9 @@ type Connection = {
   slpmo: number | null;
   slm: number | null;
   token: string;    // free-text access token / label
+  /** Azimut Rose des Vents du lien (a → b), ex. "NNO" / 337.5° */
+  azimut?: string;
+  azimutDeg?: number;
 };
 
 // Co-acteur categories for the "Ajouter des co-acteurs" panel
@@ -1177,6 +1197,7 @@ function RelationsPane({ cards, connections, onOpen }: {
         <thead className="bg-neutral-50 text-[10px] uppercase tracking-wider text-neutral-400">
           <tr>
             <th className="px-3 py-2">Relation</th>
+            <th className="px-3 py-2">🧭 Azimut</th>
             <th className="px-3 py-2">SLA</th>
             <th className="px-3 py-2">SLSA</th>
             <th className="px-3 py-2">SLPMO</th>
@@ -1195,6 +1216,7 @@ function RelationsPane({ cards, connections, onOpen }: {
                 <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: conn.color }} />
                 {nameOf(conn.a)} ↔ {nameOf(conn.b)}
               </td>
+              <td className="px-3 py-2">{conn.azimut ? `${conn.azimut}${conn.azimutDeg != null ? ` · ${conn.azimutDeg}°` : ""}` : "—"}</td>
               <td className="px-3 py-2">{conn.sla ?? "—"}</td>
               <td className="px-3 py-2">{conn.slsa ?? "—"}</td>
               <td className="px-3 py-2">{conn.slpmo ?? "—"}</td>
@@ -1416,6 +1438,11 @@ export function FamilyCanvas() {
   // Mode de la page (Favoris / Personnes / Relations / Famille / Monade)
   const [pageMode, setPageMode] = useState<PageMode>("famille");
 
+  // Lien Rose des Vents : carte source en attente de cible
+  const [linkFrom, setLinkFrom] = useState<string | null>(null);
+  // Drag & drop tactile des co-acteurs (iPhone/iPad + souris)
+  const dragRef = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null);
+
   const toggleFavori = useCallback((id: string) => {
     setCards((prev) => prev.map((c) => (c.id === id ? { ...c, favori: !c.favori } : c)));
   }, []);
@@ -1445,6 +1472,15 @@ export function FamilyCanvas() {
   const inputBg = useMemo(() => darken(canvasColor, 0.28), [canvasColor]);
 
   const layout = useMemo(() => computeLayout(cards), [cards]);
+
+  // Positions effectives : pos libre (drag & drop) prioritaire sur le layout
+  const effPositions = useMemo(() => {
+    const m = new Map(layout.positions);
+    for (const c of cards) {
+      if (c.pos) m.set(c.id, { cx: c.pos.x, cy: c.pos.y });
+    }
+    return m;
+  }, [layout, cards]);
 
   const refreshGraphList = useCallback(async () => {
     const sb = createClient();
@@ -1848,6 +1884,28 @@ export function FamilyCanvas() {
           <span className="text-[10px] text-neutral-400">nouvelle carte → calque actif</span>
         </div>
 
+      {/* Bandeau mode lien Rose des Vents */}
+      {linkFrom && (
+        <div className="flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs text-violet-800">
+          <span>🧭 Rose des Vents — touche la carte à relier depuis{" "}
+            <strong>
+              {(() => {
+                const c = cards.find((x) => x.id === linkFrom);
+                return c ? (c.prenom || c.template.name) : "?";
+              })()}
+            </strong>
+            {" "}(l&apos;azimut du lien sera calculé)
+          </span>
+          <button
+            type="button"
+            onClick={() => setLinkFrom(null)}
+            className="ml-auto rounded border border-violet-300 bg-white px-2 py-0.5 text-[11px] hover:bg-violet-100"
+          >
+            ✕ Annuler
+          </button>
+        </div>
+      )}
+
       {/* Canvas — scale-to-fit sur petit écran (iPhone), pleine taille sinon */}
       <div ref={canvasWrapRef} className="overflow-x-auto rounded-xl border border-neutral-200">
         <div
@@ -1918,8 +1976,8 @@ export function FamilyCanvas() {
             height={layout.canvasH}
           >
             {connections.map((conn) => {
-              const aPos = layout.positions.get(conn.a);
-              const bPos = layout.positions.get(conn.b);
+              const aPos = effPositions.get(conn.a);
+              const bPos = effPositions.get(conn.b);
               if (!aPos || !bPos) return null;
               const isSelected = conn.id === openConnId;
               // Visibilité/translucidité héritées des calques des extrémités
@@ -1960,14 +2018,64 @@ export function FamilyCanvas() {
                       setOpenCardId(null);
                     }}
                   />
+                  {/* Azimut Rose des Vents sur le lien sélectionné */}
+                  {isSelected && conn.azimut && (
+                    <text
+                      x={(aPos.cx + bPos.cx) / 2}
+                      y={(aPos.cy + bPos.cy) / 2 - 8}
+                      fontSize={10}
+                      fontWeight={700}
+                      fill={conn.color}
+                      textAnchor="middle"
+                      style={{ pointerEvents: "none" }}
+                    >
+                      🧭 {conn.azimut}{conn.azimutDeg != null ? ` · ${conn.azimutDeg}°` : ""}
+                    </text>
+                  )}
                 </g>
               );
             })}
           </svg>
 
+          {/* Rose des Vents autour de la carte source en mode lien */}
+          {linkFrom && (() => {
+            const p = effPositions.get(linkFrom);
+            if (!p) return null;
+            const R = 86;
+            return (
+              <div
+                className="pointer-events-none absolute"
+                style={{ left: p.cx - R, top: p.cy - R, width: R * 2, height: R * 2, zIndex: 40 }}
+              >
+                <svg width={R * 2} height={R * 2}>
+                  <circle cx={R} cy={R} r={R - 14} fill="none" stroke="#7C3AED" strokeWidth={1.2} strokeDasharray="3 3" opacity={0.9} />
+                  {ROSE_DIRECTIONS.map((dir, i) => {
+                    const ang = (i * 22.5 - 90) * (Math.PI / 180);
+                    const x1 = R + Math.cos(ang) * (R - 26);
+                    const y1 = R + Math.sin(ang) * (R - 26);
+                    const x2 = R + Math.cos(ang) * (R - 14);
+                    const y2 = R + Math.sin(ang) * (R - 14);
+                    const lx = R + Math.cos(ang) * (R - 5);
+                    const ly = R + Math.sin(ang) * (R - 5);
+                    return (
+                      <g key={dir}>
+                        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#7C3AED" strokeWidth={i % 4 === 0 ? 2 : 1} />
+                        {i % 2 === 0 && (
+                          <text x={lx} y={ly} fontSize={7} fontWeight={700} fill="#7C3AED" textAnchor="middle" dominantBaseline="middle">
+                            {dir}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+            );
+          })()}
+
           {/* Cards */}
           {cards.map((card) => {
-            const pos = layout.positions.get(card.id);
+            const pos = effPositions.get(card.id);
             if (!pos) return null;
             const solid = PLATON_SOLIDS.find((s) => s.id === card.shape) ?? PLATON_SOLIDS[0];
             const isOpen = card.id === openCardId;
@@ -1982,10 +2090,50 @@ export function FamilyCanvas() {
             const isGlass = cardLayer.side === "M";
 
             return (
-              <button
+              <div
                 key={card.id}
-                type="button"
-                onClick={() => toggleCard(card.id)}
+                role="button"
+                tabIndex={0}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                  dragRef.current = { id: card.id, startX: e.clientX, startY: e.clientY, origX: pos.cx, origY: pos.cy, moved: false };
+                }}
+                onPointerMove={(e) => {
+                  const d = dragRef.current;
+                  if (!d || d.id !== card.id) return;
+                  const dx = (e.clientX - d.startX) / fitScale;
+                  const dy = (e.clientY - d.startY) / fitScale;
+                  if (!d.moved && Math.hypot(dx, dy) < 6) return;
+                  d.moved = true;
+                  setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, pos: { x: d.origX + dx, y: d.origY + dy } } : c)));
+                }}
+                onPointerUp={() => {
+                  const d = dragRef.current;
+                  dragRef.current = null;
+                  if (d && d.moved) return; // drag terminé, pas un tap
+                  if (linkFrom && linkFrom !== card.id) {
+                    // Cible du lien Rose des Vents
+                    const from = effPositions.get(linkFrom);
+                    const az = from ? azimutOf(from, pos) : null;
+                    setConnections((prev) => [
+                      ...prev,
+                      {
+                        id: `conn-${linkFrom}-${card.id}-${Date.now()}`,
+                        a: linkFrom,
+                        b: card.id,
+                        color: "#a289f0",
+                        sla: null, slsa: null, slpmo: null, slm: null,
+                        token: "",
+                        azimut: az?.dir,
+                        azimutDeg: az?.deg,
+                      },
+                    ]);
+                    setLinkFrom(null);
+                  } else {
+                    toggleCard(card.id);
+                  }
+                }}
                 className="absolute flex flex-col items-center transition-transform hover:scale-105"
                 style={{
                   left: pos.cx - CARD_SZ / 2 + glassOffset,
@@ -1994,11 +2142,12 @@ export function FamilyCanvas() {
                   background: "none",
                   border: "none",
                   padding: 0,
-                  cursor: "pointer",
+                  cursor: linkFrom && linkFrom !== card.id ? "crosshair" : "grab",
                   overflow: "visible",
                   transformOrigin: "center center",
                   opacity: isGlass ? cardLayer.opacity : 1,
                   zIndex: isGlass ? 20 + mIndex : 10,
+                  touchAction: "none",
                 }}
               >
                 {/* Shape container */}
@@ -2080,7 +2229,7 @@ export function FamilyCanvas() {
                 >
                   {card.state}
                 </p>
-              </button>
+              </div>
             );
           })}
 
@@ -2180,6 +2329,29 @@ export function FamilyCanvas() {
                 <option key={n} value={`M${n}`}>♂ Masculine {n}</option>
               ))}
             </select>
+          </div>
+
+          {/* Lier (Rose des Vents) + retour grille */}
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => { setLinkFrom(openCard.id); setOpenCardId(null); setPageMode("famille"); }}
+              className="rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-semibold text-white transition hover:bg-violet-700"
+              title="Créer un lien : touche ensuite la carte cible — l'azimut Rose des Vents est calculé"
+            >
+              🧭 Lier depuis cette carte
+            </button>
+            {openCard.pos && (
+              <button
+                type="button"
+                onClick={() => updateCard(openCard.id, { pos: null })}
+                className="rounded-full px-2.5 py-1 text-[10px] font-semibold transition hover:brightness-110"
+                style={{ backgroundColor: sectionBg, color: textColor }}
+                title="Replacer la carte sur la grille des niveaux"
+              >
+                ⌗ Replacer sur la grille
+              </button>
+            )}
           </div>
 
           {/* Relations de cette carte */}
