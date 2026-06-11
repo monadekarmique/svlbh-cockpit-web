@@ -97,6 +97,10 @@ type LocalCard = {
   attachments?: CardAttachment[];
   /** Position libre (drag & drop) — prioritaire sur le layout par niveaux */
   pos?: { x: number; y: number } | null;
+  /** Couleur du titre — l'une des 3 couleurs triadiques de l'entité */
+  titleColor?: string;
+  /** Couleur du solide de Platon — l'une des 3 couleurs triadiques */
+  shapeColor?: string;
 };
 
 // Rose des Vents — 16 directions (sens horaire depuis le Nord), même
@@ -105,6 +109,41 @@ const ROSE_DIRECTIONS = [
   "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
   "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO",
 ] as const;
+
+// Triade chromatique : teinte de base ±120° (titre du co-acteur — DEC Patrick)
+function rotateHue(hex: string, deg: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  let r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0;
+  const l = (max + min) / 2;
+  const d = max - min;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  if (d !== 0) {
+    if (max === r) h = 60 * (((g - b) / d) % 6);
+    else if (max === g) h = 60 * ((b - r) / d + 2);
+    else h = 60 * ((r - g) / d + 4);
+  }
+  h = (h + deg + 360) % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m2 = l - c / 2;
+  let rr = 0, gg = 0, bb = 0;
+  if (h < 60) { rr = c; gg = x; }
+  else if (h < 120) { rr = x; gg = c; }
+  else if (h < 180) { gg = c; bb = x; }
+  else if (h < 240) { gg = x; bb = c; }
+  else if (h < 300) { rr = x; bb = c; }
+  else { rr = c; bb = x; }
+  const toHex = (v: number) => Math.round((v + m2) * 255).toString(16).padStart(2, "0");
+  return `#${toHex(rr)}${toHex(gg)}${toHex(bb)}`.toUpperCase();
+}
+
+function triadOf(hex: string): [string, string, string] {
+  return [hex, rotateHue(hex, 120), rotateHue(hex, 240)];
+}
 
 function azimutOf(from: { cx: number; cy: number }, to: { cx: number; cy: number }): { deg: number; dir: string } {
   // 0° = Nord (vers le haut du canvas), sens horaire
@@ -2174,10 +2213,10 @@ export function FamilyCanvas() {
                       position: "absolute",
                       inset: 0,
                       borderRadius: isConsultante ? "50%" : 8,
-                      border: `2px ${isConsultante ? "dashed" : "solid"} ${card.template.color}`,
+                      border: `2px ${isConsultante ? "dashed" : "solid"} ${card.shapeColor ?? card.template.color}`,
                       boxShadow: isOpen
-                        ? `0 0 0 3px ${card.template.color}50, 0 0 18px ${card.template.color}30`
-                        : `0 0 8px ${card.template.color}20`,
+                        ? `0 0 0 3px ${card.shapeColor ?? card.template.color}50, 0 0 18px ${card.shapeColor ?? card.template.color}30`
+                        : `0 0 8px ${card.shapeColor ?? card.template.color}20`,
                     }}
                   />
                   {/* Inner clip-path fill */}
@@ -2186,7 +2225,7 @@ export function FamilyCanvas() {
                       position: "absolute",
                       inset: 8,
                       clipPath: solid.clipPath,
-                      backgroundColor: `${card.template.color}22`,
+                      backgroundColor: `${card.shapeColor ?? card.template.color}22`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -2207,8 +2246,8 @@ export function FamilyCanvas() {
                         marginLeft: -5,
                         marginTop: -5,
                         borderRadius: "50%",
-                        backgroundColor: card.template.color,
-                        boxShadow: `0 0 6px ${card.template.color}`,
+                        backgroundColor: card.shapeColor ?? card.template.color,
+                        boxShadow: `0 0 6px ${card.shapeColor ?? card.template.color}`,
                       }}
                     />
                   )}
@@ -2219,7 +2258,7 @@ export function FamilyCanvas() {
                 {/* Labels */}
                 <p
                   className="mt-1 truncate text-center text-[10px] font-semibold leading-tight"
-                  style={{ color: card.template.color, maxWidth: CARD_SZ + 24, marginLeft: -12 }}
+                  style={{ color: card.titleColor ?? card.template.color, maxWidth: CARD_SZ + 24, marginLeft: -12 }}
                 >
                   {card.prenom || card.template.name}
                 </p>
@@ -2329,6 +2368,53 @@ export function FamilyCanvas() {
                 <option key={n} value={`M${n}`}>♂ Masculine {n}</option>
               ))}
             </select>
+          </div>
+
+          {/* Couleur triadique du titre (ex. Père) */}
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: textColor, opacity: 0.55 }}>
+              Titre
+            </span>
+            {triadOf(openCard.template.color).map((hex, i) => {
+              const isActive = (openCard.titleColor ?? openCard.template.color).toUpperCase() === hex.toUpperCase();
+              return (
+                <button
+                  key={hex}
+                  type="button"
+                  onClick={() => updateCard(openCard.id, { titleColor: hex })}
+                  className={`h-6 w-6 rounded-full transition hover:scale-110 ${isActive ? "ring-2 ring-white ring-offset-1" : "ring-1 ring-black/20"}`}
+                  style={{ backgroundColor: hex }}
+                  title={`${["Base", "Triade +120°", "Triade +240°"][i]} — ${hex}`}
+                />
+              );
+            })}
+            <span className="truncate text-[10px] font-semibold" style={{ color: openCard.titleColor ?? openCard.template.color }}>
+              {openCard.prenom || openCard.template.name}
+            </span>
+          </div>
+
+          {/* Couleur triadique de la forme (solide de Platon) */}
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: textColor, opacity: 0.55 }}>
+              Forme
+            </span>
+            {triadOf(openCard.template.color).map((hex, i) => {
+              const isActive = (openCard.shapeColor ?? openCard.template.color).toUpperCase() === hex.toUpperCase();
+              return (
+                <button
+                  key={hex}
+                  type="button"
+                  onClick={() => updateCard(openCard.id, { shapeColor: hex })}
+                  className={`h-6 w-6 transition hover:scale-110 ${isActive ? "ring-2 ring-white ring-offset-1" : "ring-1 ring-black/20"}`}
+                  style={{
+                    backgroundColor: `${hex}33`,
+                    border: `2px solid ${hex}`,
+                    borderRadius: 6,
+                  }}
+                  title={`${["Base", "Triade +120°", "Triade +240°"][i]} — ${hex}`}
+                />
+              );
+            })}
           </div>
 
           {/* Lier (Rose des Vents) + retour grille */}
