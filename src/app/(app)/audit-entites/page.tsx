@@ -12,10 +12,16 @@ import {
   DIMENSIONS,
   CHAKRA_NAMES,
   RELATION_CATEGORIES,
+  RELATION_CARD_TEMPLATES,
   FAMILY_STRUCTURE_TEMPLATES,
+  PURPOSE_OPTIONS,
+  RELATION_STATE_OPTIONS,
   fetchAuditData,
   createFamilyStructure,
+  createRelationCard,
+  updateRelation,
   type AuditData,
+  type AuditRelation,
 } from "@/lib/cercle/audit-entites";
 
 function supaClient() {
@@ -232,7 +238,7 @@ export default function AuditEntitesPage() {
                       <Users className="h-4 w-4 shrink-0" style={{ color: t.color }} />
                       <div className="min-w-0">
                         <p className="font-medium text-neutral-900">{t.name}</p>
-                        <p className="truncate text-[10px] text-neutral-500">{t.description} ({t.relations.length})</p>
+                        <p className="truncate text-[10px] text-neutral-500">{t.description} ({t.cardIds.length})</p>
                       </div>
                     </button>
                   ))}

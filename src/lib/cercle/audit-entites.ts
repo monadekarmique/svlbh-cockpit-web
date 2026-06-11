@@ -63,101 +63,124 @@ export const RELATION_CATEGORIES = [
   "attachements à des systèmes qui aident des entités",
 ] as const;
 
-// ── Templates de structures familiales ──
+// ── Templates de cartes relationnelles (6 cartes de base) ──
 
-export type FamilyRelationTemplate = {
+export type RelationCardTemplate = {
+  id: string;
+  name: string;
   relation_type: string;
-  generation: number; // 1 = parents, 2 = grands-parents, 3 = arrière-grands-parents
-  lignee: "maternelle" | "paternelle" | "both";
-  default_purpose: string;
-  default_state: string;
+  generation: number; // 0 = consultante, 1 = parents, 2 = grands-parents, 3 = arrière-grands-parents
+  lignee: "consultante" | "maternelle" | "paternelle";
+  gender: "F" | "M";
+  color: string;
+  icon: string;
 };
+
+export const RELATION_CARD_TEMPLATES: RelationCardTemplate[] = [
+  { id: "consultante", name: "Consultante", relation_type: "consultante", generation: 0, lignee: "consultante", gender: "F", color: "#8B3A62", icon: "👤" },
+  { id: "pere", name: "Père", relation_type: "père", generation: 1, lignee: "paternelle", gender: "M", color: "#2196F3", icon: "👨" },
+  { id: "mere", name: "Mère", relation_type: "mère", generation: 1, lignee: "maternelle", gender: "F", color: "#E91E63", icon: "👩" },
+  { id: "grand-mere-paternelle", name: "Grand-mère paternelle", relation_type: "grand-mère paternelle", generation: 2, lignee: "paternelle", gender: "F", color: "#9C27B0", icon: "👵" },
+  { id: "grand-pere", name: "Grand-père", relation_type: "grand-père", generation: 2, lignee: "paternelle", gender: "M", color: "#3F51B5", icon: "👴" },
+  { id: "arriere-grand-mere-paternelle", name: "Arrière grand-mère paternelle", relation_type: "arrière-grand-mère paternelle", generation: 3, lignee: "paternelle", gender: "F", color: "#673AB7", icon: "👵" },
+];
+
+// ── Options pour les dropdowns ──
+
+export const PURPOSE_OPTIONS = [
+  { value: "soul_mission", label: "Mission d'âme" },
+  { value: "relation", label: "Relation" },
+  { value: "healing", label: "Guérison" },
+  { value: "karma", label: "Karma" },
+] as const;
+
+export const RELATION_STATE_OPTIONS = [
+  { value: "absente", label: "Absente" },
+  { value: "bloquée", label: "Bloquée" },
+  { value: "active", label: "Active" },
+  { value: "libérée", label: "Libérée" },
+] as const;
+
+// ── Structures familiales groupées (pour création batch) ──
 
 export type FamilyStructureTemplate = {
   id: string;
   name: string;
   description: string;
   color: string;
-  relations: FamilyRelationTemplate[];
+  cardIds: string[]; // références aux RELATION_CARD_TEMPLATES
 };
 
 export const FAMILY_STRUCTURE_TEMPLATES: FamilyStructureTemplate[] = [
   {
     id: "carte-mere",
     name: "Carte de la Mère",
-    description: "Lignée féminine 3 générations (Lfem)",
+    description: "Lignée féminine (Lfem)",
     color: "#E91E63",
-    relations: [
-      { relation_type: "mère", generation: 1, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "grand-mère maternelle", generation: 2, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "arrière-grand-mère maternelle", generation: 3, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-    ],
+    cardIds: ["mere"],
   },
   {
     id: "carte-pere",
     name: "Carte du Père",
-    description: "Lignée masculine 3 générations (Lmasc)",
+    description: "Lignée masculine (Lmasc)",
     color: "#2196F3",
-    relations: [
-      { relation_type: "père", generation: 1, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "grand-père paternel", generation: 2, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "arrière-grand-père paternel", generation: 3, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-    ],
+    cardIds: ["pere"],
   },
   {
     id: "carte-parents",
     name: "Parents G1",
-    description: "Père + Mère uniquement",
+    description: "Père + Mère",
     color: "#9C27B0",
-    relations: [
-      { relation_type: "mère", generation: 1, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "père", generation: 1, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-    ],
+    cardIds: ["pere", "mere"],
   },
   {
-    id: "carte-grands-parents",
-    name: "Grands-parents G2",
-    description: "4 grands-parents",
-    color: "#FF9800",
-    relations: [
-      { relation_type: "grand-mère maternelle", generation: 2, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "grand-père maternel", generation: 2, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "grand-mère paternelle", generation: 2, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "grand-père paternel", generation: 2, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-    ],
-  },
-  {
-    id: "carte-bilaterale-3g",
-    name: "Bilatérale complète 3G",
-    description: "Parents + 4 grands-parents + 8 arrière-grands-parents",
+    id: "carte-6-base",
+    name: "6 cartes de base",
+    description: "Consultante + Parents + GP + AGM",
     color: "#4CAF50",
-    relations: [
-      // G1
-      { relation_type: "mère", generation: 1, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "père", generation: 1, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-      // G2 maternelle
-      { relation_type: "grand-mère maternelle", generation: 2, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "grand-père maternel", generation: 2, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      // G2 paternelle
-      { relation_type: "grand-mère paternelle", generation: 2, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "grand-père paternel", generation: 2, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-      // G3 maternelle (côté mère de la mère)
-      { relation_type: "arrière-grand-mère maternelle (côté mère)", generation: 3, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "arrière-grand-père maternel (côté mère)", generation: 3, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      // G3 maternelle (côté père de la mère)
-      { relation_type: "arrière-grand-mère maternelle (côté père)", generation: 3, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "arrière-grand-père maternel (côté père)", generation: 3, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
-      // G3 paternelle (côté mère du père)
-      { relation_type: "arrière-grand-mère paternelle (côté mère)", generation: 3, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "arrière-grand-père paternel (côté mère)", generation: 3, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-      // G3 paternelle (côté père du père)
-      { relation_type: "arrière-grand-mère paternelle (côté père)", generation: 3, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-      { relation_type: "arrière-grand-père paternel (côté père)", generation: 3, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
-    ],
+    cardIds: ["consultante", "pere", "mere", "grand-mere-paternelle", "grand-pere", "arriere-grand-mere-paternelle"],
   },
 ];
 
-// ── Fonction pour créer une structure familiale ──
+// ── Fonction pour créer une carte relationnelle individuelle ──
+
+export async function createRelationCard(
+  supabase: SupabaseClient,
+  cardId: string,
+  consultanteId: string,
+): Promise<{ success: boolean; relationId?: string; error?: string }> {
+  const card = RELATION_CARD_TEMPLATES.find((c) => c.id === cardId);
+  if (!card) {
+    return { success: false, error: "Carte non trouvée" };
+  }
+
+  const relationId = crypto.randomUUID();
+  const { error } = await supabase.from("relation").insert({
+    relation_id: relationId,
+    consultante_record_id: consultanteId,
+    relation_type: card.relation_type,
+    relation_state: "absente",
+    purpose: "soul_mission",
+    categories: [],
+    systemes_a_liberer: [],
+    score_lumiere: null,
+    sla: null,
+    slsa: null,
+    slpmo: null,
+    slm: null,
+    niveau_shamanique_bloques: null,
+    color_hex: card.color,
+    access_token_monade: null,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, relationId };
+}
+
+// ── Fonction pour créer une structure familiale (batch) ──
 
 export async function createFamilyStructure(
   supabase: SupabaseClient,
@@ -169,17 +192,26 @@ export async function createFamilyStructure(
     return { success: false, count: 0, error: "Template non trouvé" };
   }
 
-  const relationsToInsert = template.relations.map((r) => ({
+  const cards = template.cardIds
+    .map((id) => RELATION_CARD_TEMPLATES.find((c) => c.id === id))
+    .filter(Boolean);
+
+  const relationsToInsert = cards.map((card) => ({
     relation_id: crypto.randomUUID(),
     consultante_record_id: consultanteId,
-    relation_type: r.relation_type,
-    relation_state: r.default_state,
-    purpose: r.default_purpose,
+    relation_type: card!.relation_type,
+    relation_state: "absente",
+    purpose: "soul_mission",
     categories: [],
     systemes_a_liberer: [],
     score_lumiere: null,
+    sla: null,
+    slsa: null,
+    slpmo: null,
+    slm: null,
     niveau_shamanique_bloques: null,
-    color_hex: template.color,
+    color_hex: card!.color,
+    access_token_monade: null,
   }));
 
   const { error } = await supabase.from("relation").insert(relationsToInsert);
@@ -189,6 +221,35 @@ export async function createFamilyStructure(
   }
 
   return { success: true, count: relationsToInsert.length };
+}
+
+// ── Fonction pour mettre à jour une relation ──
+
+export async function updateRelation(
+  supabase: SupabaseClient,
+  relationId: string,
+  updates: Partial<{
+    purpose: string;
+    relation_state: string;
+    sla: number | null;
+    slsa: number | null;
+    slpmo: number | null;
+    slm: number | null;
+    niveau_shamanique_bloques: number | null;
+    categories: string[];
+    access_token_monade: string | null;
+  }>,
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("relation")
+    .update(updates)
+    .eq("relation_id", relationId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
 }
 
 // ── Requêtes Supabase ──
