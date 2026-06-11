@@ -39,6 +39,28 @@ const ANNOTATION_TYPES = [
 ] as const;
 type Annotation = { id: string; type: string; value: string };
 
+// Attachements Clés chromatiques & Décodages reçus sur les co-acteurs —
+// snapshot au moment de l'attache (rendu autonome du graphe), standard
+// visuel 100% /parcours-recus (DEC Patrick 2026-06-11).
+type CleSnapshot = {
+  key_hex: string;
+  key_hue: number | null;
+  key_saturation: number | null;
+  key_brightness: number | null;
+  gradients: string[] | null;
+  notes: string | null;
+  session_label: string | null;
+};
+type CardAttachment = {
+  id: string;
+  kind: "cle" | "decodage";
+  ref_id: string;
+  label: string;
+  sub?: string;
+  cle?: CleSnapshot;
+  attached_at: string;
+};
+
 // Calques Lfem / Lmasc — structure féminine en base, structures masculines
 // superposées en verre liquide (translucidité réglable). DEC Patrick 2026-06-11.
 type GraphLayer = { id: string; name: string; side: "F" | "M"; opacity: number; visible: boolean };
@@ -72,6 +94,7 @@ type LocalCard = {
   annotations: Annotation[];
   layer: string; // id du calque (GraphLayer) — "F" par défaut
   favori?: boolean;
+  attachments?: CardAttachment[];
 };
 
 // Modes de la page (façon MacFamilyTree) — DEC Patrick 2026-06-11.
@@ -332,6 +355,73 @@ function EditPersonPanel({
   const removeAnnotation = (id: string) =>
     onUpdate({ annotations: annotations.filter((a) => a.id !== id) });
 
+  // ── Attachements Clés chromatiques & Décodages reçus ──
+  const attachments = card.attachments ?? [];
+  const [attachKind, setAttachKind] = useState<"" | "cle" | "decodage">("");
+  const [attachRef, setAttachRef] = useState("");
+  const [attachAssets, setAttachAssets] = useState<Array<{ id: string; label: string; sub?: string; cle?: CleSnapshot }>>([]);
+  const [attachLoading, setAttachLoading] = useState(false);
+
+  useEffect(() => {
+    if (!attachKind) return;
+    let alive = true;
+    (async () => {
+      setAttachLoading(true);
+      const sb = createClient();
+      if (attachKind === "cle") {
+        const { data } = await sb
+          .from("cles_chromatiques_soin_matinal")
+          .select("id, key_hex, key_hue, key_saturation, key_brightness, gradients, notes, session_label, created_at")
+          .order("created_at", { ascending: false })
+          .limit(60);
+        if (alive) setAttachAssets((data ?? []).map((r) => ({
+          id: r.id as string,
+          label: (r.key_hex as string) ?? "Clé",
+          sub: [r.session_label as string | null, r.created_at ? new Date(r.created_at as string).toLocaleDateString("fr-CH") : null]
+            .filter(Boolean).join(" · ") || undefined,
+          cle: {
+            key_hex: r.key_hex as string,
+            key_hue: r.key_hue as number | null,
+            key_saturation: r.key_saturation as number | null,
+            key_brightness: r.key_brightness as number | null,
+            gradients: (r.gradients as string[] | null) ?? null,
+            notes: r.notes as string | null,
+            session_label: r.session_label as string | null,
+          },
+        })));
+      } else {
+        const { data } = await sb
+          .from("decodages_v0")
+          .select("id, menu, consultante_label, created_at")
+          .order("created_at", { ascending: false })
+          .limit(60);
+        if (alive) setAttachAssets((data ?? []).map((r) => ({
+          id: r.id as string,
+          label: (r.menu as string | null) ?? "Décodage",
+          sub: [r.consultante_label as string | null, r.created_at ? new Date(r.created_at as string).toLocaleDateString("fr-CH") : null]
+            .filter(Boolean).join(" · ") || undefined,
+        })));
+      }
+      if (alive) setAttachLoading(false);
+    })();
+    return () => { alive = false; };
+  }, [attachKind]);
+
+  const addAttachment = () => {
+    const asset = attachAssets.find((a) => a.id === attachRef);
+    if (!asset || !attachKind) return;
+    onUpdate({
+      attachments: [
+        ...attachments,
+        { id: `att-${Date.now()}`, kind: attachKind, ref_id: asset.id, label: asset.label, sub: asset.sub, cle: asset.cle, attached_at: new Date().toISOString() },
+      ],
+    });
+    setAttachRef("");
+  };
+
+  const removeAttachment = (id: string) =>
+    onUpdate({ attachments: attachments.filter((a) => a.id !== id) });
+
   // ── Médias ──
   // Upload vers Supabase Storage (pathology-photos/{svlbh_id}/canvas-…) pour
   // que les médias survivent au reload et alimentent le mode Galerie.
@@ -433,6 +523,127 @@ function EditPersonPanel({
         >
           + Ajouter une annotation
         </button>
+      </div>
+
+      {/* Clés chromatiques & Décodages reçus — standard visuel /parcours-recus */}
+      <div className="mt-4 rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
+        <p className="mb-2 flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
+          <span className="flex h-5 w-5 items-center justify-center rounded bg-amber-500 text-[10px]">🔗</span>
+          Clés & Décodages reçus ({attachments.length})
+        </p>
+        <div className="space-y-2">
+          {attachments.map((a) =>
+            a.kind === "cle" && a.cle ? (
+              <article
+                key={a.id}
+                className="flex gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm"
+              >
+                <span
+                  className="h-12 w-12 shrink-0 rounded-lg ring-1 ring-black/10"
+                  style={{ backgroundColor: a.cle.key_hex }}
+                  title={a.cle.key_hex}
+                />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <header className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 className="font-mono text-sm font-bold text-neutral-900">{a.cle.key_hex}</h2>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-neutral-500">
+                        {new Date(a.attached_at).toLocaleString("fr-CH", { dateStyle: "short", timeStyle: "short" })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(a.id)}
+                        className="rounded border border-red-200 bg-white px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </header>
+                  {a.cle.session_label && (
+                    <p className="text-xs text-neutral-600">
+                      Source : <span className="font-semibold">{a.cle.session_label}</span>
+                    </p>
+                  )}
+                  {a.cle.key_hue != null && (
+                    <p className="text-xs text-neutral-500">
+                      H {Number(a.cle.key_hue).toFixed(0)}° · S {Math.round(Number(a.cle.key_saturation ?? 0) * 100)}% · B{" "}
+                      {Math.round(Number(a.cle.key_brightness ?? 0) * 100)}%
+                    </p>
+                  )}
+                  {Array.isArray(a.cle.gradients) && a.cle.gradients.length > 0 && (
+                    <MiniSwatches hexes={a.cle.gradients} size={12} max={10} />
+                  )}
+                  {a.cle.notes && (
+                    <p className="line-clamp-2 whitespace-pre-wrap text-xs text-neutral-600">{a.cle.notes}</p>
+                  )}
+                </div>
+              </article>
+            ) : (
+              <div
+                key={a.id}
+                className="flex items-center justify-between gap-2 rounded border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm"
+              >
+                <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                  <span title="Décodage">🔮</span>
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-400">décodage</span>
+                  <span className="truncate font-medium text-neutral-700" title={a.label}>{a.label}</span>
+                  {a.sub && <span className="truncate text-xs text-neutral-500">{a.sub}</span>}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(a.id)}
+                  className="rounded border border-red-200 bg-white px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
+                >
+                  ✕
+                </button>
+              </div>
+            ),
+          )}
+        </div>
+
+        {/* Picker — style host-attachment-form */}
+        <div className="mt-2 space-y-2 rounded border border-violet-200 bg-violet-50/30 p-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={attachKind}
+              onChange={(e) => { setAttachKind(e.target.value as "" | "cle" | "decodage"); setAttachRef(""); }}
+              className="h-8 rounded border border-neutral-300 bg-white px-2 text-xs text-neutral-800"
+            >
+              <option value="" disabled>Type…</option>
+              <option value="cle">🎨 Clé chromatique</option>
+              <option value="decodage">🔮 Décodage</option>
+            </select>
+            <select
+              value={attachRef}
+              onChange={(e) => setAttachRef(e.target.value)}
+              disabled={!attachKind || attachLoading || attachAssets.length === 0}
+              className="h-8 w-full max-w-60 truncate rounded border border-neutral-300 bg-white px-2 text-xs text-neutral-800"
+            >
+              <option value="" disabled>
+                {attachLoading
+                  ? "Chargement…"
+                  : !attachKind
+                    ? "Choisir un type d'abord"
+                    : attachAssets.length === 0
+                      ? "Aucun asset disponible"
+                      : `Choisir parmi ${attachAssets.length} asset${attachAssets.length > 1 ? "s" : ""}…`}
+              </option>
+              {attachAssets.map((as) => (
+                <option key={as.id} value={as.id}>
+                  {as.label}{as.sub ? ` · ${as.sub}` : ""}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={addAttachment}
+              disabled={!attachKind || !attachRef}
+              className="h-8 rounded bg-violet-600 px-3 text-[11px] font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+            >
+              Attacher
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Autres noms */}
@@ -861,6 +1072,25 @@ function CoActeurPanel({
   );
 }
 
+// Réplique de ColorSwatches (svlbh-pro-web) — mêmes classes/dimensions.
+function MiniSwatches({ hexes, size = 12, max = 10 }: { hexes: string[]; size?: number; max?: number }) {
+  const visible = hexes.slice(0, max);
+  const overflow = hexes.length - visible.length;
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {visible.map((hex, i) => (
+        <span
+          key={`${hex}-${i}`}
+          title={hex}
+          className="inline-block rounded-full ring-1 ring-black/10"
+          style={{ width: size, height: size, backgroundColor: hex }}
+        />
+      ))}
+      {overflow > 0 && <span className="ml-1 text-xs text-neutral-500">+{overflow}</span>}
+    </div>
+  );
+}
+
 // ── Panes des modes Personnes / Relations / Monade (DEC Patrick 2026-06-11) ──
 
 function PersonnesPane({ cards, layers, onOpen, onToggleFavori, emptyLabel }: {
@@ -1270,7 +1500,7 @@ export function FamilyCanvas() {
       cards?: LocalCard[]; connections?: Connection[];
       canvasColor?: string; viewMode?: ViewMode; layers?: GraphLayer[];
     };
-    setCards((p.cards ?? []).map((c) => ({ ...c, annotations: c.annotations ?? [], layer: c.layer ?? "F" })));
+    setCards((p.cards ?? []).map((c) => ({ ...c, annotations: c.annotations ?? [], layer: c.layer ?? "F", attachments: c.attachments ?? [] })));
     setConnections(p.connections ?? []);
     if (p.canvasColor) setCanvasColor(p.canvasColor);
     if (p.viewMode) setViewMode(p.viewMode);
@@ -1335,6 +1565,7 @@ export function FamilyCanvas() {
         medias: [],
         annotations: [],
         layer: activeLayer,
+        attachments: [],
       };
       const newConns: Connection[] = [];
       const mkConn = (a: string, b: string): Connection => ({
