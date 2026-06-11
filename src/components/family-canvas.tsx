@@ -1391,17 +1391,157 @@ function MonadePane({ cards, canvasColor, onOpen }: {
   );
 }
 
-function GaleriePane({ cards, onOpen }: { cards: LocalCard[]; onOpen: (id: string) => void }) {
+function GaleriePane({ cards, onOpen, onAddMedias }: {
+  cards: LocalCard[];
+  onOpen: (id: string) => void;
+  onAddMedias: (cardId: string, medias: CardMedia[]) => void;
+}) {
   // Galerie des médias façon MacFamilyTree : tous les médias du graphe,
-  // groupés par personne, légende, lightbox au clic.
+  // groupés par personne, légende, lightbox au clic. Ajout depuis le
+  // Pathology Mapper (table pathology_photo) ou depuis des fichiers.
   const [lightbox, setLightbox] = useState<{ cardId: string; idx: number } | null>(null);
+  const [targetCardId, setTargetCardId] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pmPhotos, setPmPhotos] = useState<Array<{ id: string; url: string; title: string }>>([]);
+  const [pmSelected, setPmSelected] = useState<Set<string>>(new Set());
+  const [pmLoading, setPmLoading] = useState(false);
   const withMedia = cards.filter((c) => (c.medias?.length ?? 0) > 0);
+
+  const nameOfCard = (c: LocalCard) => [c.prenom, c.nom].filter(Boolean).join(" ") || c.template.name;
+
+  const openPmPicker = async () => {
+    setPickerOpen(true);
+    setPmSelected(new Set());
+    setPmLoading(true);
+    const sb = createClient();
+    const { data } = await sb
+      .from("pathology_photo")
+      .select("photo_id, storage_path, caption, created_at")
+      .order("created_at", { ascending: false })
+      .limit(80);
+    setPmPhotos((data ?? []).map((r) => ({
+      id: r.photo_id as string,
+      url: sb.storage.from("pathology-photos").getPublicUrl(r.storage_path as string).data.publicUrl,
+      title: (r.caption as string | null) ?? "Pathology Mapper",
+    })));
+    setPmLoading(false);
+  };
+
+  const addSelectedPmPhotos = () => {
+    if (!targetCardId || pmSelected.size === 0) return;
+    const target = cards.find((c) => c.id === targetCardId);
+    const baseOrder = target?.medias.length ?? 0;
+    const medias: CardMedia[] = pmPhotos
+      .filter((p) => pmSelected.has(p.id))
+      .map((p, i) => ({ id: `media-${Date.now()}-${i}`, url: p.url, title: p.title, order: baseOrder + i }));
+    onAddMedias(targetCardId, medias);
+    setPickerOpen(false);
+  };
+
+  const addFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!targetCardId || files.length === 0) return;
+    const sb = createClient();
+    const { data: svlbhId } = await sb.rpc("auth_svlbh_id");
+    const target = cards.find((c) => c.id === targetCardId);
+    const baseOrder = target?.medias.length ?? 0;
+    const medias: CardMedia[] = [];
+    for (const [i, f] of files.entries()) {
+      const ext = (f.name.split(".").pop() ?? "png").toLowerCase();
+      let url = "";
+      if (svlbhId) {
+        const path = `${svlbhId}/canvas-${Date.now()}-${i}.${ext}`;
+        const { error } = await sb.storage.from("pathology-photos").upload(path, f, { contentType: f.type || "image/png" });
+        if (!error) url = sb.storage.from("pathology-photos").getPublicUrl(path).data.publicUrl;
+      }
+      if (!url) url = URL.createObjectURL(f);
+      medias.push({ id: `media-${Date.now()}-${i}`, url, title: f.name.replace(/\.[^.]+$/, ""), order: baseOrder + medias.length });
+    }
+    if (medias.length) onAddMedias(targetCardId, medias);
+  };
+
+  const addBar = cards.length > 0 && (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-violet-200 bg-violet-50/30 px-3 py-2">
+      <select
+        value={targetCardId}
+        onChange={(e) => setTargetCardId(e.target.value)}
+        className="h-8 max-w-48 truncate rounded border border-neutral-300 bg-white px-2 text-xs"
+      >
+        <option value="">Ajouter à…</option>
+        {cards.map((c) => (
+          <option key={c.id} value={c.id}>{c.template.icon} {nameOfCard(c)}</option>
+        ))}
+      </select>
+      <button
+        type="button"
+        disabled={!targetCardId}
+        onClick={() => void openPmPicker()}
+        className="h-8 rounded bg-violet-600 px-3 text-[11px] font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+      >
+        📸 ＋ Pathology Mapper
+      </button>
+      <label className={`flex h-8 cursor-pointer items-center rounded border border-violet-300 bg-white px-3 text-[11px] font-semibold text-violet-700 hover:bg-violet-100 ${!targetCardId ? "pointer-events-none opacity-50" : ""}`}>
+        📁 ＋ Fichiers
+        <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => void addFiles(e)} />
+      </label>
+    </div>
+  );
+
+  const pmPickerOverlay = pickerOpen && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={() => setPickerOpen(false)}>
+      <div className="max-h-[80vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-neutral-800">📸 Photothèque Pathology Mapper</h3>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={pmSelected.size === 0}
+              onClick={addSelectedPmPhotos}
+              className="rounded bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+            >
+              Ajouter ({pmSelected.size})
+            </button>
+            <button type="button" onClick={() => setPickerOpen(false)} className="rounded border border-neutral-300 px-2 py-1 text-xs">✕</button>
+          </div>
+        </div>
+        {pmLoading ? (
+          <p className="p-8 text-center text-sm text-neutral-400">Chargement…</p>
+        ) : pmPhotos.length === 0 ? (
+          <p className="p-8 text-center text-sm text-neutral-400">Aucune photo Pathology Mapper.</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {pmPhotos.map((p) => {
+              const sel = pmSelected.has(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPmSelected((prev) => { const n = new Set(prev); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; })}
+                  className={`relative overflow-hidden rounded-md border-2 transition ${sel ? "border-violet-600 ring-2 ring-violet-300" : "border-transparent hover:border-neutral-300"}`}
+                  title={p.title}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt={p.title} className="h-24 w-full object-cover" />
+                  {sel && <span className="absolute right-1 top-1 rounded-full bg-violet-600 px-1.5 text-[10px] text-white">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   if (withMedia.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-400">
-        Aucun média — ajoute des images dans la fiche d&apos;une personne (mode Famille).
-      </p>
+      <div className="space-y-3">
+        {addBar}
+        <p className="rounded-xl border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-400">
+          Aucun média — ajoute des images via la barre ci-dessus ou dans la fiche d&apos;une personne (mode Famille).
+        </p>
+        {pmPickerOverlay}
+      </div>
     );
   }
 
@@ -1413,6 +1553,7 @@ function GaleriePane({ cards, onOpen }: { cards: LocalCard[]; onOpen: (id: strin
 
   return (
     <div className="space-y-6 rounded-xl border border-neutral-200 bg-white p-4">
+      {addBar}
       {withMedia.map((c) => {
         const medias = [...c.medias].sort((a, b) => a.order - b.order);
         return (
@@ -1486,6 +1627,7 @@ function GaleriePane({ cards, onOpen }: { cards: LocalCard[]; onOpen: (id: strin
           </div>
         </div>
       )}
+      {pmPickerOverlay}
     </div>
   );
 }
@@ -1525,6 +1667,10 @@ export function FamilyCanvas() {
 
   const toggleFavori = useCallback((id: string) => {
     setCards((prev) => prev.map((c) => (c.id === id ? { ...c, favori: !c.favori } : c)));
+  }, []);
+
+  const addMediasToCard = useCallback((cardId: string, medias: CardMedia[]) => {
+    setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, medias: [...c.medias, ...medias] } : c)));
   }, []);
 
   // Persistance canvas_graph (Supabase)
@@ -2538,7 +2684,7 @@ export function FamilyCanvas() {
         <MonadePane cards={cards} canvasColor={canvasColor} onOpen={(id) => { setOpenCardId(id); setPageMode("famille"); }} />
       )}
       {pageMode === "galerie" && (
-        <GaleriePane cards={cards} onOpen={(id) => { setOpenCardId(id); setPageMode("famille"); }} />
+        <GaleriePane cards={cards} onOpen={(id) => { setOpenCardId(id); setPageMode("famille"); }} onAddMedias={addMediasToCard} />
       )}
       </div>{/* end canvas column */}
 
