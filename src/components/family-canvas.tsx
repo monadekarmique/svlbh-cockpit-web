@@ -23,6 +23,7 @@ type PlatonSolidId = (typeof PLATON_SOLIDS)[number]["id"];
 type LocalCard = {
   id: string;
   template: RelationCardTemplate;
+  niveau: number; // freely editable; drives canvas row position
   purpose: string;
   state: string;
   sla: number | null;
@@ -117,32 +118,53 @@ const VIEW_MODE_LABELS: Record<ViewMode, Record<number, string>> = {
 const CANVAS_W = 960;
 const ROW_H = 150;
 const CARD_SZ = 76;
-const CANVAS_H = 4 * ROW_H; // 600px
+const MIN_ROWS = 4; // canvas minimum même sans carte
 
-function genCY(generation: number): number {
-  // G3 at top (row 0), G0 at bottom (row 3)
-  return (3 - generation) * ROW_H + ROW_H / 2;
+// Returns label for a given niveau in the current view mode
+function levelLabel(niveau: number, mode: ViewMode): string {
+  const prefix = mode === "generations" ? "G" : mode === "niveaux" ? "N" : "I";
+  return `${prefix}${niveau}`;
 }
 
-function computePositions(cards: LocalCard[]): Map<string, { cx: number; cy: number }> {
-  const byGen = new Map<number, LocalCard[]>();
+type LayoutResult = {
+  positions: Map<string, { cx: number; cy: number }>;
+  sortedLevels: number[]; // descending (highest at top)
+  canvasH: number;
+};
+
+// Positions cards by their `niveau` value. Higher niveau = higher on canvas.
+// Canvas height adapts to the spread of levels present.
+function computeLayout(cards: LocalCard[]): LayoutResult {
+  const uniqueLevels = [...new Set(cards.map((c) => c.niveau))];
+  // Sort descending so highest level = row 0 (top of canvas)
+  const sortedLevels = uniqueLevels.sort((a, b) => b - a);
+  const rowCount = Math.max(MIN_ROWS, sortedLevels.length);
+  const canvasH = rowCount * ROW_H;
+
+  // row index for each level (highest = 0)
+  const levelRow = new Map(sortedLevels.map((lvl, i) => [lvl, i]));
+
+  const byLevel = new Map<number, LocalCard[]>();
   for (const card of cards) {
-    const g = card.template.generation;
-    if (!byGen.has(g)) byGen.set(g, []);
-    byGen.get(g)!.push(card);
+    const n = card.niveau;
+    if (!byLevel.has(n)) byLevel.set(n, []);
+    byLevel.get(n)!.push(card);
   }
-  const pos = new Map<string, { cx: number; cy: number }>();
-  for (const [gen, genCards] of byGen) {
-    const cy = genCY(gen);
+
+  const positions = new Map<string, { cx: number; cy: number }>();
+  for (const [lvl, lvlCards] of byLevel) {
+    const row = levelRow.get(lvl)!;
+    const cy = row * ROW_H + ROW_H / 2;
     const gap = 60;
-    const totalW = genCards.length * CARD_SZ + (genCards.length - 1) * gap;
+    const totalW = lvlCards.length * CARD_SZ + (lvlCards.length - 1) * gap;
     let x = (CANVAS_W - totalW) / 2 + CARD_SZ / 2;
-    for (const card of genCards) {
-      pos.set(card.id, { cx: x, cy });
+    for (const card of lvlCards) {
+      positions.set(card.id, { cx: x, cy });
       x += CARD_SZ + gap;
     }
   }
-  return pos;
+
+  return { positions, sortedLevels, canvasH };
 }
 
 function connectionColor(card: LocalCard): string {
@@ -258,9 +280,8 @@ export function FamilyCanvas() {
   const textColor = useMemo(() => textOnColor(canvasColor), [canvasColor]);
   const sectionBg = useMemo(() => darken(canvasColor, 0.18), [canvasColor]);
   const inputBg = useMemo(() => darken(canvasColor, 0.28), [canvasColor]);
-  const genLabels = VIEW_MODE_LABELS[viewMode];
 
-  const positions = useMemo(() => computePositions(cards), [cards]);
+  const layout = useMemo(() => computeLayout(cards), [cards]);
 
   const handleDragStart = useCallback((e: React.DragEvent, card: RelationCardTemplate) => {
     setDraggedCard(card);
@@ -273,6 +294,7 @@ export function FamilyCanvas() {
       const newCard: LocalCard = {
         id: `${tpl.id}-${Date.now()}`,
         template: tpl,
+        niveau: tpl.generation,
         purpose: "soul_mission",
         state: "absente",
         sla: null, slsa: null, slpmo: null, slm: null,
@@ -383,7 +405,7 @@ export function FamilyCanvas() {
           className="relative"
           style={{
             width: CANVAS_W,
-            height: CANVAS_H,
+            height: layout.canvasH,
             backgroundColor: canvasColor,
             backgroundImage:
               "linear-gradient(rgba(0,0,0,0.08) 1px, transparent 1px)," +
@@ -398,12 +420,13 @@ export function FamilyCanvas() {
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
         >
-          {/* Generation row dividers + labels */}
-          {[3, 2, 1, 0].map((gen) => {
-            const rowTop = (3 - gen) * ROW_H;
+          {/* Row dividers + labels — dynamic, based on levels actually present */}
+          {Array.from({ length: Math.ceil(layout.canvasH / ROW_H) }, (_, rowIdx) => {
+            const rowTop = rowIdx * ROW_H;
+            const niveau = layout.sortedLevels[rowIdx]; // may be undefined (empty rows)
             return (
-              <div key={gen}>
-                {gen < 3 && (
+              <div key={rowIdx}>
+                {rowIdx > 0 && (
                   <div
                     className="absolute left-0 right-0 h-px"
                     style={{ top: rowTop, backgroundColor: "rgba(0,0,0,0.14)" }}
@@ -418,10 +441,12 @@ export function FamilyCanvas() {
                     style={{
                       backgroundColor: "rgba(0,0,0,0.18)",
                       color: textColor,
-                      opacity: gen === 0 ? 1 : 0.75,
+                      opacity: niveau !== undefined ? (niveau === 0 ? 1 : 0.75) : 0.25,
                     }}
                   >
-                    {genLabels[gen]}
+                    {niveau !== undefined
+                      ? levelLabel(niveau, viewMode)
+                      : `${viewMode === "generations" ? "G" : viewMode === "niveaux" ? "N" : "I"}—`}
                   </span>
                 </div>
               </div>
@@ -432,11 +457,11 @@ export function FamilyCanvas() {
           <svg
             className="pointer-events-none absolute inset-0"
             width={CANVAS_W}
-            height={CANVAS_H}
+            height={layout.canvasH}
           >
             {connections.map((conn) => {
-              const aPos = positions.get(conn.a);
-              const bPos = positions.get(conn.b);
+              const aPos = layout.positions.get(conn.a);
+              const bPos = layout.positions.get(conn.b);
               if (!aPos || !bPos) return null;
               const cardA = cards.find((c) => c.id === conn.a);
               const cardB = cards.find((c) => c.id === conn.b);
@@ -461,7 +486,7 @@ export function FamilyCanvas() {
 
           {/* Cards */}
           {cards.map((card) => {
-            const pos = positions.get(card.id);
+            const pos = layout.positions.get(card.id);
             if (!pos) return null;
             const solid = PLATON_SOLIDS.find((s) => s.id === card.shape) ?? PLATON_SOLIDS[0];
             const isOpen = card.id === openCardId;
@@ -686,6 +711,48 @@ export function FamilyCanvas() {
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* Niveau */}
+          <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
+            <p className="mb-2 flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-violet-500 text-[10px]">N</span>
+              Niveau dans la séquence
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => updateCard(openCard.id, { niveau: Math.max(0, openCard.niveau - 1) })}
+                className="flex h-8 w-8 items-center justify-center rounded text-lg font-bold transition hover:brightness-110"
+                style={{ backgroundColor: inputBg, color: textColor }}
+              >
+                −
+              </button>
+              <input
+                type="number"
+                value={openCard.niveau}
+                onChange={(e) =>
+                  updateCard(openCard.id, {
+                    niveau: isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value),
+                  })
+                }
+                onFocus={(e) => e.currentTarget.select()}
+                className="w-full rounded px-2 py-1.5 text-center font-mono text-lg font-bold"
+                style={{ backgroundColor: inputBg, color: textColor }}
+                min={0}
+              />
+              <button
+                type="button"
+                onClick={() => updateCard(openCard.id, { niveau: openCard.niveau + 1 })}
+                className="flex h-8 w-8 items-center justify-center rounded text-lg font-bold transition hover:brightness-110"
+                style={{ backgroundColor: inputBg, color: textColor }}
+              >
+                +
+              </button>
+            </div>
+            <p className="mt-1 text-center text-[9px]" style={{ color: textColor, opacity: 0.5 }}>
+              {levelLabel(openCard.niveau, viewMode)} · positionne la carte sur le canvas
+            </p>
           </div>
 
           {/* Scores */}
