@@ -1708,6 +1708,55 @@ export function FamilyCanvas() {
     return m;
   }, [layout, cards]);
 
+  // ── Brouillon local (localStorage) : le canvas survit au reload même sans
+  // « Sauvegarder » — restauré au mount, écrit en continu (debounce 400 ms).
+  const DRAFT_KEY = "svlbh-family-canvas-draft-v1";
+  const draftRestored = useRef(false);
+
+  useEffect(() => {
+    if (draftRestored.current) return;
+    draftRestored.current = true;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw) as {
+        graphId?: string | null; graphTitle?: string;
+        cards?: LocalCard[]; connections?: Connection[];
+        canvasColor?: string; viewMode?: ViewMode; layers?: GraphLayer[];
+        famille?: { tokenVoyelles?: string; slsa?: number | null; vifa?: string; events?: FamilleEvent[] };
+        monades?: Array<Partial<Monade> & { id: string }>;
+      };
+      if (!d.cards?.length && !d.monades?.length && !d.famille?.tokenVoyelles) return;
+      setCards((d.cards ?? []).map((c) => ({ ...c, annotations: c.annotations ?? [], layer: c.layer ?? "F", attachments: c.attachments ?? [] })));
+      setConnections(d.connections ?? []);
+      if (d.canvasColor) setCanvasColor(d.canvasColor);
+      if (d.viewMode) setViewMode(d.viewMode);
+      setLayers(d.layers && d.layers.length > 0 ? d.layers : DEFAULT_LAYERS);
+      setFamilleToken(d.famille?.tokenVoyelles ?? "");
+      setFamilleSlsa(d.famille?.slsa ?? null);
+      setFamilleVifa(d.famille?.vifa ?? "");
+      setFamilleEvents(d.famille?.events ?? []);
+      setMonades((d.monades ?? []).map((m) => ({
+        id: m.id, label: m.label ?? "", token: m.token ?? "", slm: m.slm ?? null, slpmo: m.slpmo ?? null, pierre: m.pierre ?? "",
+      })));
+      if (d.graphId) setGraphId(d.graphId);
+      if (d.graphTitle) setGraphTitle(d.graphTitle);
+    } catch { /* brouillon corrompu — on repart à vide */ }
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          graphId, graphTitle, cards, connections, canvasColor, viewMode, layers,
+          famille: { tokenVoyelles: familleToken, slsa: familleSlsa, vifa: familleVifa, events: familleEvents },
+          monades,
+        }));
+      } catch { /* quota plein — tant pis pour le brouillon */ }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [graphId, graphTitle, cards, connections, canvasColor, viewMode, layers, familleToken, familleSlsa, familleVifa, familleEvents, monades]);
+
   const refreshGraphList = useCallback(async () => {
     const sb = createClient();
     const { data } = await sb
@@ -1814,6 +1863,7 @@ export function FamilyCanvas() {
     setFamilleEvents([]);
     setMonades([]);
     setLinkFrom(null);
+    try { localStorage.removeItem("svlbh-family-canvas-draft-v1"); } catch { /* noop */ }
   }, []);
 
   const handleDragStart = useCallback((e: React.DragEvent, card: RelationCardTemplate) => {
