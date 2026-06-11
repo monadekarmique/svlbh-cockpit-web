@@ -9,6 +9,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { resolveProfile } from "@/lib/resolve-profile";
 
 export async function requireOwner(): Promise<void> {
   // Bearer reader bypass — multi-instances IA
@@ -21,11 +22,9 @@ export async function requireOwner(): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("praticienne_profile")
-    .select("stx, pro_status, cercle_lumiere_sr")
-    .eq("supabase_user_id", user.id)
-    .maybeSingle();
+  const profile = await resolveProfile<{
+    stx: string | null; pro_status: string | null; cercle_lumiere_sr: boolean | null;
+  }>(supabase, user.id, "stx, pro_status, cercle_lumiere_sr");
 
   const isOwner =
     !!profile &&
@@ -44,11 +43,9 @@ export async function isOwner(): Promise<boolean> {
   } = await supabase.auth.getUser();
   if (!user) return false;
 
-  const { data: profile } = await supabase
-    .from("praticienne_profile")
-    .select("stx, pro_status, cercle_lumiere_sr")
-    .eq("supabase_user_id", user.id)
-    .maybeSingle();
+  const profile = await resolveProfile<{
+    stx: string | null; pro_status: string | null; cercle_lumiere_sr: boolean | null;
+  }>(supabase, user.id, "stx, pro_status, cercle_lumiere_sr");
 
   return (
     !!profile &&
@@ -82,11 +79,9 @@ export async function requireSt4Plus(): Promise<St4PlusGate> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("praticienne_profile")
-    .select("svlbh_id, stx, pro_status")
-    .eq("supabase_user_id", user.id)
-    .maybeSingle();
+  const profile = await resolveProfile<{
+    svlbh_id: string | null; stx: string | null; pro_status: string | null;
+  }>(supabase, user.id, "svlbh_id, stx, pro_status");
 
   if (!profile || profile.pro_status !== "ACTIVE") {
     redirect("/dashboard");

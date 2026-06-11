@@ -7,6 +7,7 @@ import { CockpitNav } from "@/components/cockpit-nav";
 import { UserMenu } from "@/components/user-menu";
 import { SupportRealtimeNotifier } from "@/components/support-realtime-notifier";
 import { autoRelinkProfile } from "@/lib/auto-relink-profile";
+import { resolveProfile } from "@/lib/resolve-profile";
 import { ExternalAppLink } from "@/components/external-app-link";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { IdInspectorToggle } from "@/components/id-inspector";
@@ -23,11 +24,11 @@ async function isCockpitAllowed(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
 ): Promise<boolean> {
-  const { data: profile } = await supabase
-    .from("praticienne_profile")
-    .select("stx, pro_status, cercle_lumiere_sr")
-    .eq("supabase_user_id", userId)
-    .maybeSingle();
+  const profile = await resolveProfile<{
+    stx: string | null;
+    pro_status: string | null;
+    cercle_lumiere_sr: boolean | null;
+  }>(supabase, userId, "stx, pro_status, cercle_lumiere_sr");
   // Cercle de Lumière SR : accès gardé (sécurité indépendante)
   if (profile?.cercle_lumiere_sr === true) {
     return true;
@@ -84,13 +85,10 @@ export default async function CockpitLayout({
   // Profil pour la nav : Owner (ST6) ou Cercle SR voient les modules
   // Admin / Compliance / Facturation directement dans la nav (DEC Patrick 2026-05-12).
   // Si Bearer reader : on charge le profile via svlbh_id (pas de session user).
-  const { data: navProfile } = user
-    ? await supabase
-        .from("praticienne_profile")
-        .select("svlbh_id, stx, cercle_lumiere_sr, email")
-        .eq("supabase_user_id", user.id)
-        .maybeSingle()
-    : { data: null as { svlbh_id: string | null; stx: string | null; cercle_lumiere_sr: boolean | null; email: string | null } | null };
+  const navProfile = user
+    ? await resolveProfile<{ svlbh_id: string | null; stx: string | null; cercle_lumiere_sr: boolean | null; email: string | null }>(
+        supabase, user.id, "svlbh_id, stx, cercle_lumiere_sr, email")
+    : null;
   const isOwner = navProfile?.stx === "ST6" || navProfile?.cercle_lumiere_sr === true;
   // ST5+ reçoit le toast notifier Realtime quand une praticienne démarre une session.
   const showSupportNotifier = navProfile?.stx === "ST5" || navProfile?.stx === "ST6";
