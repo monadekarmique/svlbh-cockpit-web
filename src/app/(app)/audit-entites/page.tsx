@@ -35,7 +35,7 @@ export default function AuditEntitesPage() {
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [selectedConsultante, setSelectedConsultante] = useState<string | null>(null);
-  const [consultantes, setConsultantes] = useState<Array<{ consultante_id: string; display_name: string }>>([]);
+  const [consultantes, setConsultantes] = useState<Array<{ consultante_id: string; first_name: string | null; last_name: string | null }>>([]);
   // État de travail LOCAL (pas de persistance DB) : marque NSB / catégories
   // comme « travaillées » pendant la session.
   const [worked, setWorked] = useState<Set<string>>(new Set());
@@ -91,8 +91,8 @@ export default function AuditEntitesPage() {
     const sb = supaClient();
     const { data: rows } = await sb
       .from("consultante_record")
-      .select("consultante_id, display_name")
-      .order("display_name");
+      .select("consultante_id, first_name, last_name")
+      .order("last_name");
     if (rows) setConsultantes(rows);
   }, []);
 
@@ -214,7 +214,7 @@ export default function AuditEntitesPage() {
                     <option value="">Sélectionner...</option>
                     {consultantes.map((c) => (
                       <option key={c.consultante_id} value={c.consultante_id}>
-                        {c.display_name || c.consultante_id.slice(0, 8)}
+                        {[c.first_name, c.last_name].filter(Boolean).join(" ") || c.consultante_id.slice(0, 8)}
                       </option>
                     ))}
                   </select>
