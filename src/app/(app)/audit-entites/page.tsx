@@ -6,23 +6,20 @@
 
 import Link from "next/link";
 import { Fragment, useEffect, useState, useCallback } from "react";
-import { ChevronDown, ChevronRight, Plus, Users } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   DIMENSIONS,
   CHAKRA_NAMES,
   RELATION_CATEGORIES,
-  RELATION_CARD_TEMPLATES,
-  FAMILY_STRUCTURE_TEMPLATES,
-  PURPOSE_OPTIONS,
-  RELATION_STATE_OPTIONS,
   fetchAuditData,
-  createFamilyStructure,
   createRelationCard,
   updateRelation,
   type AuditData,
   type AuditRelation,
+  type RelationCardTemplate,
 } from "@/lib/cercle/audit-entites";
+import { FamilyCanvas } from "@/components/family-canvas";
 
 function supaClient() {
   return createBrowserClient(
@@ -36,12 +33,7 @@ export default function AuditEntitesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Accordéons ouverts/fermés
-  const [grapheOpen, setGrapheOpen] = useState(false);
-  // Menu création structure familiale
-  const [createMenuOpen, setCreateMenuOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [selectedConsultante, setSelectedConsultante] = useState<string | null>(null);
-  const [consultantes, setConsultantes] = useState<Array<{ consultante_id: string; first_name: string | null; last_name: string | null }>>([]);
+  const [grapheOpen, setGrapheOpen] = useState(true);
   // État de travail LOCAL (pas de persistance DB) : marque NSB / catégories
   // comme « travaillées » pendant la session.
   const [worked, setWorked] = useState<Set<string>>(new Set());
@@ -93,38 +85,27 @@ export default function AuditEntitesPage() {
     }
   }, []);
 
-  const loadConsultantes = useCallback(async () => {
-    const sb = supaClient();
-    const { data: rows } = await sb
-      .from("consultante_record")
-      .select("consultante_id, first_name, last_name")
-      .order("last_name");
-    if (rows) setConsultantes(rows);
-  }, []);
-
   useEffect(() => {
     loadData();
-    loadConsultantes();
-  }, [loadData, loadConsultantes]);
+  }, [loadData]);
 
-  async function handleCreateStructure(templateId: string) {
-    if (!selectedConsultante) {
-      alert("Sélectionnez d'abord une consultante");
-      return;
+  async function handleCardPlaced(card: RelationCardTemplate) {
+    const sb = supaClient();
+    const result = await createRelationCard(sb, card.id, "");
+    if (result.success) {
+      await loadData();
+    } else {
+      alert(`Erreur : ${result.error}`);
     }
-    setCreating(true);
-    try {
-      const sb = supaClient();
-      const result = await createFamilyStructure(sb, templateId, selectedConsultante);
-      if (result.success) {
-        setCreateMenuOpen(false);
-        await loadData();
-        setGrapheOpen(true);
-      } else {
-        alert(`Erreur : ${result.error}`);
-      }
-    } finally {
-      setCreating(false);
+  }
+
+  async function handleUpdateRelation(relationId: string, updates: Partial<AuditRelation>) {
+    const sb = supaClient();
+    const result = await updateRelation(sb, relationId, updates);
+    if (result.success) {
+      await loadData();
+    } else {
+      alert(`Erreur : ${result.error}`);
     }
   }
 
@@ -175,159 +156,31 @@ export default function AuditEntitesPage() {
         <KpiCard label="Signatures vibr." initial={data.signatures.length} color="#6B3A8A" />
       </section>
 
-      {/* Section 2 : Relations familiales — Accordéon */}
+      {/* Section 2 : Canvas familial avec drawer 6 cartes */}
       <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setGrapheOpen((o) => !o)}
-            className="flex flex-1 items-center gap-2 rounded-lg py-1 text-left transition hover:bg-neutral-50"
-          >
-            {grapheOpen ? (
-              <ChevronDown className="h-5 w-5 text-blue-950" />
-            ) : (
-              <ChevronRight className="h-5 w-5 text-blue-950" />
-            )}
-            <h2 className="text-lg font-bold tracking-tight text-blue-950">
-              Graphe Relationnel Familial
-            </h2>
-            <span className="ml-auto text-xs text-neutral-400">
-              {data.relations.length} relation{data.relations.length !== 1 ? "s" : ""}
-            </span>
-          </button>
-          {/* Bouton création structure */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setCreateMenuOpen((o) => !o)}
-              className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-rose-700"
-              disabled={creating}
-            >
-              <Plus className="h-4 w-4" />
-              Créer structure
-            </button>
-            {createMenuOpen && (
-              <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-xl border bg-white p-3 shadow-lg">
-                <div className="mb-3">
-                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                    Consultante cible
-                  </label>
-                  <select
-                    value={selectedConsultante ?? ""}
-                    onChange={(e) => setSelectedConsultante(e.target.value || null)}
-                    className="w-full rounded-lg border px-2 py-1.5 text-sm"
-                  >
-                    <option value="">Sélectionner...</option>
-                    {consultantes.map((c) => (
-                      <option key={c.consultante_id} value={c.consultante_id}>
-                        {[c.first_name, c.last_name].filter(Boolean).join(" ") || c.consultante_id.slice(0, 8)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  {FAMILY_STRUCTURE_TEMPLATES.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => handleCreateStructure(t.id)}
-                      disabled={creating || !selectedConsultante}
-                      className="flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition hover:bg-neutral-50 disabled:opacity-50"
-                      style={{ borderLeftWidth: 4, borderLeftColor: t.color }}
-                    >
-                      <Users className="h-4 w-4 shrink-0" style={{ color: t.color }} />
-                      <div className="min-w-0">
-                        <p className="font-medium text-neutral-900">{t.name}</p>
-                        <p className="truncate text-[10px] text-neutral-500">{t.description} ({t.cardIds.length})</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setCreateMenuOpen(false)}
-                  className="mt-2 w-full rounded-lg bg-neutral-100 py-1.5 text-xs text-neutral-600 hover:bg-neutral-200"
-                >
-                  Annuler
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setGrapheOpen((o) => !o)}
+          className="flex items-center gap-2 rounded-lg py-1 text-left transition hover:bg-neutral-50"
+        >
+          {grapheOpen ? (
+            <ChevronDown className="h-5 w-5 text-blue-950" />
+          ) : (
+            <ChevronRight className="h-5 w-5 text-blue-950" />
+          )}
+          <h2 className="text-lg font-bold tracking-tight text-blue-950">
+            Graphe Relationnel Familial
+          </h2>
+          <span className="ml-2 text-xs text-neutral-400">
+            {data.relations.length} relation{data.relations.length !== 1 ? "s" : ""}
+          </span>
+        </button>
         {grapheOpen && (
-          <>
-            {data.relations.length === 0 ? (
-              <p className="text-sm text-neutral-500">Aucune relation enregistrée.</p>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {data.relations.map((r) => (
-                  <article
-                    key={r.relation_id}
-                    className="rounded-xl border bg-white p-4 shadow-sm"
-                    style={{ borderLeftWidth: 4, borderLeftColor: r.color_hex ?? "#8B3A62" }}
-                  >
-                    <div className="flex items-baseline justify-between">
-                      <span className="font-mono text-sm font-bold" style={{ color: "#8B3A62" }}>
-                        {r.relation_type}
-                      </span>
-                      <span className="text-[10px] text-neutral-400">{r.relation_state}</span>
-                    </div>
-                    <p className="mt-1 text-xs text-neutral-600">But : {r.purpose}</p>
-                    {r.score_lumiere != null && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-xs text-neutral-500">Score :</span>
-                        <span
-                          className="font-mono text-lg font-bold"
-                          style={{ color: r.score_lumiere < 50 ? "#DC2626" : "#16A34A" }}
-                        >
-                          {r.score_lumiere}%
-                        </span>
-                      </div>
-                    )}
-                    {r.niveau_shamanique_bloques != null && (() => {
-                      const k = `nsb:${r.relation_id}`;
-                      const done = worked.has(k);
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => toggleWorked(k)}
-                          className="mt-1 block text-left text-[11px] text-neutral-500 hover:text-neutral-900"
-                          style={done ? { textDecoration: "line-through", opacity: 0.5 } : undefined}
-                          title="Cliquer pour marquer comme travaillé"
-                        >
-                          Niveaux shamaniques bloqués : <strong>{r.niveau_shamanique_bloques}</strong>{done ? " ✓" : ""}
-                        </button>
-                      );
-                    })()}
-                    {r.categories.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {r.categories.map((c) => {
-                          const k = `cat:${r.relation_id}:${c}`;
-                          const done = worked.has(k);
-                          return (
-                            <button
-                              key={c}
-                              type="button"
-                              onClick={() => toggleWorked(k)}
-                              className={
-                                "rounded-full px-2 py-0.5 text-[9px] font-medium transition " +
-                                (done
-                                  ? "bg-green-100 text-green-700 line-through"
-                                  : "bg-rose-50 text-rose-700 hover:bg-rose-100")
-                              }
-                              title="Cliquer pour marquer comme travaillé"
-                            >
-                              {c}{done ? " ✓" : ""}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </article>
-                ))}
-              </div>
-            )}
-          </>
+          <FamilyCanvas
+            relations={data.relations}
+            onCardPlaced={handleCardPlaced}
+            onUpdateRelation={handleUpdateRelation}
+          />
         )}
       </section>
 
