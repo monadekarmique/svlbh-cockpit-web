@@ -157,7 +157,7 @@ export async function createRelationCard(
   const relationId = crypto.randomUUID();
   const { error } = await supabase.from("relation").insert({
     relation_id: relationId,
-    consultante_record_id: consultanteId,
+    end_a_consultante_id: consultanteId,
     relation_type: card.relation_type,
     relation_state: "absente",
     purpose: "soul_mission",
@@ -198,7 +198,7 @@ export async function createFamilyStructure(
 
   const relationsToInsert = cards.map((card) => ({
     relation_id: crypto.randomUUID(),
-    consultante_record_id: consultanteId,
+    end_a_consultante_id: consultanteId,
     relation_type: card!.relation_type,
     relation_state: "absente",
     purpose: "soul_mission",
