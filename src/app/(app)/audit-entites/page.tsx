@@ -13,11 +13,7 @@ import {
   CHAKRA_NAMES,
   RELATION_CATEGORIES,
   fetchAuditData,
-  createRelationCard,
-  updateRelation,
   type AuditData,
-  type AuditRelation,
-  type RelationCardTemplate,
 } from "@/lib/cercle/audit-entites";
 import { FamilyCanvas } from "@/components/family-canvas";
 
@@ -89,26 +85,6 @@ export default function AuditEntitesPage() {
     loadData();
   }, [loadData]);
 
-  async function handleCardPlaced(card: RelationCardTemplate) {
-    const sb = supaClient();
-    const result = await createRelationCard(sb, card.id, "");
-    if (result.success) {
-      await loadData();
-    } else {
-      alert(`Erreur : ${result.error}`);
-    }
-  }
-
-  async function handleUpdateRelation(relationId: string, updates: Partial<AuditRelation>) {
-    const sb = supaClient();
-    const result = await updateRelation(sb, relationId, updates);
-    if (result.success) {
-      await loadData();
-    } else {
-      alert(`Erreur : ${result.error}`);
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -175,13 +151,7 @@ export default function AuditEntitesPage() {
             {data.relations.length} relation{data.relations.length !== 1 ? "s" : ""}
           </span>
         </button>
-        {grapheOpen && (
-          <FamilyCanvas
-            relations={data.relations}
-            onCardPlaced={handleCardPlaced}
-            onUpdateRelation={handleUpdateRelation}
-          />
-        )}
+        {grapheOpen && <FamilyCanvas />}
       </section>
 
       {/* Section 3 : Heatmap 9D × 33C */}

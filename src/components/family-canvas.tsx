@@ -6,16 +6,23 @@ import {
   PURPOSE_OPTIONS,
   RELATION_STATE_OPTIONS,
   type RelationCardTemplate,
-  type AuditRelation,
 } from "@/lib/cercle/audit-entites";
 
-type FamilyCanvasProps = {
-  relations: AuditRelation[];
-  onCardPlaced?: (card: RelationCardTemplate) => void;
-  onUpdateRelation?: (relationId: string, updates: Partial<AuditRelation>) => void;
+type LocalCard = {
+  id: string;
+  template: RelationCardTemplate;
+  purpose: string;
+  state: string;
+  sla: number | null;
+  slsa: number | null;
+  slpmo: number | null;
+  slm: number | null;
+  nsb: number | null;
+  scoreLumiere: number | null;
 };
 
-export function FamilyCanvas({ relations, onCardPlaced, onUpdateRelation }: FamilyCanvasProps) {
+export function FamilyCanvas() {
+  const [cards, setCards] = useState<LocalCard[]>([]);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [draggedCard, setDraggedCard] = useState<RelationCardTemplate | null>(null);
 
@@ -33,15 +40,37 @@ export function FamilyCanvas({ relations, onCardPlaced, onUpdateRelation }: Fami
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     if (!draggedCard) return;
-    onCardPlaced?.(draggedCard);
+    const newCard: LocalCard = {
+      id: `${draggedCard.id}-${Date.now()}`,
+      template: draggedCard,
+      purpose: "soul_mission",
+      state: "absente",
+      sla: null,
+      slsa: null,
+      slpmo: null,
+      slm: null,
+      nsb: null,
+      scoreLumiere: null,
+    };
+    setCards((prev) => [...prev, newCard]);
+    setOpenCardId(newCard.id);
     setDraggedCard(null);
-  }, [draggedCard, onCardPlaced]);
+  }, [draggedCard]);
 
-  const toggleCard = useCallback((relationId: string) => {
-    setOpenCardId((prev) => (prev === relationId ? null : relationId));
+  const toggleCard = useCallback((cardId: string) => {
+    setOpenCardId((prev) => (prev === cardId ? null : cardId));
   }, []);
 
-  const openRelation = relations.find((r) => r.relation_id === openCardId);
+  const updateCard = useCallback((cardId: string, updates: Partial<LocalCard>) => {
+    setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, ...updates } : c)));
+  }, []);
+
+  const removeCard = useCallback((cardId: string) => {
+    setCards((prev) => prev.filter((c) => c.id !== cardId));
+    setOpenCardId((prev) => (prev === cardId ? null : prev));
+  }, []);
+
+  const openCard = cards.find((c) => c.id === openCardId);
 
   return (
     <div className="flex gap-4">
@@ -49,55 +78,62 @@ export function FamilyCanvas({ relations, onCardPlaced, onUpdateRelation }: Fami
       <div
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        className="relative flex-1 rounded-xl border bg-gradient-to-b from-neutral-50 to-white p-4"
+        className="relative min-h-[300px] flex-1 rounded-xl border bg-gradient-to-b from-neutral-50 to-white p-4"
       >
         {/* Cartes fermées (vignettes cliquables) */}
-        <div className="mb-4 flex flex-wrap gap-2">
-          {relations.map((r) => {
-            const isOpen = r.relation_id === openCardId;
-            return (
-              <button
-                key={r.relation_id}
-                type="button"
-                onClick={() => toggleCard(r.relation_id)}
-                className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs transition ${
-                  isOpen
-                    ? "border-2 shadow-md"
-                    : "border-neutral-200 bg-white hover:bg-neutral-50"
-                }`}
-                style={{
-                  borderColor: isOpen ? r.color_hex ?? "#8B3A62" : undefined,
-                  backgroundColor: isOpen ? `${r.color_hex ?? "#8B3A62"}10` : undefined,
-                }}
-              >
-                <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ backgroundColor: r.color_hex ?? "#8B3A62" }}
-                />
-                <span className="font-medium" style={{ color: isOpen ? r.color_hex ?? "#8B3A62" : "#374151" }}>
-                  {r.relation_type}
-                </span>
-                <span className="text-[9px] text-neutral-400">{r.relation_state}</span>
-              </button>
-            );
-          })}
-        </div>
+        {cards.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {cards.map((c) => {
+              const isOpen = c.id === openCardId;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => toggleCard(c.id)}
+                  className={`group flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs transition ${
+                    isOpen
+                      ? "border-2 shadow-md"
+                      : "border-neutral-200 bg-white hover:bg-neutral-50"
+                  }`}
+                  style={{
+                    borderColor: isOpen ? c.template.color : undefined,
+                    backgroundColor: isOpen ? `${c.template.color}10` : undefined,
+                  }}
+                >
+                  <span>{c.template.icon}</span>
+                  <span className="font-medium" style={{ color: isOpen ? c.template.color : "#374151" }}>
+                    {c.template.name}
+                  </span>
+                  <span className="text-[9px] text-neutral-400">{c.state}</span>
+                  <span
+                    onClick={(e) => { e.stopPropagation(); removeCard(c.id); }}
+                    className="ml-1 hidden text-red-500 hover:text-red-700 group-hover:inline"
+                  >
+                    ×
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Carte ouverte (détails complets) */}
-        {openRelation && (
+        {openCard && (
           <div
             className="rounded-xl border-2 bg-white p-4 shadow-lg"
-            style={{ borderColor: openRelation.color_hex ?? "#8B3A62" }}
+            style={{ borderColor: openCard.template.color }}
           >
             <div className="mb-3 flex items-start justify-between">
-              <div>
-                <h3
-                  className="text-lg font-bold"
-                  style={{ color: openRelation.color_hex ?? "#8B3A62" }}
-                >
-                  {openRelation.relation_type}
-                </h3>
-                <p className="text-xs text-neutral-500">{openRelation.relation_state}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{openCard.template.icon}</span>
+                <div>
+                  <h3 className="text-lg font-bold" style={{ color: openCard.template.color }}>
+                    {openCard.template.name}
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    G{openCard.template.generation} · {openCard.template.gender === "F" ? "Féminin" : "Masculin"}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -115,8 +151,8 @@ export function FamilyCanvas({ relations, onCardPlaced, onUpdateRelation }: Fami
                   But
                 </label>
                 <select
-                  value={openRelation.purpose}
-                  onChange={(e) => onUpdateRelation?.(openRelation.relation_id, { purpose: e.target.value })}
+                  value={openCard.purpose}
+                  onChange={(e) => updateCard(openCard.id, { purpose: e.target.value })}
                   className="w-full rounded-lg border px-2 py-1.5 text-sm"
                 >
                   {PURPOSE_OPTIONS.map((o) => (
@@ -131,8 +167,8 @@ export function FamilyCanvas({ relations, onCardPlaced, onUpdateRelation }: Fami
                   État
                 </label>
                 <select
-                  value={openRelation.relation_state}
-                  onChange={(e) => onUpdateRelation?.(openRelation.relation_id, { relation_state: e.target.value })}
+                  value={openCard.state}
+                  onChange={(e) => updateCard(openCard.id, { state: e.target.value })}
                   className="w-full rounded-lg border px-2 py-1.5 text-sm"
                 >
                   {RELATION_STATE_OPTIONS.map((o) => (
@@ -143,19 +179,15 @@ export function FamilyCanvas({ relations, onCardPlaced, onUpdateRelation }: Fami
 
               {/* 4 Scores */}
               <div className="col-span-2 grid grid-cols-4 gap-2">
-                {(["sla", "slsa", "slpmo", "slm"] as const).map((scoreKey) => (
-                  <div key={scoreKey}>
+                {(["sla", "slsa", "slpmo", "slm"] as const).map((key) => (
+                  <div key={key}>
                     <label className="mb-1 block text-[9px] font-bold uppercase tracking-wide text-neutral-400">
-                      {scoreKey.toUpperCase()}
+                      {key.toUpperCase()}
                     </label>
                     <input
                       type="number"
-                      value={String((openRelation as Record<string, unknown>)[scoreKey] ?? "")}
-                      onChange={(e) =>
-                        onUpdateRelation?.(openRelation.relation_id, {
-                          [scoreKey]: e.target.value ? Number(e.target.value) : null,
-                        } as Partial<AuditRelation>)
-                      }
+                      value={openCard[key] ?? ""}
+                      onChange={(e) => updateCard(openCard.id, { [key]: e.target.value ? Number(e.target.value) : null })}
                       onFocus={(e) => e.currentTarget.select()}
                       placeholder="—"
                       className="w-full rounded-lg border px-2 py-1 text-center font-mono text-sm"
@@ -171,12 +203,8 @@ export function FamilyCanvas({ relations, onCardPlaced, onUpdateRelation }: Fami
                 </label>
                 <input
                   type="number"
-                  value={openRelation.niveau_shamanique_bloques ?? ""}
-                  onChange={(e) =>
-                    onUpdateRelation?.(openRelation.relation_id, {
-                      niveau_shamanique_bloques: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
+                  value={openCard.nsb ?? ""}
+                  onChange={(e) => updateCard(openCard.id, { nsb: e.target.value ? Number(e.target.value) : null })}
                   onFocus={(e) => e.currentTarget.select()}
                   placeholder="—"
                   className="w-full rounded-lg border px-2 py-1.5 font-mono text-sm"
@@ -190,32 +218,14 @@ export function FamilyCanvas({ relations, onCardPlaced, onUpdateRelation }: Fami
                 </label>
                 <input
                   type="number"
-                  value={openRelation.score_lumiere ?? ""}
-                  onChange={(e) =>
-                    onUpdateRelation?.(openRelation.relation_id, {
-                      score_lumiere: e.target.value ? Number(e.target.value) : null,
-                    } as Partial<AuditRelation>)
-                  }
+                  value={openCard.scoreLumiere ?? ""}
+                  onChange={(e) => updateCard(openCard.id, { scoreLumiere: e.target.value ? Number(e.target.value) : null })}
                   onFocus={(e) => e.currentTarget.select()}
                   placeholder="—"
                   className="w-full rounded-lg border px-2 py-1.5 font-mono text-sm"
                 />
               </div>
             </div>
-
-            {/* Catégories */}
-            {openRelation.categories.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1">
-                {openRelation.categories.map((c) => (
-                  <span
-                    key={c}
-                    className="rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-medium text-rose-700"
-                  >
-                    {c}
-                  </span>
-                ))}
-              </div>
-            )}
 
             {/* Menu Sentiers */}
             <div className="mt-4 flex gap-2">
@@ -245,8 +255,8 @@ export function FamilyCanvas({ relations, onCardPlaced, onUpdateRelation }: Fami
         )}
 
         {/* État vide */}
-        {relations.length === 0 && !draggedCard && (
-          <div className="flex h-40 items-center justify-center">
+        {cards.length === 0 && !draggedCard && (
+          <div className="flex h-full min-h-[200px] items-center justify-center">
             <p className="text-sm text-neutral-400">
               Glissez des cartes depuis le drawer pour créer la structure familiale
             </p>
