@@ -81,6 +81,7 @@ const PAGE_MODES = [
   { id: "relations", label: "Relations" },
   { id: "famille", label: "Famille" },
   { id: "monade", label: "Monade" },
+  { id: "galerie", label: "🖼 Galerie" },
 ] as const;
 type PageMode = (typeof PAGE_MODES)[number]["id"];
 
@@ -320,16 +321,37 @@ function EditPersonPanel({
     onUpdate({ annotations: annotations.filter((a) => a.id !== id) });
 
   // ── Médias ──
-  const addMedia = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload vers Supabase Storage (pathology-photos/{svlbh_id}/canvas-…) pour
+  // que les médias survivent au reload et alimentent le mode Galerie.
+  // Fallback blob: locale si l'upload échoue (préviewable mais non persisté).
+  const addMedia = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    const newMedias = files.map((f, i) => ({
-      id: `media-${Date.now()}-${i}`,
-      url: URL.createObjectURL(f),
-      title: f.name.replace(/\.[^.]+$/, ""),
-      order: card.medias.length + i,
-    }));
-    onUpdate({ medias: [...card.medias, ...newMedias] });
     e.target.value = "";
+    if (files.length === 0) return;
+    const sb = createClient();
+    const { data: svlbhId } = await sb.rpc("auth_svlbh_id");
+    const newMedias: CardMedia[] = [];
+    for (const [i, f] of files.entries()) {
+      const ext = (f.name.split(".").pop() ?? "png").toLowerCase();
+      let url = "";
+      if (svlbhId) {
+        const path = `${svlbhId}/canvas-${Date.now()}-${i}.${ext}`;
+        const { error } = await sb.storage
+          .from("pathology-photos")
+          .upload(path, f, { contentType: f.type || "image/png" });
+        if (!error) {
+          url = sb.storage.from("pathology-photos").getPublicUrl(path).data.publicUrl;
+        }
+      }
+      if (!url) url = URL.createObjectURL(f);
+      newMedias.push({
+        id: `media-${Date.now()}-${i}`,
+        url,
+        title: f.name.replace(/\.[^.]+$/, ""),
+        order: card.medias.length + newMedias.length,
+      });
+    }
+    onUpdate({ medias: [...card.medias, ...newMedias] });
   };
 
   const removeMedia = (id: string) =>
@@ -1033,6 +1055,105 @@ function MonadePane({ cards, canvasColor, onOpen }: {
   );
 }
 
+function GaleriePane({ cards, onOpen }: { cards: LocalCard[]; onOpen: (id: string) => void }) {
+  // Galerie des médias façon MacFamilyTree : tous les médias du graphe,
+  // groupés par personne, légende, lightbox au clic.
+  const [lightbox, setLightbox] = useState<{ cardId: string; idx: number } | null>(null);
+  const withMedia = cards.filter((c) => (c.medias?.length ?? 0) > 0);
+
+  if (withMedia.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-400">
+        Aucun média — ajoute des images dans la fiche d&apos;une personne (mode Famille).
+      </p>
+    );
+  }
+
+  const lbCard = lightbox ? withMedia.find((c) => c.id === lightbox.cardId) : null;
+  const lbMedias = lbCard ? [...lbCard.medias].sort((a, b) => a.order - b.order) : [];
+  const lbMedia = lightbox && lbMedias[lightbox.idx];
+
+  const nameOf = (c: LocalCard) => [c.prenom, c.nom].filter(Boolean).join(" ") || c.template.name;
+
+  return (
+    <div className="space-y-6 rounded-xl border border-neutral-200 bg-white p-4">
+      {withMedia.map((c) => {
+        const medias = [...c.medias].sort((a, b) => a.order - b.order);
+        return (
+          <div key={c.id} className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              {medias.map((m, idx) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setLightbox({ cardId: c.id, idx })}
+                  className="overflow-hidden rounded-md border border-neutral-200 transition hover:scale-105 hover:shadow-md"
+                  title={m.title}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={m.url} alt={m.title} className="h-28 w-auto object-cover" />
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => onOpen(c.id)}
+              className="inline-block max-w-full truncate rounded bg-green-100 px-2 py-1 text-left text-xs font-semibold text-green-900 hover:bg-green-200"
+              title="Ouvrir la fiche"
+            >
+              {c.template.icon} {nameOf(c)} · {medias.length} média{medias.length > 1 ? "s" : ""}
+            </button>
+          </div>
+        );
+      })}
+
+      {/* Lightbox */}
+      {lightbox && lbMedia && lbCard && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/85 p-6"
+          onClick={() => setLightbox(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lbMedia.url}
+            alt={lbMedia.title}
+            className="max-h-[78vh] max-w-full rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="mt-3 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="rounded-full bg-white/15 px-3 py-1.5 text-sm text-white hover:bg-white/25 disabled:opacity-30"
+              disabled={lightbox.idx === 0}
+              onClick={() => setLightbox({ ...lightbox, idx: lightbox.idx - 1 })}
+            >
+              ←
+            </button>
+            <span className="text-xs text-white/80">
+              {nameOf(lbCard)} — {lbMedia.title} ({lightbox.idx + 1}/{lbMedias.length})
+            </span>
+            <button
+              type="button"
+              className="rounded-full bg-white/15 px-3 py-1.5 text-sm text-white hover:bg-white/25 disabled:opacity-30"
+              disabled={lightbox.idx >= lbMedias.length - 1}
+              onClick={() => setLightbox({ ...lightbox, idx: lightbox.idx + 1 })}
+            >
+              →
+            </button>
+            <button
+              type="button"
+              className="rounded-full bg-white/15 px-3 py-1.5 text-xs text-white hover:bg-white/25"
+              onClick={() => { setLightbox(null); onOpen(lbCard.id); }}
+            >
+              Ouvrir la fiche
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function FamilyCanvas() {
   const [viewMode, setViewMode] = useState<ViewMode>("generations");
   const [canvasColor, setCanvasColor] = useState(DEFAULT_CANVAS_COLOR);
@@ -1727,6 +1848,9 @@ export function FamilyCanvas() {
       )}
       {pageMode === "monade" && (
         <MonadePane cards={cards} canvasColor={canvasColor} onOpen={(id) => { setOpenCardId(id); setPageMode("famille"); }} />
+      )}
+      {pageMode === "galerie" && (
+        <GaleriePane cards={cards} onOpen={(id) => { setOpenCardId(id); setPageMode("famille"); }} />
       )}
       </div>{/* end canvas column */}
 
