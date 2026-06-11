@@ -52,11 +52,27 @@ const TEMPLATE_EDGES: Array<[string, string]> = [
 // Connection is simply a pair of card IDs; direction determined by y-position at render time
 type Connection = { a: string; b: string };
 
-const GEN_LABELS: Record<number, string> = {
-  3: "G3 · Arrière-grands-parents",
-  2: "G2 · Grands-parents",
-  1: "G1 · Parents",
-  0: "G0 · Consultante",
+type ViewMode = "generations" | "niveaux" | "incarnations";
+
+const VIEW_MODE_LABELS: Record<ViewMode, Record<number, string>> = {
+  generations: {
+    3: "G3 · Arrière-grands-parents",
+    2: "G2 · Grands-parents",
+    1: "G1 · Parents",
+    0: "G0 · Consultante",
+  },
+  niveaux: {
+    3: "N3 · Niveau Ancestral Profond",
+    2: "N2 · Niveau Grand-parental",
+    1: "N1 · Niveau Parental",
+    0: "N0 · Niveau Personnel",
+  },
+  incarnations: {
+    3: "I3 · 3ème Incarnation",
+    2: "I2 · 2ème Incarnation",
+    1: "I1 · 1ère Incarnation",
+    0: "I0 · Incarnation Présente",
+  },
 };
 
 const CANVAS_W = 960;
@@ -129,16 +145,19 @@ function bezierPath(
 }
 
 export function FamilyCanvas() {
+  const [viewMode, setViewMode] = useState<ViewMode>("generations");
   const [canvasColor, setCanvasColor] = useState(DEFAULT_CANVAS_COLOR);
   const [cards, setCards] = useState<LocalCard[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [draggedCard, setDraggedCard] = useState<RelationCardTemplate | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [addProcheOpen, setAddProcheOpen] = useState(false);
 
   const textColor = useMemo(() => textOnColor(canvasColor), [canvasColor]);
   const sectionBg = useMemo(() => darken(canvasColor, 0.18), [canvasColor]);
   const inputBg = useMemo(() => darken(canvasColor, 0.28), [canvasColor]);
+  const genLabels = VIEW_MODE_LABELS[viewMode];
 
   const positions = useMemo(() => computePositions(cards), [cards]);
 
@@ -148,43 +167,46 @@ export function FamilyCanvas() {
     e.dataTransfer.effectAllowed = "copy";
   }, []);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragOver(false);
-      if (!draggedCard) return;
-
+  const addCardFromTemplate = useCallback(
+    (tpl: RelationCardTemplate) => {
       const newCard: LocalCard = {
-        id: `${draggedCard.id}-${Date.now()}`,
-        template: draggedCard,
+        id: `${tpl.id}-${Date.now()}`,
+        template: tpl,
         purpose: "soul_mission",
         state: "absente",
         sla: null, slsa: null, slpmo: null, slm: null,
         nsb: null, scoreLumiere: null,
         prenom: "", nom: "", autresPrenoms: "", titre: "",
-        sexe: draggedCard.gender,
-        shape: draggedCard.gender === "F" ? "circle" : "cube",
+        sexe: tpl.gender,
+        shape: tpl.gender === "F" ? "circle" : "cube",
         evenements: [],
       };
-
-      // Auto-connect based on template edges
       const newConns: Connection[] = [];
       for (const [tA, tB] of TEMPLATE_EDGES) {
-        if (draggedCard.id === tA) {
+        if (tpl.id === tA) {
           const match = cards.find((c) => c.template.id === tB);
           if (match) newConns.push({ a: newCard.id, b: match.id });
-        } else if (draggedCard.id === tB) {
+        } else if (tpl.id === tB) {
           const match = cards.find((c) => c.template.id === tA);
           if (match) newConns.push({ a: newCard.id, b: match.id });
         }
       }
-
       setCards((prev) => [...prev, newCard]);
       if (newConns.length > 0) setConnections((prev) => [...prev, ...newConns]);
       setOpenCardId(newCard.id);
+    },
+    [cards],
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      if (!draggedCard) return;
+      addCardFromTemplate(draggedCard);
       setDraggedCard(null);
     },
-    [draggedCard, cards],
+    [draggedCard, addCardFromTemplate],
   );
 
   const toggleCard = useCallback((cardId: string) => {
@@ -217,20 +239,41 @@ export function FamilyCanvas() {
     <div className="flex gap-4">
       {/* Canvas column */}
       <div className="flex flex-1 flex-col gap-2">
-        {/* Color picker toolbar */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-neutral-500">Couleur du système :</span>
-          <label className="relative h-6 w-9 cursor-pointer overflow-hidden rounded border border-neutral-300 shadow-sm">
-            <span className="absolute inset-0" style={{ backgroundColor: canvasColor }} />
-            <input
-              type="color"
-              value={canvasColor}
-              onChange={(e) => setCanvasColor(e.target.value)}
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-              title="Changer la couleur du système"
-            />
-          </label>
-          <span className="font-mono text-xs text-neutral-400">{canvasColor}</span>
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Mode toggle */}
+          <div className="flex items-center rounded-lg border border-neutral-200 bg-neutral-50 p-0.5">
+            {(["generations", "niveaux", "incarnations"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setViewMode(mode)}
+                className="rounded px-2.5 py-1 text-[11px] font-medium transition"
+                style={
+                  viewMode === mode
+                    ? { backgroundColor: canvasColor, color: textColor }
+                    : { color: "#6B7280" }
+                }
+              >
+                {mode === "generations" ? "Générations" : mode === "niveaux" ? "Niveaux" : "Incarnations"}
+              </button>
+            ))}
+          </div>
+          {/* Color picker */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-neutral-500">Couleur :</span>
+            <label className="relative h-6 w-9 cursor-pointer overflow-hidden rounded border border-neutral-300 shadow-sm">
+              <span className="absolute inset-0" style={{ backgroundColor: canvasColor }} />
+              <input
+                type="color"
+                value={canvasColor}
+                onChange={(e) => setCanvasColor(e.target.value)}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                title="Couleur du système"
+              />
+            </label>
+            <span className="font-mono text-xs text-neutral-400">{canvasColor}</span>
+          </div>
         </div>
 
       {/* Canvas */}
@@ -277,7 +320,7 @@ export function FamilyCanvas() {
                       opacity: gen === 0 ? 1 : 0.75,
                     }}
                   >
-                    {GEN_LABELS[gen]}
+                    {genLabels[gen]}
                   </span>
                 </div>
               </div>
@@ -449,8 +492,11 @@ export function FamilyCanvas() {
               Actions
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <button className="flex flex-col items-center gap-1 rounded-lg p-2 text-[10px] text-cyan-300 transition hover:brightness-110"
-                style={{ backgroundColor: inputBg }}>
+              <button
+                onClick={() => setAddProcheOpen((o) => !o)}
+                className="flex flex-col items-center gap-1 rounded-lg p-2 text-[10px] text-cyan-300 transition hover:brightness-110"
+                style={{ backgroundColor: addProcheOpen ? darken(inputBg, 0.1) : inputBg }}
+              >
                 <UserPlus className="h-5 w-5" />
                 Ajouter des proches
               </button>
@@ -477,6 +523,38 @@ export function FamilyCanvas() {
                 Sélectionner une famille…
               </button>
             </div>
+
+            {/* Popup ajout proche */}
+            {addProcheOpen && (
+              <div className="mt-2 rounded-lg p-2" style={{ backgroundColor: inputBg }}>
+                <p className="mb-1.5 text-[9px] font-bold uppercase tracking-wide" style={{ color: textColor, opacity: 0.65 }}>
+                  Choisir un proche à ajouter
+                </p>
+                <div className="space-y-1">
+                  {RELATION_CARD_TEMPLATES.map((tpl) => (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => {
+                        addCardFromTemplate(tpl);
+                        setAddProcheOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition hover:brightness-110"
+                      style={{ backgroundColor: sectionBg }}
+                    >
+                      <span className="text-base">{tpl.icon}</span>
+                      <span style={{ color: textColor }}>{tpl.name}</span>
+                      <span
+                        className="ml-auto rounded px-1 py-0.5 text-[9px] font-bold"
+                        style={{ backgroundColor: `${tpl.color}30`, color: tpl.color }}
+                      >
+                        G{tpl.generation}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Nom & sexe */}
