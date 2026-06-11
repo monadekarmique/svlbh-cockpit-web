@@ -92,6 +92,10 @@ const TEMPLATE_EDGES: Array<[string, string]> = [
   ["grand-pere", "pere"],
   ["grand-mere-paternelle", "pere"],
   ["arriere-grand-mere-paternelle", "grand-pere"],
+  ["fils", "consultante"],
+  ["fille", "consultante"],
+  ["petit-fils", "fils"],
+  ["petite-fille", "fille"],
 ];
 
 // Connection: undirected pair of card IDs + editable attributes
@@ -144,7 +148,15 @@ const CO_ACTEUR_CATEGORIES: CoActeurCategory[] = [
     id: "roles-familiaux",
     name: "Rôles familiaux",
     icon: "👨‍👩‍👧",
-    templates: RELATION_CARD_TEMPLATES as unknown as RelationCardTemplate[],
+    // Ascendants (cartes de base) + descendants (générations négatives,
+    // sous la consultante — DEC Patrick 2026-06-11)
+    templates: [
+      ...(RELATION_CARD_TEMPLATES as unknown as RelationCardTemplate[]),
+      { id: "fils", name: "Fils", relation_type: "fils", generation: -1, lignee: "consultante", gender: "M", color: "#0D9488", icon: "👦" },
+      { id: "fille", name: "Fille", relation_type: "fille", generation: -1, lignee: "consultante", gender: "F", color: "#DB2777", icon: "👧" },
+      { id: "petit-fils", name: "Petit-fils", relation_type: "petit-fils", generation: -2, lignee: "consultante", gender: "M", color: "#0EA5E9", icon: "🧒" },
+      { id: "petite-fille", name: "Petite-fille", relation_type: "petite-fille", generation: -2, lignee: "consultante", gender: "F", color: "#F472B6", icon: "🧒" },
+    ],
   },
 ];
 
@@ -1416,20 +1428,40 @@ export function FamilyCanvas() {
     <div className="flex flex-col gap-4 lg:flex-row">
       {/* Canvas column */}
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        {/* Barre de modes (façon MacFamilyTree) */}
+        {/* Barre de modes (façon MacFamilyTree) : Favoris · Galerie · menu
+            déroulant Personnes/Relations/Famille/Monade (DEC Patrick) */}
         <div className="flex flex-wrap items-center gap-1 rounded-lg border border-neutral-200 bg-white p-1">
-          {PAGE_MODES.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setPageMode(m.id)}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition ${
-                pageMode === m.id ? "bg-violet-600 text-white" : "text-neutral-500 hover:bg-neutral-100"
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
+          {(["favoris", "galerie"] as const).map((id) => {
+            const m = PAGE_MODES.find((x) => x.id === id)!;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setPageMode(m.id)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition ${
+                  pageMode === m.id ? "bg-violet-600 text-white" : "text-neutral-500 hover:bg-neutral-100"
+                }`}
+              >
+                {m.label}
+              </button>
+            );
+          })}
+          <select
+            value={["personnes", "relations", "famille", "monade"].includes(pageMode) ? pageMode : ""}
+            onChange={(e) => { if (e.target.value) setPageMode(e.target.value as PageMode); }}
+            className={`cursor-pointer rounded-md px-2 py-1 text-xs font-medium transition ${
+              ["personnes", "relations", "famille", "monade"].includes(pageMode)
+                ? "bg-violet-600 text-white"
+                : "bg-white text-neutral-500"
+            }`}
+            title="Choisir la vue"
+          >
+            <option value="" disabled>⊞ Vue…</option>
+            <option value="personnes">Personnes</option>
+            <option value="relations">Relations</option>
+            <option value="famille">Famille</option>
+            <option value="monade">Monade</option>
+          </select>
         </div>
 
         {pageMode === "famille" && (
@@ -1956,7 +1988,7 @@ export function FamilyCanvas() {
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => updateCard(openCard.id, { niveau: Math.max(0, openCard.niveau - 1) })}
+                  onClick={() => updateCard(openCard.id, { niveau: openCard.niveau - 1 })}
                   className="flex h-5 w-5 items-center justify-center rounded text-xs font-bold transition hover:brightness-110"
                   style={{ backgroundColor: inputBg, color: textColor }}
                 >
@@ -1973,7 +2005,6 @@ export function FamilyCanvas() {
                   onFocus={(e) => e.currentTarget.select()}
                   className="w-10 rounded px-1 py-0.5 text-center font-mono text-xs font-bold"
                   style={{ backgroundColor: inputBg, color: textColor }}
-                  min={0}
                 />
                 <button
                   type="button"
