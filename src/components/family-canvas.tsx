@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { UserPlus, Pencil, Users, Trash2, Link2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import {
   RELATION_CARD_TEMPLATES,
   PURPOSE_OPTIONS,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/cercle/audit-entites";
 
 const PLATON_SOLIDS = [
+  { id: "soleil", name: "Soleil (Unité)", clipPath: "circle(50%)" },
   { id: "circle", name: "Cercle", clipPath: "circle(50%)" },
   { id: "tetrahedron", name: "Tétraèdre", clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)" },
   { id: "cube", name: "Cube", clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)" },
@@ -29,6 +31,21 @@ const AUTRES_NOMS_TYPES = [
 
 type AutreNom = { id: string; type: string; value: string };
 type CardMedia = { id: string; url: string; title: string; order: number };
+
+// Annotations de décodage structurées (remplace la surcharge des champs nom
+// façon MacFamilyTree — DEC Patrick 2026-06-11).
+const ANNOTATION_TYPES = [
+  "Structure anatomique", "Système", "Énergie", "Thème", "Décodage requis", "Libre",
+] as const;
+type Annotation = { id: string; type: string; value: string };
+
+// Calques Lfem / Lmasc — structure féminine en base, structures masculines
+// superposées en verre liquide (translucidité réglable). DEC Patrick 2026-06-11.
+type GraphLayer = { id: string; name: string; side: "F" | "M"; opacity: number; visible: boolean };
+const DEFAULT_LAYERS: GraphLayer[] = [
+  { id: "F", name: "♀ Féminine", side: "F", opacity: 1, visible: true },
+  { id: "M1", name: "♂ Masculine 1", side: "M", opacity: 0.55, visible: true },
+];
 
 type LocalCard = {
   id: string;
@@ -52,7 +69,20 @@ type LocalCard = {
   sexe: "F" | "M";
   shape: PlatonSolidId;
   evenements: Array<{ type: string; date: string }>;
+  annotations: Annotation[];
+  layer: string; // id du calque (GraphLayer) — "F" par défaut
+  favori?: boolean;
 };
+
+// Modes de la page (façon MacFamilyTree) — DEC Patrick 2026-06-11.
+const PAGE_MODES = [
+  { id: "favoris", label: "★ Favoris" },
+  { id: "personnes", label: "Personnes" },
+  { id: "relations", label: "Relations" },
+  { id: "famille", label: "Famille" },
+  { id: "monade", label: "Monade" },
+] as const;
+type PageMode = (typeof PAGE_MODES)[number]["id"];
 
 // Undirected edges: templateId A ↔ templateId B (parent ↔ child in family tree)
 const TEMPLATE_EDGES: Array<[string, string]> = [
@@ -169,15 +199,19 @@ function computeLayout(cards: LocalCard[]): LayoutResult {
   // row index for each level (highest = 0)
   const levelRow = new Map(sortedLevels.map((lvl, i) => [lvl, i]));
 
-  const byLevel = new Map<number, LocalCard[]>();
+  // Groupes par (niveau, calque) : chaque calque est centré indépendamment,
+  // pour qu'une structure ♂ se superpose à la structure ♀ (verre liquide)
+  // au lieu de s'aligner à côté.
+  const byLevelLayer = new Map<string, LocalCard[]>();
   for (const card of cards) {
-    const n = card.niveau;
-    if (!byLevel.has(n)) byLevel.set(n, []);
-    byLevel.get(n)!.push(card);
+    const key = `${card.niveau}|${card.layer ?? "F"}`;
+    if (!byLevelLayer.has(key)) byLevelLayer.set(key, []);
+    byLevelLayer.get(key)!.push(card);
   }
 
   const positions = new Map<string, { cx: number; cy: number }>();
-  for (const [lvl, lvlCards] of byLevel) {
+  for (const [key, lvlCards] of byLevelLayer) {
+    const lvl = Number(key.split("|")[0]);
     const row = levelRow.get(lvl)!;
     const cy = row * ROW_H + ROW_H / 2;
     const sorted = [...lvlCards].sort((a, b) => a.xOrder - b.xOrder);
@@ -267,6 +301,24 @@ function EditPersonPanel({
   const removeAutreNom = (id: string) =>
     onUpdate({ autresNoms: card.autresNoms.filter((n) => n.id !== id) });
 
+  // ── Annotations de décodage ──
+  const annotations = card.annotations ?? [];
+  const addAnnotation = () =>
+    onUpdate({
+      annotations: [
+        ...annotations,
+        { id: `ann-${Date.now()}`, type: ANNOTATION_TYPES[0], value: "" },
+      ],
+    });
+
+  const updateAnnotation = (id: string, field: "type" | "value", val: string) =>
+    onUpdate({
+      annotations: annotations.map((a) => (a.id === id ? { ...a, [field]: val } : a)),
+    });
+
+  const removeAnnotation = (id: string) =>
+    onUpdate({ annotations: annotations.filter((a) => a.id !== id) });
+
   // ── Médias ──
   const addMedia = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -302,6 +354,53 @@ function EditPersonPanel({
 
   return (
     <>
+      {/* Annotations de décodage — structurées (anatomie, système, énergie, thème…) */}
+      <div className="mt-4 rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
+        <p className="mb-2 flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
+          <span className="flex h-5 w-5 items-center justify-center rounded bg-purple-500 text-[10px]">📝</span>
+          Annotations décodage ({annotations.length})
+        </p>
+        <div className="space-y-2">
+          {annotations.map((a) => (
+            <div key={a.id} className="rounded p-2" style={{ backgroundColor: inputBg }}>
+              <div className="mb-1 flex items-center gap-1">
+                <select
+                  value={a.type}
+                  onChange={(e) => updateAnnotation(a.id, "type", e.target.value)}
+                  className="flex-1 rounded px-1.5 py-0.5 text-[10px]"
+                  style={{ backgroundColor: darken(inputBg, 0.1), color: textColor }}
+                >
+                  {ANNOTATION_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => removeAnnotation(a.id)}
+                  className="px-1 text-xs text-red-400 hover:text-red-300"
+                >✕</button>
+              </div>
+              <textarea
+                value={a.value}
+                onChange={(e) => updateAnnotation(a.id, "value", e.target.value)}
+                placeholder="Ex. Artère thyroïdienne supérieure — communication interne onirique…"
+                rows={2}
+                className="w-full resize-y rounded px-2 py-1 text-xs"
+                style={{ backgroundColor: darken(inputBg, 0.08), color: textColor }}
+              />
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={addAnnotation}
+          className="mt-2 w-full rounded py-1 text-[10px] text-purple-300 transition hover:brightness-110"
+          style={{ backgroundColor: inputBg }}
+        >
+          + Ajouter une annotation
+        </button>
+      </div>
+
       {/* Autres noms */}
       <div className="mt-4 rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
         <p className="mb-2 flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
@@ -728,6 +827,212 @@ function CoActeurPanel({
   );
 }
 
+// ── Panes des modes Personnes / Relations / Monade (DEC Patrick 2026-06-11) ──
+
+function PersonnesPane({ cards, layers, onOpen, onToggleFavori, emptyLabel }: {
+  cards: LocalCard[];
+  layers: GraphLayer[];
+  onOpen: (id: string) => void;
+  onToggleFavori: (id: string) => void;
+  emptyLabel?: string;
+}) {
+  if (cards.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-400">
+        {emptyLabel ?? "Aucune personne — construis la structure en mode Famille."}
+      </p>
+    );
+  }
+  return (
+    <div className="overflow-x-auto rounded-xl border border-neutral-200">
+      <table className="w-full text-left text-xs">
+        <thead className="bg-neutral-50 text-[10px] uppercase tracking-wider text-neutral-400">
+          <tr>
+            <th className="px-3 py-2">★</th>
+            <th className="px-3 py-2">Personne</th>
+            <th className="px-3 py-2">Rôle</th>
+            <th className="px-3 py-2">Calque</th>
+            <th className="px-3 py-2">État</th>
+            <th className="px-3 py-2">Score Lumière</th>
+            <th className="px-3 py-2">Annotations</th>
+          </tr>
+        </thead>
+        <tbody>
+          {cards.map((c) => {
+            const l = layers.find((x) => x.id === (c.layer ?? "F"));
+            return (
+              <tr
+                key={c.id}
+                className="cursor-pointer border-t border-neutral-100 hover:bg-violet-50"
+                onClick={() => onOpen(c.id)}
+              >
+                <td
+                  className="px-3 py-2"
+                  onClick={(e) => { e.stopPropagation(); onToggleFavori(c.id); }}
+                >
+                  {c.favori ? "⭐" : "☆"}
+                </td>
+                <td className="px-3 py-2 font-medium">
+                  {[c.prenom, c.nom].filter(Boolean).join(" ") || c.template.name}
+                </td>
+                <td className="px-3 py-2 text-neutral-500">{c.template.name}</td>
+                <td className="px-3 py-2">{l?.name ?? c.layer}</td>
+                <td className="px-3 py-2">{c.state}</td>
+                <td className="px-3 py-2">{c.scoreLumiere ?? "—"}</td>
+                <td className="px-3 py-2 text-neutral-500">
+                  {c.annotations?.length ? `${c.annotations.length} 📝` : "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function RelationsPane({ cards, connections, onOpen }: {
+  cards: LocalCard[];
+  connections: Connection[];
+  onOpen: (id: string) => void;
+}) {
+  const nameOf = (id: string) => {
+    const c = cards.find((x) => x.id === id);
+    return c ? ([c.prenom, c.nom].filter(Boolean).join(" ") || c.template.name) : "?";
+  };
+  if (connections.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-400">
+        Aucune relation — relie des personnes en mode Famille.
+      </p>
+    );
+  }
+  return (
+    <div className="overflow-x-auto rounded-xl border border-neutral-200">
+      <table className="w-full text-left text-xs">
+        <thead className="bg-neutral-50 text-[10px] uppercase tracking-wider text-neutral-400">
+          <tr>
+            <th className="px-3 py-2">Relation</th>
+            <th className="px-3 py-2">SLA</th>
+            <th className="px-3 py-2">SLSA</th>
+            <th className="px-3 py-2">SLPMO</th>
+            <th className="px-3 py-2">SLM</th>
+            <th className="px-3 py-2">Token</th>
+          </tr>
+        </thead>
+        <tbody>
+          {connections.map((conn) => (
+            <tr
+              key={conn.id}
+              className="cursor-pointer border-t border-neutral-100 hover:bg-violet-50"
+              onClick={() => onOpen(conn.id)}
+            >
+              <td className="px-3 py-2 font-medium">
+                <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: conn.color }} />
+                {nameOf(conn.a)} ↔ {nameOf(conn.b)}
+              </td>
+              <td className="px-3 py-2">{conn.sla ?? "—"}</td>
+              <td className="px-3 py-2">{conn.slsa ?? "—"}</td>
+              <td className="px-3 py-2">{conn.slpmo ?? "—"}</td>
+              <td className="px-3 py-2">{conn.slm ?? "—"}</td>
+              <td className="px-3 py-2 text-neutral-500">{conn.token || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MonadePane({ cards, canvasColor, onOpen }: {
+  cards: LocalCard[];
+  canvasColor: string;
+  onOpen: (id: string) => void;
+}) {
+  // Vue Monade : l'Unité au centre (consultante — symbole du soleil),
+  // les autres acteurs en anneaux concentriques par génération.
+  const size = 560;
+  const cx = size / 2;
+  if (cards.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-400">
+        Aucune personne — construis la structure en mode Famille.
+      </p>
+    );
+  }
+  const center = cards.find((c) => c.template.id === "consultante") ?? cards[0];
+  const others = cards.filter((c) => c.id !== center.id);
+  const rings = new Map<number, LocalCard[]>();
+  for (const c of others) {
+    const g = Math.max(1, Math.abs(c.niveau));
+    if (!rings.has(g)) rings.set(g, []);
+    rings.get(g)!.push(c);
+  }
+  const ringKeys = [...rings.keys()].sort((a, b) => a - b);
+  const maxR = cx - 64;
+
+  const node = (c: LocalCard, x: number, y: number, big: boolean) => (
+    <button
+      key={c.id}
+      type="button"
+      onClick={() => onOpen(c.id)}
+      className="absolute flex flex-col items-center transition-transform hover:scale-110"
+      style={{ left: x - 24, top: y - 24, width: 48, background: "none", border: "none", padding: 0, cursor: "pointer" }}
+    >
+      <span
+        className="relative flex items-center justify-center rounded-full"
+        style={{
+          width: big ? 48 : 38,
+          height: big ? 48 : 38,
+          border: `2px solid ${c.template.color}`,
+          backgroundColor: `${c.template.color}18`,
+          fontSize: big ? 20 : 15,
+        }}
+      >
+        {c.template.icon}
+        {big && (
+          <span
+            className="absolute rounded-full"
+            style={{ width: 7, height: 7, backgroundColor: c.template.color, boxShadow: `0 0 6px ${c.template.color}` }}
+          />
+        )}
+      </span>
+      <span className="mt-0.5 max-w-20 truncate text-[9px] font-semibold" style={{ color: c.template.color }}>
+        {c.prenom || c.template.name}
+      </span>
+    </button>
+  );
+
+  return (
+    <div className="flex justify-center overflow-x-auto rounded-xl border border-neutral-200 p-4" style={{ backgroundColor: canvasColor }}>
+      <div className="relative" style={{ width: size, height: size }}>
+        {/* Anneaux */}
+        {ringKeys.map((g, i) => {
+          const r = ((i + 1) / ringKeys.length) * maxR;
+          return (
+            <div
+              key={g}
+              className="absolute rounded-full border border-dashed"
+              style={{ left: cx - r, top: cx - r, width: r * 2, height: r * 2, borderColor: "rgba(0,0,0,0.18)" }}
+            />
+          );
+        })}
+        {/* Acteurs en anneaux */}
+        {ringKeys.flatMap((g, i) => {
+          const r = ((i + 1) / ringKeys.length) * maxR;
+          const ringCards = rings.get(g)!;
+          return ringCards.map((c, j) => {
+            const angle = (j / ringCards.length) * 2 * Math.PI - Math.PI / 2;
+            return node(c, cx + r * Math.cos(angle), cx + r * Math.sin(angle), false);
+          });
+        })}
+        {/* Unité au centre — symbole du soleil */}
+        {node(center, cx, cx, true)}
+      </div>
+    </div>
+  );
+}
+
 export function FamilyCanvas() {
   const [viewMode, setViewMode] = useState<ViewMode>("generations");
   const [canvasColor, setCanvasColor] = useState(DEFAULT_CANVAS_COLOR);
@@ -741,11 +1046,119 @@ export function FamilyCanvas() {
   const [showSephiroth, setShowSephiroth] = useState(false);
   const [editPersonOpen, setEditPersonOpen] = useState(false);
 
+  // Calques Lfem/Lmasc
+  const [layers, setLayers] = useState<GraphLayer[]>(DEFAULT_LAYERS);
+  const [activeLayer, setActiveLayer] = useState("F");
+
+  // Mode de la page (Favoris / Personnes / Relations / Famille / Monade)
+  const [pageMode, setPageMode] = useState<PageMode>("famille");
+
+  const toggleFavori = useCallback((id: string) => {
+    setCards((prev) => prev.map((c) => (c.id === id ? { ...c, favori: !c.favori } : c)));
+  }, []);
+
+  // Persistance canvas_graph (Supabase)
+  const [graphId, setGraphId] = useState<string | null>(null);
+  const [graphTitle, setGraphTitle] = useState("Sans titre");
+  const [savedGraphs, setSavedGraphs] = useState<Array<{ graph_id: string; title: string; updated_at: string }>>([]);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  // Scale-to-fit iPhone : le canvas est pensé 960px (iMac) — on le met à
+  // l'échelle du conteneur sur petit écran.
+  const canvasWrapRef = useRef<HTMLDivElement>(null);
+  const [fitScale, setFitScale] = useState(1);
+  useEffect(() => {
+    const el = canvasWrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      setFitScale(Math.min(1, el.clientWidth / CANVAS_W));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const textColor = useMemo(() => textOnColor(canvasColor), [canvasColor]);
   const sectionBg = useMemo(() => darken(canvasColor, 0.18), [canvasColor]);
   const inputBg = useMemo(() => darken(canvasColor, 0.28), [canvasColor]);
 
   const layout = useMemo(() => computeLayout(cards), [cards]);
+
+  const refreshGraphList = useCallback(async () => {
+    const sb = createClient();
+    const { data } = await sb
+      .from("canvas_graph")
+      .select("graph_id, title, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(30);
+    setSavedGraphs(data ?? []);
+  }, []);
+
+  useEffect(() => { void refreshGraphList(); }, [refreshGraphList]);
+
+  const saveGraph = useCallback(async () => {
+    setSaveState("saving");
+    try {
+      const sb = createClient();
+      const payload = { cards, connections, canvasColor, viewMode, layers };
+      if (graphId) {
+        const { error } = await sb
+          .from("canvas_graph")
+          .update({ title: graphTitle, payload, updated_at: new Date().toISOString() })
+          .eq("graph_id", graphId);
+        if (error) throw error;
+      } else {
+        const { data: svlbhId, error: idErr } = await sb.rpc("auth_svlbh_id");
+        if (idErr || !svlbhId) throw idErr ?? new Error("svlbh_id introuvable");
+        const { data, error } = await sb
+          .from("canvas_graph")
+          .insert({ title: graphTitle, payload, created_by_svlbh_id: svlbhId })
+          .select("graph_id")
+          .single();
+        if (error) throw error;
+        setGraphId(data.graph_id);
+      }
+      setSaveState("saved");
+      void refreshGraphList();
+      setTimeout(() => setSaveState("idle"), 2000);
+    } catch {
+      setSaveState("error");
+    }
+  }, [cards, connections, canvasColor, viewMode, layers, graphId, graphTitle, refreshGraphList]);
+
+  const loadGraph = useCallback(async (id: string) => {
+    const sb = createClient();
+    const { data } = await sb
+      .from("canvas_graph")
+      .select("graph_id, title, payload")
+      .eq("graph_id", id)
+      .maybeSingle();
+    if (!data) return;
+    const p = (data.payload ?? {}) as {
+      cards?: LocalCard[]; connections?: Connection[];
+      canvasColor?: string; viewMode?: ViewMode; layers?: GraphLayer[];
+    };
+    setCards((p.cards ?? []).map((c) => ({ ...c, annotations: c.annotations ?? [], layer: c.layer ?? "F" })));
+    setConnections(p.connections ?? []);
+    if (p.canvasColor) setCanvasColor(p.canvasColor);
+    if (p.viewMode) setViewMode(p.viewMode);
+    setLayers(p.layers && p.layers.length > 0 ? p.layers : DEFAULT_LAYERS);
+    setActiveLayer("F");
+    setGraphId(data.graph_id);
+    setGraphTitle(data.title);
+    setOpenCardId(null);
+    setOpenConnId(null);
+  }, []);
+
+  const newGraph = useCallback(() => {
+    setGraphId(null);
+    setGraphTitle("Sans titre");
+    setCards([]);
+    setConnections([]);
+    setLayers(DEFAULT_LAYERS);
+    setActiveLayer("F");
+    setOpenCardId(null);
+    setOpenConnId(null);
+  }, []);
 
   const handleDragStart = useCallback((e: React.DragEvent, card: RelationCardTemplate) => {
     setDraggedCard(card);
@@ -771,6 +1184,8 @@ export function FamilyCanvas() {
         evenements: [],
         autresNoms: [],
         medias: [],
+        annotations: [],
+        layer: activeLayer,
       };
       const newConns: Connection[] = [];
       const mkConn = (a: string, b: string): Connection => ({
@@ -793,7 +1208,7 @@ export function FamilyCanvas() {
       if (newConns.length > 0) setConnections((prev) => [...prev, ...newConns]);
       setOpenCardId(newCard.id);
     },
-    [cards],
+    [cards, activeLayer],
   );
 
   const handleDrop = useCallback(
@@ -861,9 +1276,27 @@ export function FamilyCanvas() {
   const openCard = cards.find((c) => c.id === openCardId);
 
   return (
-    <div className="flex gap-4">
+    <div className="flex flex-col gap-4 lg:flex-row">
       {/* Canvas column */}
-      <div className="flex flex-1 flex-col gap-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        {/* Barre de modes (façon MacFamilyTree) */}
+        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-neutral-200 bg-white p-1">
+          {PAGE_MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setPageMode(m.id)}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition ${
+                pageMode === m.id ? "bg-violet-600 text-white" : "text-neutral-500 hover:bg-neutral-100"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        {pageMode === "famille" && (
+        <>
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Mode toggle */}
@@ -913,13 +1346,118 @@ export function FamilyCanvas() {
             </label>
             <span className="font-mono text-xs text-neutral-400">{canvasColor}</span>
           </div>
+
+          {/* Persistance graphe (canvas_graph) */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
+            <input
+              value={graphTitle}
+              onChange={(e) => setGraphTitle(e.target.value)}
+              placeholder="Titre du graphe"
+              className="w-36 rounded border border-neutral-200 px-2 py-1 text-xs"
+            />
+            <button
+              type="button"
+              onClick={() => void saveGraph()}
+              className="rounded bg-violet-600 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-violet-700"
+            >
+              {saveState === "saving" ? "…" : saveState === "saved" ? "✓ Sauvé" : saveState === "error" ? "⚠ Erreur" : "Sauvegarder"}
+            </button>
+            <select
+              value={graphId ?? ""}
+              onChange={(e) => { if (e.target.value) void loadGraph(e.target.value); }}
+              className="max-w-40 rounded border border-neutral-200 px-1.5 py-1 text-[11px] text-neutral-600"
+            >
+              <option value="">Charger…</option>
+              {savedGraphs.map((g) => (
+                <option key={g.graph_id} value={g.graph_id}>{g.title}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              title="Nouveau graphe"
+              onClick={newGraph}
+              className="rounded border border-neutral-200 px-2 py-1 text-[11px] text-neutral-500 hover:bg-neutral-50"
+            >
+              ＋ Nouveau
+            </button>
+          </div>
         </div>
 
-      {/* Canvas */}
-      <div className="overflow-x-auto rounded-xl border border-neutral-200">
+        {/* Calques Lfem / Lmasc — structures superposées en verre liquide */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] uppercase tracking-wider text-neutral-400">Calques</span>
+          {layers.map((l) => (
+            <div
+              key={l.id}
+              className={`flex items-center gap-1.5 rounded-full border px-2 py-0.5 ${
+                activeLayer === l.id ? "border-violet-400 bg-violet-50" : "border-neutral-200 bg-white"
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => setActiveLayer(l.id)}
+                className="text-[11px] font-medium"
+                style={{ color: l.side === "F" ? "#BE185D" : "#1D4ED8" }}
+                title="Calque actif pour les nouvelles cartes"
+              >
+                {l.name}
+              </button>
+              <button
+                type="button"
+                title={l.visible ? "Masquer" : "Afficher"}
+                onClick={() =>
+                  setLayers((prev) => prev.map((x) => (x.id === l.id ? { ...x, visible: !x.visible } : x)))
+                }
+                className="text-[11px]"
+                style={{ opacity: l.visible ? 1 : 0.4 }}
+              >
+                👁
+              </button>
+              {l.side === "M" && (
+                <input
+                  type="range"
+                  min={15}
+                  max={90}
+                  value={Math.round(l.opacity * 100)}
+                  onChange={(e) =>
+                    setLayers((prev) =>
+                      prev.map((x) => (x.id === l.id ? { ...x, opacity: Number(e.target.value) / 100 } : x)),
+                    )
+                  }
+                  className="h-1 w-16 accent-blue-600"
+                  title={`Transparence ${Math.round(l.opacity * 100)}%`}
+                />
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              setLayers((prev) => {
+                const n = prev.filter((x) => x.side === "M").length + 1;
+                return [...prev, { id: `M${n}`, name: `♂ Masculine ${n}`, side: "M", opacity: 0.55, visible: true }];
+              })
+            }
+            className="rounded-full border border-dashed border-neutral-300 px-2 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-50"
+          >
+            ＋ structure ♂
+          </button>
+          <span className="text-[10px] text-neutral-400">nouvelle carte → calque actif</span>
+        </div>
+
+      {/* Canvas — scale-to-fit sur petit écran (iPhone), pleine taille sinon */}
+      <div ref={canvasWrapRef} className="overflow-x-auto rounded-xl border border-neutral-200">
+        <div
+          style={{
+            width: CANVAS_W * fitScale,
+            height: layout.canvasH * fitScale,
+          }}
+        >
         <div
           className="relative"
           style={{
+            transform: `scale(${fitScale})`,
+            transformOrigin: "top left",
             width: CANVAS_W,
             height: layout.canvasH,
             backgroundColor: canvasColor,
@@ -981,6 +1519,18 @@ export function FamilyCanvas() {
               const bPos = layout.positions.get(conn.b);
               if (!aPos || !bPos) return null;
               const isSelected = conn.id === openConnId;
+              // Visibilité/translucidité héritées des calques des extrémités
+              const layerOf = (cardId: string) => {
+                const c = cards.find((x) => x.id === cardId);
+                return layers.find((l) => l.id === (c?.layer ?? "F"));
+              };
+              const la = layerOf(conn.a);
+              const lb = layerOf(conn.b);
+              if ((la && !la.visible) || (lb && !lb.visible)) return null;
+              const lineOpacity = Math.min(
+                la?.side === "M" ? la.opacity : 1,
+                lb?.side === "M" ? lb.opacity : 1,
+              );
               return (
                 <g key={conn.id} style={{ pointerEvents: "visibleStroke", cursor: "pointer" }}>
                   {/* Wider invisible hit area */}
@@ -1000,7 +1550,7 @@ export function FamilyCanvas() {
                     stroke={conn.color}
                     strokeWidth={isSelected ? 3.5 : 2}
                     fill="none"
-                    opacity={isSelected ? 1 : 0.7}
+                    opacity={(isSelected ? 1 : 0.7) * lineOpacity}
                     strokeDasharray={isSelected ? "6 3" : undefined}
                     onClick={() => {
                       setOpenConnId((prev) => (prev === conn.id ? null : conn.id));
@@ -1020,6 +1570,14 @@ export function FamilyCanvas() {
             const isOpen = card.id === openCardId;
             const isConsultante = card.template.id === "consultante";
 
+            // Calque : ♀ = base opaque ; ♂ = verre liquide superposé (offset + blur)
+            const cardLayer = layers.find((l) => l.id === (card.layer ?? "F")) ?? layers[0];
+            if (!cardLayer.visible) return null;
+            const mLayers = layers.filter((l) => l.side === "M");
+            const mIndex = cardLayer.side === "M" ? mLayers.findIndex((l) => l.id === cardLayer.id) : -1;
+            const glassOffset = mIndex >= 0 ? (mIndex + 1) * 10 : 0;
+            const isGlass = cardLayer.side === "M";
+
             return (
               <button
                 key={card.id}
@@ -1027,8 +1585,8 @@ export function FamilyCanvas() {
                 onClick={() => toggleCard(card.id)}
                 className="absolute flex flex-col items-center transition-transform hover:scale-105"
                 style={{
-                  left: pos.cx - CARD_SZ / 2,
-                  top: pos.cy - CARD_SZ / 2,
+                  left: pos.cx - CARD_SZ / 2 + glassOffset,
+                  top: pos.cy - CARD_SZ / 2 - glassOffset,
                   width: CARD_SZ,
                   background: "none",
                   border: "none",
@@ -1036,10 +1594,28 @@ export function FamilyCanvas() {
                   cursor: "pointer",
                   overflow: "visible",
                   transformOrigin: "center center",
+                  opacity: isGlass ? cardLayer.opacity : 1,
+                  zIndex: isGlass ? 20 + mIndex : 10,
                 }}
               >
                 {/* Shape container */}
-                <div style={{ position: "relative", width: CARD_SZ, height: CARD_SZ }}>
+                <div
+                  style={{
+                    position: "relative",
+                    width: CARD_SZ,
+                    height: CARD_SZ,
+                    ...(isGlass
+                      ? {
+                          backdropFilter: "blur(10px) saturate(150%)",
+                          WebkitBackdropFilter: "blur(10px) saturate(150%)",
+                          background: "rgba(255,255,255,0.22)",
+                          borderRadius: 16,
+                          border: "1px solid rgba(255,255,255,0.5)",
+                          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6), 0 6px 18px rgba(0,0,0,0.18)",
+                        }
+                      : {}),
+                  }}
+                >
                   {/* Outer ring — circle for consultante, rounded-rect for others */}
                   <div
                     style={{
@@ -1067,6 +1643,26 @@ export function FamilyCanvas() {
                   >
                     {card.template.icon}
                   </div>
+                  {/* Soleil (Unité) : point central */}
+                  {card.shape === "soleil" && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: "50%",
+                        top: "50%",
+                        width: 10,
+                        height: 10,
+                        marginLeft: -5,
+                        marginTop: -5,
+                        borderRadius: "50%",
+                        backgroundColor: card.template.color,
+                        boxShadow: `0 0 6px ${card.template.color}`,
+                      }}
+                    />
+                  )}
+                  {card.favori && (
+                    <span style={{ position: "absolute", top: -8, right: -8, fontSize: 13 }}>⭐</span>
+                  )}
                 </div>
                 {/* Labels */}
                 <p
@@ -1115,13 +1711,29 @@ export function FamilyCanvas() {
             </div>
           )}
         </div>
+        </div>{/* end scale-to-fit wrapper */}
       </div>
+      </>
+      )}
+
+      {pageMode === "personnes" && (
+        <PersonnesPane cards={cards} layers={layers} onOpen={(id) => { setOpenCardId(id); setPageMode("famille"); }} onToggleFavori={toggleFavori} />
+      )}
+      {pageMode === "relations" && (
+        <RelationsPane cards={cards} connections={connections} onOpen={(id) => { setOpenConnId(id); setPageMode("famille"); }} />
+      )}
+      {pageMode === "favoris" && (
+        <PersonnesPane cards={cards.filter((c) => c.favori)} layers={layers} emptyLabel="Aucun favori — étoile ★ dans la fiche d'une personne." onOpen={(id) => { setOpenCardId(id); setPageMode("famille"); }} onToggleFavori={toggleFavori} />
+      )}
+      {pageMode === "monade" && (
+        <MonadePane cards={cards} canvasColor={canvasColor} onOpen={(id) => { setOpenCardId(id); setPageMode("famille"); }} />
+      )}
       </div>{/* end canvas column */}
 
       {/* Side panel */}
       {openCard && (
         <div
-          className="w-80 shrink-0 overflow-y-auto rounded-xl p-4 shadow-xl"
+          className="w-full overflow-y-auto rounded-xl p-4 shadow-xl lg:w-80 lg:shrink-0"
           style={{ backgroundColor: canvasColor, color: textColor }}
         >
           {/* Relations de cette carte */}
@@ -1153,6 +1765,14 @@ export function FamilyCanvas() {
                 {openCard.titre || openCard.template.relation_type}
               </p>
             </div>
+            <button
+              type="button"
+              title={openCard.favori ? "Retirer des favoris" : "Ajouter aux favoris"}
+              onClick={() => toggleFavori(openCard.id)}
+              className="shrink-0 text-lg transition hover:scale-110"
+            >
+              {openCard.favori ? "⭐" : "☆"}
+            </button>
           </div>
           {/* ← position → */}
           <div className="mb-4 flex items-center justify-center gap-2">
@@ -1428,10 +2048,10 @@ export function FamilyCanvas() {
         </div>
       )}
 
-      {/* Drawer */}
-      {!openCard && (
+      {/* Drawer — visible en mode Famille uniquement */}
+      {!openCard && pageMode === "famille" && (
         <div
-          className="w-48 shrink-0 space-y-2 rounded-xl p-3"
+          className="w-full shrink-0 space-y-2 rounded-xl p-3 lg:w-48"
           style={{ backgroundColor: canvasColor, border: "1px solid rgba(0,0,0,0.15)" }}
         >
           <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: textColor, opacity: 0.6 }}>
