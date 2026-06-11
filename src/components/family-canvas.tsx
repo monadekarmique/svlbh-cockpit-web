@@ -145,6 +145,39 @@ function triadOf(hex: string): [string, string, string] {
   return [hex, rotateHue(hex, 120), rotateHue(hex, 240)];
 }
 
+// Événements familiaux (niveau famille) — type + date dans l'un des 4
+// calendriers (DEC Patrick 2026-06-11). La date est saisie librement dans
+// le calendrier choisi (pas de conversion automatique).
+const FAMILLE_EVENT_TYPES = [
+  "Naissance", "Décès", "Mariage", "Divorce", "Fécondation", "Adoption",
+  "Migration", "Guerre", "Accident", "Maladie", "Secret de famille", "Autre",
+] as const;
+const CALENDRIERS = ["Anunaki", "Hébraïque", "Grégorien", "Musulman"] as const;
+type FamilleEvent = { id: string; type: string; calendrier: string; date: string };
+
+// Monades (max 25) : token de nombres + SLM + SLPMO + pierre de protection
+type Monade = { id: string; label: string; token: string; slm: number | null; slpmo: number | null; pierre?: string };
+const MAX_MONADES = 25;
+
+// Pierres de protection monadiques (liste de base — à affiner sur transmission)
+const PIERRES_PROTECTION = [
+  "Obsidienne noire", "Tourmaline noire", "Labradorite", "Œil de tigre",
+  "Ambre", "Shungite", "Hématite", "Onyx noir", "Quartz fumé", "Améthyste",
+  "Malachite", "Lapis-lazuli", "Cornaline", "Grenat", "Pyrite", "Sélénite",
+] as const;
+
+// Les 24 permutations de V·I·F·A (menu famille — DEC Patrick 2026-06-11)
+const VIFA_PERMUTATIONS: string[] = (() => {
+  const letters = ["V", "I", "F", "A"];
+  const out: string[] = [];
+  const permute = (rest: string[], acc: string) => {
+    if (rest.length === 0) { out.push(acc); return; }
+    rest.forEach((l, i) => permute([...rest.slice(0, i), ...rest.slice(i + 1)], acc + l));
+  };
+  permute(letters, "");
+  return out;
+})();
+
 function azimutOf(from: { cx: number; cy: number }, to: { cx: number; cy: number }): { deg: number; dir: string } {
   // 0° = Nord (vers le haut du canvas), sens horaire
   const deg = (Math.atan2(to.cx - from.cx, -(to.cy - from.cy)) * 180) / Math.PI;
@@ -1477,6 +1510,14 @@ export function FamilyCanvas() {
   // Mode de la page (Favoris / Personnes / Relations / Famille / Monade)
   const [pageMode, setPageMode] = useState<PageMode>("famille");
 
+  // Famille (niveau graphe) : token de voyelles + SLSA + permutation VIFA
+  const [familleToken, setFamilleToken] = useState("");
+  const [familleSlsa, setFamilleSlsa] = useState<number | null>(null);
+  const [familleVifa, setFamilleVifa] = useState("");
+  const [familleEvents, setFamilleEvents] = useState<FamilleEvent[]>([]);
+  // Monades — leur place : à gauche et au-dessus du canvas (DEC Patrick)
+  const [monades, setMonades] = useState<Monade[]>([]);
+
   // Lien Rose des Vents : carte source en attente de cible
   const [linkFrom, setLinkFrom] = useState<string | null>(null);
   // Drag & drop tactile des co-acteurs (iPhone/iPad + souris)
@@ -1537,7 +1578,7 @@ export function FamilyCanvas() {
     setSaveState("saving");
     try {
       const sb = createClient();
-      const payload = { cards, connections, canvasColor, viewMode, layers };
+      const payload = { cards, connections, canvasColor, viewMode, layers, famille: { tokenVoyelles: familleToken, slsa: familleSlsa, vifa: familleVifa, events: familleEvents }, monades };
       if (graphId) {
         const { error } = await sb
           .from("canvas_graph")
@@ -1574,7 +1615,16 @@ export function FamilyCanvas() {
     const p = (data.payload ?? {}) as {
       cards?: LocalCard[]; connections?: Connection[];
       canvasColor?: string; viewMode?: ViewMode; layers?: GraphLayer[];
+      famille?: { tokenVoyelles?: string; slsa?: number | null; vifa?: string; events?: FamilleEvent[] };
+      monades?: Array<Partial<Monade> & { id: string }>;
     };
+    setMonades((p.monades ?? []).map((m) => ({
+      id: m.id, label: m.label ?? "", token: m.token ?? "", slm: m.slm ?? null, slpmo: m.slpmo ?? null, pierre: m.pierre ?? "",
+    })));
+    setFamilleToken(p.famille?.tokenVoyelles ?? "");
+    setFamilleSlsa(p.famille?.slsa ?? null);
+    setFamilleVifa(p.famille?.vifa ?? "");
+    setFamilleEvents(p.famille?.events ?? []);
     setCards((p.cards ?? []).map((c) => ({ ...c, annotations: c.annotations ?? [], layer: c.layer ?? "F", attachments: c.attachments ?? [] })));
     setConnections(p.connections ?? []);
     if (p.canvasColor) setCanvasColor(p.canvasColor);
@@ -1612,6 +1662,12 @@ export function FamilyCanvas() {
     setActiveLayer("F");
     setOpenCardId(null);
     setOpenConnId(null);
+    setFamilleToken("");
+    setFamilleSlsa(null);
+    setFamilleVifa("");
+    setFamilleEvents([]);
+    setMonades([]);
+    setLinkFrom(null);
   }, []);
 
   const handleDragStart = useCallback((e: React.DragEvent, card: RelationCardTemplate) => {
@@ -1944,6 +2000,83 @@ export function FamilyCanvas() {
           </button>
         </div>
       )}
+
+      {/* Monades (max 25) — leur place : à gauche et au-dessus du canvas */}
+      <div className="flex flex-col gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/60 px-3 py-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">
+            ☉ Monades ({monades.length}/{MAX_MONADES})
+          </span>
+          <button
+            type="button"
+            disabled={monades.length >= MAX_MONADES}
+            onClick={() =>
+              setMonades((prev) => prev.length >= MAX_MONADES ? prev : [...prev, { id: `mon-${Date.now()}`, label: `Monade ${prev.length + 1}`, token: "", slm: null, slpmo: null }])
+            }
+            className="rounded-full border border-dashed border-indigo-300 bg-white px-2 py-0.5 text-[11px] text-indigo-600 hover:bg-indigo-100 disabled:opacity-30"
+          >
+            ＋ Monade
+          </button>
+        </div>
+        {monades.map((m) => (
+          <div key={m.id} className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <input
+              value={m.label}
+              onChange={(e) => setMonades((prev) => prev.map((x) => (x.id === m.id ? { ...x, label: e.target.value } : x)))}
+              placeholder="Nom"
+              className="w-32 rounded border border-indigo-200 bg-white px-2 py-0.5"
+            />
+            <label className="flex items-center gap-1 text-indigo-700">
+              Token #
+              <input
+                value={m.token}
+                onChange={(e) => setMonades((prev) => prev.map((x) => (x.id === m.id ? { ...x, token: e.target.value } : x)))}
+                placeholder="ex. 7·11·22"
+                className="w-24 rounded border border-indigo-200 bg-white px-2 py-0.5 font-mono"
+              />
+            </label>
+            <label className="flex items-center gap-1 text-indigo-700">
+              SLM
+              <input
+                type="number"
+                value={m.slm ?? ""}
+                onChange={(e) => setMonades((prev) => prev.map((x) => (x.id === m.id ? { ...x, slm: e.target.value === "" ? null : Number(e.target.value) } : x)))}
+                onFocus={(e) => e.currentTarget.select()}
+                className="w-16 rounded border border-indigo-200 bg-white px-1.5 py-0.5 text-right font-mono"
+              />%
+            </label>
+            <label className="flex items-center gap-1 text-indigo-700">
+              SLPMO
+              <input
+                type="number"
+                value={m.slpmo ?? ""}
+                onChange={(e) => setMonades((prev) => prev.map((x) => (x.id === m.id ? { ...x, slpmo: e.target.value === "" ? null : Number(e.target.value) } : x)))}
+                onFocus={(e) => e.currentTarget.select()}
+                className="w-16 rounded border border-indigo-200 bg-white px-1.5 py-0.5 text-right font-mono"
+              />%
+            </label>
+            <label className="flex items-center gap-1 text-indigo-700">
+              🪨
+              <select
+                value={m.pierre ?? ""}
+                onChange={(e) => setMonades((prev) => prev.map((x) => (x.id === m.id ? { ...x, pierre: e.target.value } : x)))}
+                className="rounded border border-indigo-200 bg-white px-1.5 py-0.5"
+                title="Pierre de protection monadique"
+              >
+                <option value="">Pierre…</option>
+                {PIERRES_PROTECTION.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() => setMonades((prev) => prev.filter((x) => x.id !== m.id))}
+              className="rounded border border-red-200 bg-white px-2 py-0.5 text-red-700 hover:bg-red-50"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
 
       {/* Canvas — scale-to-fit sur petit écran (iPhone), pleine taille sinon */}
       <div ref={canvasWrapRef} className="overflow-x-auto rounded-xl border border-neutral-200">
@@ -2303,6 +2436,91 @@ export function FamilyCanvas() {
           )}
         </div>
         </div>{/* end scale-to-fit wrapper */}
+      </div>
+
+      {/* Famille — sous le canvas : token de voyelles · SLSA · permutation VIFA */}
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Famille</span>
+        <label className="flex items-center gap-1.5 text-xs text-neutral-600">
+          Token de voyelles
+          <input
+            value={familleToken}
+            onChange={(e) => setFamilleToken(e.target.value)}
+            placeholder="ex. A·E·I·O·U…"
+            className="w-36 rounded border border-neutral-200 px-2 py-1 font-mono text-xs"
+          />
+        </label>
+        <label className="flex items-center gap-1.5 text-xs text-neutral-600">
+          SLSA
+          <input
+            type="number"
+            value={familleSlsa ?? ""}
+            onChange={(e) => setFamilleSlsa(e.target.value === "" ? null : Number(e.target.value))}
+            onFocus={(e) => e.currentTarget.select()}
+            placeholder="—"
+            className="w-20 rounded border border-neutral-200 px-2 py-1 text-right font-mono text-xs"
+          />
+          <span className="text-neutral-400">%</span>
+        </label>
+        <label className="flex items-center gap-1.5 text-xs text-neutral-600">
+          VIFA
+          <select
+            value={familleVifa}
+            onChange={(e) => setFamilleVifa(e.target.value)}
+            className="rounded border border-neutral-200 px-2 py-1 font-mono text-xs"
+          >
+            <option value="">—</option>
+            {VIFA_PERMUTATIONS.map((p) => (
+              <option key={p} value={p}>{p.split("").join("·")}</option>
+            ))}
+          </select>
+        </label>
+
+        {/* Événements familiaux — type + calendrier + date */}
+        <div className="flex w-full flex-col gap-1.5 border-t border-neutral-100 pt-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Événements familiaux
+          </span>
+          {familleEvents.map((ev) => (
+            <div key={ev.id} className="flex flex-wrap items-center gap-1.5 text-xs">
+              <select
+                value={ev.type}
+                onChange={(e) => setFamilleEvents((prev) => prev.map((x) => (x.id === ev.id ? { ...x, type: e.target.value } : x)))}
+                className="rounded border border-neutral-200 px-1.5 py-1 text-xs"
+              >
+                {FAMILLE_EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <select
+                value={ev.calendrier}
+                onChange={(e) => setFamilleEvents((prev) => prev.map((x) => (x.id === ev.id ? { ...x, calendrier: e.target.value } : x)))}
+                className="rounded border border-neutral-200 px-1.5 py-1 text-xs"
+                title="Calendrier de la date"
+              >
+                {CALENDRIERS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <input
+                value={ev.date}
+                onChange={(e) => setFamilleEvents((prev) => prev.map((x) => (x.id === ev.id ? { ...x, date: e.target.value } : x)))}
+                placeholder="Date dans ce calendrier…"
+                className="w-44 rounded border border-neutral-200 px-2 py-1 font-mono text-xs"
+              />
+              <button
+                type="button"
+                onClick={() => setFamilleEvents((prev) => prev.filter((x) => x.id !== ev.id))}
+                className="rounded border border-red-200 bg-white px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setFamilleEvents((prev) => [...prev, { id: `ev-${Date.now()}`, type: FAMILLE_EVENT_TYPES[0], calendrier: "Grégorien", date: "" }])}
+            className="self-start rounded border border-dashed border-neutral-300 px-2 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-50"
+          >
+            ＋ Ajouter un événement
+          </button>
+        </div>
       </div>
       </>
       )}
