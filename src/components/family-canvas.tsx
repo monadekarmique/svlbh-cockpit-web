@@ -24,6 +24,7 @@ type LocalCard = {
   id: string;
   template: RelationCardTemplate;
   niveau: number; // freely editable; drives canvas row position
+  xOrder: number; // horizontal sort order within a niveau band
   purpose: string;
   state: string;
   sla: number | null;
@@ -82,6 +83,7 @@ const CO_ACTEUR_CATEGORIES: CoActeurCategory[] = [
       { id: "ancetre-guide",  name: "Ancêtre Guide",      relation_type: "ancêtre guide",      generation: 3, lignee: "paternelle", gender: "M", color: "#6366F1", icon: "👴" },
       { id: "guide-totem",    name: "Guide Totem",        relation_type: "guide totem",        generation: 0, lignee: "consultante", gender: "M", color: "#10B981", icon: "🦅" },
       { id: "source-divine",  name: "Source Divine",      relation_type: "source divine",      generation: 120, lignee: "consultante", gender: "F", color: "#FBBF24", icon: "☀️" },
+      { id: "observateur-quantique", name: "Observateur Quantique", relation_type: "observateur quantique", generation: 0, lignee: "consultante", gender: "M", color: "#06B6D4", icon: "ለ" },
     ],
   },
   {
@@ -166,10 +168,11 @@ function computeLayout(cards: LocalCard[]): LayoutResult {
   for (const [lvl, lvlCards] of byLevel) {
     const row = levelRow.get(lvl)!;
     const cy = row * ROW_H + ROW_H / 2;
+    const sorted = [...lvlCards].sort((a, b) => a.xOrder - b.xOrder);
     const gap = 60;
-    const totalW = lvlCards.length * CARD_SZ + (lvlCards.length - 1) * gap;
+    const totalW = sorted.length * CARD_SZ + (sorted.length - 1) * gap;
     let x = (CANVAS_W - totalW) / 2 + CARD_SZ / 2;
-    for (const card of lvlCards) {
+    for (const card of sorted) {
       positions.set(card.id, { cx: x, cy });
       x += CARD_SZ + gap;
     }
@@ -214,6 +217,95 @@ function bezierPath(
   const y2 = lower.cy - CARD_SZ / 2;
   const my = (y1 + y2) / 2;
   return `M ${upper.cx} ${y1} C ${upper.cx} ${my}, ${lower.cx} ${my}, ${lower.cx} ${y2}`;
+}
+
+// ── Sephiroth Tree overlay ─────────────────────────────────────────────────
+
+const SEPHIROTH = [
+  { id:  1, name: "Keter",    abbr: "KTR", x: 90,  y: 18,  color: "#F8F8F8", stroke: "#C0C0C0" },
+  { id:  2, name: "Chokhmah", abbr: "CHK", x: 152, y: 54,  color: "#C0C0C0", stroke: "#808080" },
+  { id:  3, name: "Binah",    abbr: "BIN", x: 28,  y: 54,  color: "#1E2A4A", stroke: "#4A6090" },
+  { id:  0, name: "Daath",    abbr: "DA",  x: 90,  y: 90,  color: "#9070B0", stroke: "#6040A0" }, // hidden
+  { id:  4, name: "Chesed",   abbr: "CHS", x: 152, y: 130, color: "#3B82F6", stroke: "#2563EB" },
+  { id:  5, name: "Geburah",  abbr: "GBR", x: 28,  y: 130, color: "#EF4444", stroke: "#DC2626" },
+  { id:  6, name: "Tiferet",  abbr: "TIF", x: 90,  y: 165, color: "#F59E0B", stroke: "#D97706" },
+  { id:  7, name: "Netzach",  abbr: "NTZ", x: 152, y: 205, color: "#22C55E", stroke: "#16A34A" },
+  { id:  8, name: "Hod",      abbr: "HOD", x: 28,  y: 205, color: "#F97316", stroke: "#EA580C" },
+  { id:  9, name: "Yesod",    abbr: "YSD", x: 90,  y: 242, color: "#A78BFA", stroke: "#7C3AED" },
+  { id: 10, name: "Malkuth",  abbr: "MLK", x: 90,  y: 280, color: "#78716C", stroke: "#57534E" },
+] as const;
+
+// Main structural paths (pairs of sephirah indices in SEPHIROTH array)
+const SEPHIROTH_PATHS: Array<[number, number]> = [
+  [0, 1], [0, 2],          // Keter → Chokhmah, Binah
+  [1, 2],                  // Chokhmah ↔ Binah
+  [1, 3], [2, 3],          // → Daath
+  [1, 4], [2, 5],          // right/left pillar
+  [3, 4], [3, 5], [3, 6],  // Daath → Chesed, Geburah, Tiferet
+  [4, 5], [4, 6], [5, 6],  // Chesed/Geburah/Tiferet triangle
+  [4, 7], [5, 8],          // pillars continue
+  [6, 7], [6, 8], [6, 9],  // Tiferet → Netzach, Hod, Yesod
+  [7, 8], [7, 9], [8, 9],  // Netzach/Hod/Yesod
+  [9, 10],                 // Yesod → Malkuth
+];
+
+function SephirothOverlay() {
+  const W = 182;
+  const H = 300;
+  const R = 14; // node radius
+  return (
+    <div
+      className="pointer-events-none absolute right-4 top-4 rounded-xl"
+      style={{ backgroundColor: "rgba(0,0,0,0.45)", padding: 8 }}
+    >
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+        {/* Paths */}
+        {SEPHIROTH_PATHS.map(([ai, bi]) => {
+          const a = SEPHIROTH[ai];
+          const b = SEPHIROTH[bi];
+          const isDaath = a.id === 0 || b.id === 0;
+          return (
+            <line
+              key={`${ai}-${bi}`}
+              x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+              stroke="rgba(255,255,255,0.2)"
+              strokeWidth={isDaath ? 1 : 1.5}
+              strokeDasharray={isDaath ? "3 3" : undefined}
+            />
+          );
+        })}
+        {/* Nodes */}
+        {SEPHIROTH.map((s) => {
+          const isDaath = s.id === 0;
+          return (
+            <g key={s.id}>
+              <circle
+                cx={s.x} cy={s.y} r={R}
+                fill={isDaath ? "rgba(144,112,176,0.3)" : s.color}
+                stroke={s.stroke}
+                strokeWidth={isDaath ? 1 : 1.5}
+                strokeDasharray={isDaath ? "3 2" : undefined}
+                opacity={isDaath ? 0.7 : 1}
+              />
+              <text
+                x={s.x} y={s.y + 1}
+                textAnchor="middle" dominantBaseline="middle"
+                fontSize={isDaath ? 6 : 7}
+                fontWeight="bold"
+                fill={isDaath ? "#C0A0D0" : (["#F8F8F8","#C0C0C0"].includes(s.color) ? "#333" : "#fff")}
+              >
+                {s.abbr}
+              </text>
+            </g>
+          );
+        })}
+        {/* Title */}
+        <text x={W / 2} y={H - 6} textAnchor="middle" fontSize={7} fill="rgba(255,255,255,0.4)" fontStyle="italic">
+          Arbre des Séphiroth
+        </text>
+      </svg>
+    </div>
+  );
 }
 
 function RelationsSection({
@@ -411,6 +503,7 @@ export function FamilyCanvas() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [addProcheOpen, setAddProcheOpen] = useState(false);
   const [openConnId, setOpenConnId] = useState<string | null>(null);
+  const [showSephiroth, setShowSephiroth] = useState(false);
 
   const textColor = useMemo(() => textOnColor(canvasColor), [canvasColor]);
   const sectionBg = useMemo(() => darken(canvasColor, 0.18), [canvasColor]);
@@ -426,10 +519,12 @@ export function FamilyCanvas() {
 
   const addCardFromTemplate = useCallback(
     (tpl: RelationCardTemplate) => {
+      const siblingsCount = cards.filter((c) => c.niveau === tpl.generation).length;
       const newCard: LocalCard = {
         id: `${tpl.id}-${Date.now()}`,
         template: tpl,
         niveau: tpl.generation,
+        xOrder: siblingsCount,
         purpose: "soul_mission",
         state: "absente",
         sla: null, slsa: null, slpmo: null, slm: null,
@@ -482,6 +577,26 @@ export function FamilyCanvas() {
     setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, ...updates } : c)));
   }, []);
 
+  const moveCard = useCallback((cardId: string, direction: "left" | "right") => {
+    setCards((prev) => {
+      const card = prev.find((c) => c.id === cardId);
+      if (!card) return prev;
+      const siblings = [...prev.filter((c) => c.niveau === card.niveau)]
+        .sort((a, b) => a.xOrder - b.xOrder);
+      const idx = siblings.findIndex((c) => c.id === cardId);
+      const swapIdx = direction === "left" ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= siblings.length) return prev;
+      const swapCard = siblings[swapIdx];
+      const newXOrder = swapCard.xOrder;
+      const swapNewXOrder = card.xOrder;
+      return prev.map((c) => {
+        if (c.id === cardId) return { ...c, xOrder: newXOrder };
+        if (c.id === swapCard.id) return { ...c, xOrder: swapNewXOrder };
+        return c;
+      });
+    });
+  }, []);
+
   const updateConnection = useCallback((connId: string, updates: Partial<Connection>) => {
     setConnections((prev) =>
       prev.map((c) => (c.id === connId ? { ...c, ...updates } : c)),
@@ -530,6 +645,20 @@ export function FamilyCanvas() {
               </button>
             ))}
           </div>
+          {/* Sephiroth toggle */}
+          <button
+            type="button"
+            onClick={() => setShowSephiroth((v) => !v)}
+            className="rounded px-2.5 py-1 text-[11px] font-medium transition"
+            style={
+              showSephiroth
+                ? { backgroundColor: canvasColor, color: textColor, border: "1px solid rgba(0,0,0,0.15)" }
+                : { backgroundColor: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB" }
+            }
+          >
+            ✡ Séphiroth
+          </button>
+
           {/* Color picker */}
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-neutral-500">Couleur :</span>
@@ -717,6 +846,9 @@ export function FamilyCanvas() {
             );
           })}
 
+          {/* Séphiroth overlay — top right */}
+          {showSephiroth && <SephirothOverlay />}
+
           {/* Drag-over overlay */}
           {isDragOver && draggedCard && (
             <div
@@ -766,10 +898,10 @@ export function FamilyCanvas() {
             textColor={textColor}
           />
 
-          {/* Header */}
-          <div className="mb-4 flex items-center gap-3">
+          {/* Header + déplacement horizontal */}
+          <div className="mb-3 flex items-center gap-3">
             <div
-              className="flex h-14 w-14 items-center justify-center rounded-lg text-3xl"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg text-3xl"
               style={{ backgroundColor: `${openCard.template.color}30` }}
             >
               {openCard.template.icon}
@@ -782,6 +914,30 @@ export function FamilyCanvas() {
                 {openCard.titre || openCard.template.relation_type}
               </p>
             </div>
+          </div>
+          {/* ← position → */}
+          <div className="mb-4 flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => moveCard(openCard.id, "left")}
+              title="Déplacer à gauche"
+              className="flex h-8 w-10 items-center justify-center rounded text-base font-bold transition hover:brightness-110"
+              style={{ backgroundColor: sectionBg, color: textColor }}
+            >
+              ←
+            </button>
+            <span className="text-[9px]" style={{ color: textColor, opacity: 0.45 }}>
+              position dans la bande
+            </span>
+            <button
+              type="button"
+              onClick={() => moveCard(openCard.id, "right")}
+              title="Déplacer à droite"
+              className="flex h-8 w-10 items-center justify-center rounded text-base font-bold transition hover:brightness-110"
+              style={{ backgroundColor: sectionBg, color: textColor }}
+            >
+              →
+            </button>
           </div>
 
           {/* Actions */}
@@ -807,7 +963,7 @@ export function FamilyCanvas() {
               <button className="flex flex-col items-center gap-1 rounded-lg p-2 text-[10px] text-cyan-300 transition hover:brightness-110"
                 style={{ backgroundColor: inputBg }}>
                 <span className="text-lg leading-none">ለ</span>
-                Audit·Perspective
+                Observateur Quantique
               </button>
               <button
                 onClick={() => removeCard(openCard.id)}
