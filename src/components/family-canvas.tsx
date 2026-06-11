@@ -145,6 +145,17 @@ function triadOf(hex: string): [string, string, string] {
   return [hex, rotateHue(hex, 120), rotateHue(hex, 240)];
 }
 
+// Halo automatique : rend les polices lisibles quelle que soit la teinte
+// choisie (sombre sous teinte claire, clair sous teinte sombre).
+function autoHalo(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return "0 0 3px rgba(0,0,0,0.8)";
+  const n = parseInt(m[1], 16);
+  const lum = 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
+  const c = lum > 140 ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.92)";
+  return `0 0 2px ${c}, 0 0 4px ${c}, 0 1px 1px ${c}`;
+}
+
 // Événements familiaux (niveau famille) — type + date dans l'un des 4
 // calendriers (DEC Patrick 2026-06-11). La date est saisie librement dans
 // le calendrier choisi (pas de conversion automatique).
@@ -2587,7 +2598,12 @@ export function FamilyCanvas() {
                 {/* Labels */}
                 <p
                   className="mt-1 truncate text-center text-[10px] font-semibold leading-tight"
-                  style={{ color: card.titleColor ?? card.template.color, maxWidth: CARD_SZ + 24, marginLeft: -12 }}
+                  style={{
+                    color: card.titleColor ?? card.template.color,
+                    textShadow: autoHalo(card.titleColor ?? card.template.color),
+                    maxWidth: CARD_SZ + 24,
+                    marginLeft: -12,
+                  }}
                 >
                   {card.prenom || card.template.name}
                 </p>
