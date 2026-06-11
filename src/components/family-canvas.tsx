@@ -96,6 +96,25 @@ function connectionColor(card: LocalCard): string {
   return "#94A3B8";
 }
 
+const DEFAULT_CANVAS_COLOR = "#a289f0";
+
+// Returns white or near-black depending on background luminance
+function textOnColor(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.55 ? "rgba(0,0,0,0.82)" : "rgba(255,255,255,0.95)";
+}
+
+// A slightly darkened version of the color for section overlays
+function darken(hex: string, amount = 0.18): string {
+  const r = Math.round(parseInt(hex.slice(1, 3), 16) * (1 - amount));
+  const g = Math.round(parseInt(hex.slice(3, 5), 16) * (1 - amount));
+  const b = Math.round(parseInt(hex.slice(5, 7), 16) * (1 - amount));
+  return `rgb(${r},${g},${b})`;
+}
+
 function bezierPath(
   aPos: { cx: number; cy: number },
   bPos: { cx: number; cy: number },
@@ -110,11 +129,16 @@ function bezierPath(
 }
 
 export function FamilyCanvas() {
+  const [canvasColor, setCanvasColor] = useState(DEFAULT_CANVAS_COLOR);
   const [cards, setCards] = useState<LocalCard[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [draggedCard, setDraggedCard] = useState<RelationCardTemplate | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  const textColor = useMemo(() => textOnColor(canvasColor), [canvasColor]);
+  const sectionBg = useMemo(() => darken(canvasColor, 0.18), [canvasColor]);
+  const inputBg = useMemo(() => darken(canvasColor, 0.28), [canvasColor]);
 
   const positions = useMemo(() => computePositions(cards), [cards]);
 
@@ -191,17 +215,35 @@ export function FamilyCanvas() {
 
   return (
     <div className="flex gap-4">
-      {/* Canvas — dark MacFamilyTree style */}
-      <div className="flex-1 overflow-x-auto rounded-xl border border-slate-700">
+      {/* Canvas column */}
+      <div className="flex flex-1 flex-col gap-2">
+        {/* Color picker toolbar */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-neutral-500">Couleur du système :</span>
+          <label className="relative h-6 w-9 cursor-pointer overflow-hidden rounded border border-neutral-300 shadow-sm">
+            <span className="absolute inset-0" style={{ backgroundColor: canvasColor }} />
+            <input
+              type="color"
+              value={canvasColor}
+              onChange={(e) => setCanvasColor(e.target.value)}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              title="Changer la couleur du système"
+            />
+          </label>
+          <span className="font-mono text-xs text-neutral-400">{canvasColor}</span>
+        </div>
+
+      {/* Canvas */}
+      <div className="overflow-x-auto rounded-xl border border-neutral-200">
         <div
           className="relative"
           style={{
             width: CANVAS_W,
             height: CANVAS_H,
-            backgroundColor: "#0f172a",
+            backgroundColor: canvasColor,
             backgroundImage:
-              "linear-gradient(rgba(148,163,184,.07) 1px, transparent 1px)," +
-              "linear-gradient(90deg, rgba(148,163,184,.07) 1px, transparent 1px)",
+              "linear-gradient(rgba(0,0,0,0.08) 1px, transparent 1px)," +
+              "linear-gradient(90deg, rgba(0,0,0,0.08) 1px, transparent 1px)",
             backgroundSize: "40px 40px",
           }}
           onDragOver={(e) => {
@@ -220,7 +262,7 @@ export function FamilyCanvas() {
                 {gen < 3 && (
                   <div
                     className="absolute left-0 right-0 h-px"
-                    style={{ top: rowTop, backgroundColor: "rgba(148,163,184,.15)" }}
+                    style={{ top: rowTop, backgroundColor: "rgba(0,0,0,0.14)" }}
                   />
                 )}
                 <div
@@ -230,11 +272,9 @@ export function FamilyCanvas() {
                   <span
                     className="rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wider"
                     style={{
-                      backgroundColor: "rgba(15,23,42,.85)",
-                      color:
-                        gen === 0 ? "#C4A35A"
-                        : gen === 1 ? "#94A3B8"
-                        : "#64748B",
+                      backgroundColor: "rgba(0,0,0,0.18)",
+                      color: textColor,
+                      opacity: gen === 0 ? 1 : 0.75,
                     }}
                   >
                     {GEN_LABELS[gen]}
@@ -340,7 +380,7 @@ export function FamilyCanvas() {
                 </p>
                 <p
                   className="text-[8px]"
-                  style={{ color: "#64748B", maxWidth: CARD_SZ + 24, marginLeft: -12 }}
+                  style={{ color: textColor, opacity: 0.65, maxWidth: CARD_SZ + 24, marginLeft: -12 }}
                 >
                   {card.state}
                 </p>
@@ -355,7 +395,7 @@ export function FamilyCanvas() {
               style={{ backgroundColor: "rgba(59,130,246,.05)" }}
             >
               <p className="rounded-lg px-4 py-2 text-sm font-medium"
-                style={{ backgroundColor: "rgba(59,130,246,.12)", color: "#93C5FD" }}>
+                style={{ backgroundColor: "rgba(0,0,0,0.18)", color: textColor }}>
                 Relâchez pour placer {draggedCard.name} en G{draggedCard.generation}
               </p>
             </div>
@@ -365,10 +405,10 @@ export function FamilyCanvas() {
           {cards.length === 0 && !isDragOver && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
-                <p className="text-sm font-medium" style={{ color: "#475569" }}>
+                <p className="text-sm font-medium" style={{ color: textColor, opacity: 0.7 }}>
                   Glissez des cartes pour construire la structure familiale
                 </p>
-                <p className="mt-1 text-xs" style={{ color: "#334155" }}>
+                <p className="mt-1 text-xs" style={{ color: textColor, opacity: 0.45 }}>
                   Commencez par la Consultante (G0), puis ajoutez Père et Mère (G1)…
                 </p>
               </div>
@@ -376,10 +416,14 @@ export function FamilyCanvas() {
           )}
         </div>
       </div>
+      </div>{/* end canvas column */}
 
-      {/* Side panel — sombre */}
+      {/* Side panel */}
       {openCard && (
-        <div className="w-80 shrink-0 overflow-y-auto rounded-xl bg-slate-800 p-4 text-white shadow-xl">
+        <div
+          className="w-80 shrink-0 overflow-y-auto rounded-xl p-4 shadow-xl"
+          style={{ backgroundColor: canvasColor, color: textColor }}
+        >
           {/* Header */}
           <div className="mb-4 flex items-center gap-3">
             <div
@@ -389,33 +433,36 @@ export function FamilyCanvas() {
               {openCard.template.icon}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-white">
+              <p className="truncate text-sm font-bold" style={{ color: textColor }}>
                 {openCard.prenom || openCard.template.name} {openCard.nom}
               </p>
-              <p className="truncate text-xs text-slate-400">
+              <p className="truncate text-xs" style={{ color: textColor, opacity: 0.65 }}>
                 {openCard.titre || openCard.template.relation_type}
               </p>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="mb-4 rounded-lg bg-slate-700/50 p-3">
-            <p className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-300">
+          <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
+            <p className="mb-2 flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
               <span className="flex h-5 w-5 items-center justify-center rounded bg-cyan-500 text-[10px]">▶</span>
               Actions
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <button className="flex flex-col items-center gap-1 rounded-lg bg-slate-600/50 p-2 text-[10px] text-cyan-400 hover:bg-slate-600">
+              <button className="flex flex-col items-center gap-1 rounded-lg p-2 text-[10px] text-cyan-300 transition hover:brightness-110"
+                style={{ backgroundColor: inputBg }}>
                 <UserPlus className="h-5 w-5" />
                 Ajouter des proches
               </button>
-              <button className="flex flex-col items-center gap-1 rounded-lg bg-slate-600/50 p-2 text-[10px] text-cyan-400 hover:bg-slate-600">
+              <button className="flex flex-col items-center gap-1 rounded-lg p-2 text-[10px] text-cyan-300 transition hover:brightness-110"
+                style={{ backgroundColor: inputBg }}>
                 <Pencil className="h-5 w-5" />
                 Éditer la personne
               </button>
-              <button className="flex flex-col items-center gap-1 rounded-lg bg-slate-600/50 p-2 text-[10px] text-cyan-400 hover:bg-slate-600">
-                <Users className="h-5 w-5" />
-                Personnes influentes (0)
+              <button className="flex flex-col items-center gap-1 rounded-lg p-2 text-[10px] text-cyan-300 transition hover:brightness-110"
+                style={{ backgroundColor: inputBg }}>
+                <span className="text-lg leading-none">ለ</span>
+                Audit·Perspective
               </button>
               <button
                 onClick={() => removeCard(openCard.id)}
@@ -424,7 +471,8 @@ export function FamilyCanvas() {
                 <Trash2 className="h-5 w-5" />
                 Supprimer
               </button>
-              <button className="col-span-2 flex items-center justify-center gap-2 rounded-lg bg-slate-600/50 p-2 text-[10px] text-cyan-400 hover:bg-slate-600">
+              <button className="col-span-2 flex items-center justify-center gap-2 rounded-lg p-2 text-[10px] text-cyan-300 transition hover:brightness-110"
+                style={{ backgroundColor: inputBg }}>
                 <Link2 className="h-4 w-4" />
                 Sélectionner une famille…
               </button>
@@ -432,67 +480,47 @@ export function FamilyCanvas() {
           </div>
 
           {/* Nom & sexe */}
-          <div className="mb-4 rounded-lg bg-slate-700/50 p-3">
-            <p className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-300">
+          <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
+            <p className="mb-2 flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
               <span className="flex h-5 w-5 items-center justify-center rounded bg-cyan-500 text-[10px]">👤</span>
               Nom & sexe
             </p>
             <div className="grid grid-cols-2 gap-2">
+              {(["prenom", "nom", "autresPrenoms", "titre"] as const).map((field) => (
+                <div key={field}>
+                  <label className="mb-1 block text-[9px]" style={{ color: textColor, opacity: 0.6 }}>
+                    {field === "prenom" ? "Prénom" : field === "nom" ? "Nom"
+                      : field === "autresPrenoms" ? "Autres prénoms" : "Titre"}
+                  </label>
+                  <input
+                    type="text"
+                    value={openCard[field]}
+                    onChange={(e) => updateCard(openCard.id, { [field]: e.target.value })}
+                    className="w-full rounded px-2 py-1 text-xs"
+                    style={{ backgroundColor: inputBg, color: textColor }}
+                    placeholder={field === "prenom" ? "Prénom" : field === "nom" ? "Nom" : ""}
+                  />
+                </div>
+              ))}
               <div>
-                <label className="mb-1 block text-[9px] text-slate-400">Prénom</label>
-                <input
-                  type="text"
-                  value={openCard.prenom}
-                  onChange={(e) => updateCard(openCard.id, { prenom: e.target.value })}
-                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white placeholder-slate-400"
-                  placeholder="Prénom"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">Nom</label>
-                <input
-                  type="text"
-                  value={openCard.nom}
-                  onChange={(e) => updateCard(openCard.id, { nom: e.target.value })}
-                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white placeholder-slate-400"
-                  placeholder="Nom"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">Autres prénoms</label>
-                <input
-                  type="text"
-                  value={openCard.autresPrenoms}
-                  onChange={(e) => updateCard(openCard.id, { autresPrenoms: e.target.value })}
-                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white placeholder-slate-400"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">Titre</label>
-                <input
-                  type="text"
-                  value={openCard.titre}
-                  onChange={(e) => updateCard(openCard.id, { titre: e.target.value })}
-                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white placeholder-slate-400"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">Sexe</label>
+                <label className="mb-1 block text-[9px]" style={{ color: textColor, opacity: 0.6 }}>Sexe</label>
                 <select
                   value={openCard.sexe}
                   onChange={(e) => updateCard(openCard.id, { sexe: e.target.value as "F" | "M" })}
-                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white"
+                  className="w-full rounded px-2 py-1 text-xs"
+                  style={{ backgroundColor: inputBg, color: textColor }}
                 >
                   <option value="F">Féminin</option>
                   <option value="M">Masculin</option>
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-[9px] text-slate-400">Forme</label>
+                <label className="mb-1 block text-[9px]" style={{ color: textColor, opacity: 0.6 }}>Forme</label>
                 <select
                   value={openCard.shape}
                   onChange={(e) => updateCard(openCard.id, { shape: e.target.value as PlatonSolidId })}
-                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white"
+                  className="w-full rounded px-2 py-1 text-xs"
+                  style={{ backgroundColor: inputBg, color: textColor }}
                 >
                   {PLATON_SOLIDS.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
@@ -503,18 +531,19 @@ export function FamilyCanvas() {
           </div>
 
           {/* Scores */}
-          <div className="mb-4 rounded-lg bg-slate-700/50 p-3">
-            <p className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-300">
+          <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
+            <p className="mb-2 flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
               <span className="flex h-5 w-5 items-center justify-center rounded bg-amber-500 text-[10px]">📊</span>
               Scores
             </p>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="mb-1 block text-[9px] text-slate-400">But</label>
+                <label className="mb-1 block text-[9px]" style={{ color: textColor, opacity: 0.6 }}>But</label>
                 <select
                   value={openCard.purpose}
                   onChange={(e) => updateCard(openCard.id, { purpose: e.target.value })}
-                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white"
+                  className="w-full rounded px-2 py-1 text-xs"
+                  style={{ backgroundColor: inputBg, color: textColor }}
                 >
                   {PURPOSE_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -522,20 +551,23 @@ export function FamilyCanvas() {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-[9px] text-slate-400">État</label>
+                <label className="mb-1 block text-[9px]" style={{ color: textColor, opacity: 0.6 }}>État</label>
                 <select
                   value={openCard.state}
                   onChange={(e) => updateCard(openCard.id, { state: e.target.value })}
-                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white"
+                  className="w-full rounded px-2 py-1 text-xs"
+                  style={{ backgroundColor: inputBg, color: textColor }}
                 >
                   {RELATION_STATE_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </div>
-              {(["sla", "slsa", "slpmo", "slm"] as const).map((key) => (
+              {(["sla", "slsa", "slpmo", "slm", "nsb", "scoreLumiere"] as const).map((key) => (
                 <div key={key}>
-                  <label className="mb-1 block text-[9px] text-slate-400">{key.toUpperCase()}</label>
+                  <label className="mb-1 block text-[9px]" style={{ color: textColor, opacity: 0.6 }}>
+                    {key === "scoreLumiere" ? "Score Lumière" : key.toUpperCase()}
+                  </label>
                   <input
                     type="number"
                     value={openCard[key] ?? ""}
@@ -546,59 +578,34 @@ export function FamilyCanvas() {
                     }
                     onFocus={(e) => e.currentTarget.select()}
                     placeholder="—"
-                    className="w-full rounded bg-slate-600 px-2 py-1 text-center font-mono text-xs text-white"
+                    className="w-full rounded px-2 py-1 text-center font-mono text-xs"
+                    style={{ backgroundColor: inputBg, color: textColor }}
                   />
                 </div>
               ))}
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">NSB</label>
-                <input
-                  type="number"
-                  value={openCard.nsb ?? ""}
-                  onChange={(e) =>
-                    updateCard(openCard.id, { nsb: e.target.value ? Number(e.target.value) : null })
-                  }
-                  onFocus={(e) => e.currentTarget.select()}
-                  placeholder="—"
-                  className="w-full rounded bg-slate-600 px-2 py-1 text-center font-mono text-xs text-white"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[9px] text-slate-400">Score Lumière</label>
-                <input
-                  type="number"
-                  value={openCard.scoreLumiere ?? ""}
-                  onChange={(e) =>
-                    updateCard(openCard.id, {
-                      scoreLumiere: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
-                  onFocus={(e) => e.currentTarget.select()}
-                  placeholder="—"
-                  className="w-full rounded bg-slate-600 px-2 py-1 text-center font-mono text-xs text-white"
-                />
-              </div>
             </div>
           </div>
 
           {/* Événements */}
-          <div className="rounded-lg bg-slate-700/50 p-3">
-            <p className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-300">
+          <div className="rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
+            <p className="mb-2 flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
               <span className="flex h-5 w-5 items-center justify-center rounded bg-yellow-500 text-[10px]">⭐</span>
               Événements ({openCard.evenements.length})
             </p>
             {openCard.evenements.map((evt, i) => (
-              <div key={i} className="mb-2 flex items-center gap-2 rounded bg-slate-600/50 p-2 text-xs">
+              <div key={i} className="mb-2 flex items-center gap-2 rounded p-2 text-xs"
+                style={{ backgroundColor: inputBg }}>
                 <span>📜</span>
                 <div className="flex-1">
-                  <p className="font-medium text-white">{evt.type}</p>
-                  <p className="text-slate-400">{evt.date || "Aucune date saisie"}</p>
+                  <p className="font-medium" style={{ color: textColor }}>{evt.type}</p>
+                  <p style={{ color: textColor, opacity: 0.55 }}>{evt.date || "Aucune date saisie"}</p>
                 </div>
               </div>
             ))}
             <button
               onClick={() => addEvenement(openCard.id)}
-              className="mt-2 w-full rounded bg-slate-600 py-1 text-[10px] text-cyan-400 hover:bg-slate-500"
+              className="mt-2 w-full rounded py-1 text-[10px] text-cyan-300 transition hover:brightness-110"
+              style={{ backgroundColor: inputBg }}
             >
               + Ajouter un événement
             </button>
@@ -606,17 +613,21 @@ export function FamilyCanvas() {
 
           <button
             onClick={() => setOpenCardId(null)}
-            className="mt-4 w-full rounded-lg bg-slate-600 py-2 text-xs font-medium text-slate-300 hover:bg-slate-500"
+            className="mt-4 w-full rounded-lg py-2 text-xs font-medium transition hover:brightness-110"
+            style={{ backgroundColor: sectionBg, color: textColor }}
           >
             Fermer
           </button>
         </div>
       )}
 
-      {/* Drawer — dark theme aligné sur le canvas */}
+      {/* Drawer */}
       {!openCard && (
-        <div className="w-48 shrink-0 space-y-2 rounded-xl border border-slate-700 bg-slate-900 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        <div
+          className="w-48 shrink-0 space-y-2 rounded-xl p-3"
+          style={{ backgroundColor: canvasColor, border: "1px solid rgba(0,0,0,0.15)" }}
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: textColor, opacity: 0.6 }}>
             6 cartes de base
           </p>
           <div className="space-y-1.5">
@@ -625,13 +636,17 @@ export function FamilyCanvas() {
                 key={card.id}
                 draggable
                 onDragStart={(e) => handleDragStart(e, card)}
-                className="flex cursor-grab items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-2 py-2 text-xs shadow-sm transition hover:border-slate-500 hover:bg-slate-700 active:cursor-grabbing"
-                style={{ borderLeftWidth: 4, borderLeftColor: card.color }}
+                className="flex cursor-grab items-center gap-2 rounded-lg px-2 py-2 text-xs shadow-sm transition hover:brightness-110 active:cursor-grabbing"
+                style={{
+                  backgroundColor: sectionBg,
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  borderLeft: `4px solid ${card.color}`,
+                }}
               >
                 <span className="text-base">{card.icon}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-slate-200">{card.name}</p>
-                  <p className="text-[9px] text-slate-500">
+                  <p className="truncate font-medium" style={{ color: textColor }}>{card.name}</p>
+                  <p className="text-[9px]" style={{ color: textColor, opacity: 0.55 }}>
                     {card.generation === 0 ? "Origine" : `G${card.generation}`} ·{" "}
                     {card.gender === "F" ? "Fém" : "Masc"}
                   </p>
