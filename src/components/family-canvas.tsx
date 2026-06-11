@@ -1270,6 +1270,22 @@ export function FamilyCanvas() {
     setOpenConnId(null);
   }, []);
 
+  // Garantit l'existence des calques ♂ jusqu'à Mn (création à la volée, max 5)
+  const ensureMLayer = useCallback((id: string) => {
+    setLayers((prev) => {
+      if (prev.some((l) => l.id === id)) return prev;
+      const n = Math.min(5, Number(id.slice(1)) || 1);
+      const additions: GraphLayer[] = [];
+      for (let i = 1; i <= n; i++) {
+        const lid = `M${i}`;
+        if (!prev.some((l) => l.id === lid) && !additions.some((l) => l.id === lid)) {
+          additions.push({ id: lid, name: `♂ Masculine ${i}`, side: "M", opacity: 0.55, visible: true });
+        }
+      }
+      return [...prev, ...additions];
+    });
+  }, []);
+
   const newGraph = useCallback(() => {
     setGraphId(null);
     setGraphTitle("Sans titre");
@@ -1863,28 +1879,44 @@ export function FamilyCanvas() {
           className="w-full overflow-y-auto rounded-xl p-4 shadow-xl lg:w-80 lg:shrink-0"
           style={{ backgroundColor: canvasColor, color: textColor }}
         >
-          {/* Calques — affecter la carte ouverte à ♀ ou à une structure ♂
-              (placés au-dessus de Relations — DEC Patrick 2026-06-11) */}
+          {/* Structure de l'Âme — ♀ Féminine ou ♂ Masculine 1…5 via menu
+              déroulant (au-dessus de Relations — DEC Patrick 2026-06-11) */}
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            {layers.map((l) => {
-              const isCardLayer = (openCard.layer ?? "F") === l.id;
-              return (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => updateCard(openCard.id, { layer: l.id })}
-                  className="rounded-full px-2.5 py-1 text-[10px] font-semibold transition hover:brightness-110"
-                  style={{
-                    backgroundColor: isCardLayer ? (l.side === "F" ? "#BE185D" : "#1D4ED8") : sectionBg,
-                    color: isCardLayer ? "#FFFFFF" : textColor,
-                    opacity: isCardLayer ? 1 : 0.75,
-                  }}
-                  title={`Placer cette carte sur le calque ${l.name}`}
-                >
-                  {l.name}
-                </button>
-              );
-            })}
+            <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: textColor, opacity: 0.55 }}>
+              Structure
+            </span>
+            <button
+              type="button"
+              onClick={() => updateCard(openCard.id, { layer: "F" })}
+              className="rounded-full px-2.5 py-1 text-[10px] font-semibold transition hover:brightness-110"
+              style={{
+                backgroundColor: (openCard.layer ?? "F") === "F" ? "#BE185D" : sectionBg,
+                color: (openCard.layer ?? "F") === "F" ? "#FFFFFF" : textColor,
+              }}
+              title="Placer cette carte sur la structure féminine"
+            >
+              ♀ Féminine
+            </button>
+            <select
+              value={(openCard.layer ?? "F").startsWith("M") ? openCard.layer : ""}
+              onChange={(e) => {
+                const id = e.target.value;
+                if (!id) return;
+                ensureMLayer(id);
+                updateCard(openCard.id, { layer: id });
+              }}
+              className="cursor-pointer rounded-full px-2.5 py-1 text-[10px] font-semibold"
+              style={{
+                backgroundColor: (openCard.layer ?? "F").startsWith("M") ? "#1D4ED8" : sectionBg,
+                color: (openCard.layer ?? "F").startsWith("M") ? "#FFFFFF" : textColor,
+              }}
+              title="Placer cette carte sur une structure masculine (1 à 5)"
+            >
+              <option value="">♂ Masculine…</option>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={`M${n}`}>♂ Masculine {n}</option>
+              ))}
+            </select>
           </div>
 
           {/* Relations de cette carte */}
