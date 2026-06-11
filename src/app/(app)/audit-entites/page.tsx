@@ -30,6 +30,8 @@ export default function AuditEntitesPage() {
   const [error, setError] = useState<string | null>(null);
   // Accordéons ouverts/fermés
   const [grapheOpen, setGrapheOpen] = useState(true);
+  // Warner pré-séance : re-affiché à chaque ouverture de la page (volontaire)
+  const [warnerOk, setWarnerOk] = useState(false);
   // État de travail LOCAL (pas de persistance DB) : marque NSB / catégories
   // comme « travaillées » pendant la session.
   const [worked, setWorked] = useState<Set<string>>(new Set());
@@ -123,6 +125,44 @@ export default function AuditEntitesPage() {
           Big data 9D×33C — {data.totalConsultantes} consultantes · {data.totalSessions} sessions · {data.totalDecodages} décodages
         </p>
       </header>
+
+      {/* Warner pré-séance (adapté d'Easy Entity Release — DEC Patrick 2026-06-11) */}
+      {!warnerOk && (
+        <section className="rounded-2xl border border-amber-300 bg-gradient-to-b from-amber-100 to-amber-50 p-5">
+          <h2 className="text-lg font-bold text-amber-900">
+            ⚠️ Avant de commencer — vérifie-toi au test musculaire (ou en radiesthésie)
+          </h2>
+          <p className="mt-1 text-sm text-amber-800">
+            Pose chaque affirmation. Chaque réponse doit être <strong>OUI</strong> :
+          </p>
+          <ul className="mt-3 space-y-2 text-sm text-amber-900">
+            <li className="rounded-lg bg-white/70 px-3 py-2">• Je suis ancré·e et relié·e à la Source véritable.</li>
+            <li className="rounded-lg bg-white/70 px-3 py-2">• Je suis protégé·e.</li>
+            <li className="rounded-lg bg-white/70 px-3 py-2">• Je suis bien hydraté·e.</li>
+            <li className="rounded-lg bg-white/70 px-3 py-2">• Mon test musculaire est fiable.</li>
+            <li className="rounded-lg bg-white/70 px-3 py-2">• Les réponses que je reçois servent le plus haut bien et la plus haute vérité de mon Âme.</li>
+          </ul>
+          <div className="mt-4 space-y-2 text-sm text-amber-800">
+            <p>
+              <strong>Si une réponse est NON</strong> : recentre-toi, ancre-toi, invoque ta phrase de
+              protection — puis identifie au test musculaire ou à l&apos;intuition, dans les planches,
+              ce qui doit être libéré pour lever le blocage.
+            </p>
+            <p><strong>Si tout est OUI</strong> : tu peux commencer.</p>
+            <p>
+              <strong>Vérifie ton Score de Lumière avant de débuter</strong> — il indique la charge
+              d&apos;entités sombres (ou de conscience d&apos;entité sombre) présente en toi à cet instant.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setWarnerOk(true)}
+            className="mt-4 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-700"
+          >
+            ✓ Tout est OUI — je commence
+          </button>
+        </section>
+      )}
 
       {/* Section 1 : KPIs globaux */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
