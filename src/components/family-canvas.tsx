@@ -50,8 +50,18 @@ const TEMPLATE_EDGES: Array<[string, string]> = [
   ["arriere-grand-mere-paternelle", "grand-pere"],
 ];
 
-// Connection is simply a pair of card IDs; direction determined by y-position at render time
-type Connection = { a: string; b: string };
+// Connection: undirected pair of card IDs + editable attributes
+type Connection = {
+  id: string;       // unique id for this connection
+  a: string;        // card ID
+  b: string;        // card ID
+  color: string;    // hex color of the relation arc
+  sla: number | null;
+  slsa: number | null;
+  slpmo: number | null;
+  slm: number | null;
+  token: string;    // free-text access token / label
+};
 
 // Co-acteur categories for the "Ajouter des co-acteurs" panel
 type CoActeurCategory = {
@@ -71,6 +81,7 @@ const CO_ACTEUR_CATEGORIES: CoActeurCategory[] = [
       { id: "ange-gardien",   name: "Ange Gardien",       relation_type: "ange gardien",       generation: 2, lignee: "consultante", gender: "F", color: "#A78BFA", icon: "🕊️" },
       { id: "ancetre-guide",  name: "Ancêtre Guide",      relation_type: "ancêtre guide",      generation: 3, lignee: "paternelle", gender: "M", color: "#6366F1", icon: "👴" },
       { id: "guide-totem",    name: "Guide Totem",        relation_type: "guide totem",        generation: 0, lignee: "consultante", gender: "M", color: "#10B981", icon: "🦅" },
+      { id: "source-divine",  name: "Source Divine",      relation_type: "source divine",      generation: 120, lignee: "consultante", gender: "F", color: "#FBBF24", icon: "☀️" },
     ],
   },
   {
@@ -205,6 +216,129 @@ function bezierPath(
   return `M ${upper.cx} ${y1} C ${upper.cx} ${my}, ${lower.cx} ${my}, ${lower.cx} ${y2}`;
 }
 
+function RelationsSection({
+  card,
+  allCards,
+  connections,
+  openConnId,
+  onSelectConn,
+  onUpdateConn,
+  sectionBg,
+  inputBg,
+  textColor,
+}: {
+  card: { id: string; template: { name: string; color: string; icon: string } };
+  allCards: Array<{ id: string; template: { name: string; color: string; icon: string }; prenom: string }>;
+  connections: Connection[];
+  openConnId: string | null;
+  onSelectConn: (id: string) => void;
+  onUpdateConn: (id: string, updates: Partial<Connection>) => void;
+  sectionBg: string;
+  inputBg: string;
+  textColor: string;
+}) {
+  const cardConns = connections.filter((c) => c.a === card.id || c.b === card.id);
+
+  if (cardConns.length === 0) return null;
+
+  return (
+    <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
+      <p className="mb-2 flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
+        <span className="flex h-5 w-5 items-center justify-center rounded bg-fuchsia-500 text-[10px]">↔</span>
+        Relations ({cardConns.length})
+      </p>
+      <div className="space-y-1">
+        {cardConns.map((conn) => {
+          const otherId = conn.a === card.id ? conn.b : conn.a;
+          const other = allCards.find((c) => c.id === otherId);
+          const isOpen = openConnId === conn.id;
+          return (
+            <div key={conn.id}>
+              {/* Relation row: arc icon + other card icon + name + select */}
+              <button
+                type="button"
+                onClick={() => onSelectConn(conn.id)}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition hover:brightness-110"
+                style={{
+                  backgroundColor: isOpen ? darken(inputBg, 0.08) : inputBg,
+                  borderLeft: `3px solid ${conn.color}`,
+                }}
+              >
+                {/* Arc indicator */}
+                <svg width="20" height="14" viewBox="0 0 20 14">
+                  <path d="M2 12 C2 2, 18 2, 18 12" stroke={conn.color} strokeWidth="2" fill="none" />
+                  <circle cx="2" cy="12" r="2.5" fill={card.template.color} />
+                  <circle cx="18" cy="12" r="2.5" fill={other?.template.color ?? "#94A3B8"} />
+                </svg>
+                <span className="text-base">{other?.template.icon ?? "?"}</span>
+                <span style={{ color: textColor }}>
+                  {other?.prenom || other?.template.name || "—"}
+                </span>
+                <span className="ml-auto text-[9px]" style={{ opacity: 0.5 }}>
+                  {isOpen ? "▾" : "▸"}
+                </span>
+              </button>
+
+              {/* Relation editor */}
+              {isOpen && (
+                <div className="mt-1 space-y-2 rounded p-2" style={{ backgroundColor: darken(inputBg, 0.12) }}>
+                  {/* Color */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px]" style={{ color: textColor, opacity: 0.6 }}>Couleur</span>
+                    <label className="relative h-6 w-9 cursor-pointer overflow-hidden rounded border" style={{ borderColor: "rgba(0,0,0,0.15)" }}>
+                      <span className="absolute inset-0" style={{ backgroundColor: conn.color }} />
+                      <input
+                        type="color"
+                        value={conn.color}
+                        onChange={(e) => onUpdateConn(conn.id, { color: e.target.value })}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      />
+                    </label>
+                    <span className="font-mono text-[9px]" style={{ color: textColor, opacity: 0.5 }}>{conn.color}</span>
+                  </div>
+                  {/* 4 scores */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(["sla", "slsa", "slpmo", "slm"] as const).map((key) => (
+                      <div key={key}>
+                        <label className="mb-0.5 block text-[8px]" style={{ color: textColor, opacity: 0.55 }}>{key.toUpperCase()}</label>
+                        <input
+                          type="number"
+                          value={conn[key] ?? ""}
+                          onChange={(e) =>
+                            onUpdateConn(conn.id, {
+                              [key]: e.target.value ? Number(e.target.value) : null,
+                            })
+                          }
+                          onFocus={(e) => e.currentTarget.select()}
+                          placeholder="—"
+                          className="w-full rounded px-1.5 py-1 text-center font-mono text-xs"
+                          style={{ backgroundColor: inputBg, color: textColor }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Token */}
+                  <div>
+                    <label className="mb-0.5 block text-[8px]" style={{ color: textColor, opacity: 0.55 }}>Token</label>
+                    <input
+                      type="text"
+                      value={conn.token}
+                      onChange={(e) => onUpdateConn(conn.id, { token: e.target.value })}
+                      placeholder="access token…"
+                      className="w-full rounded px-2 py-1 font-mono text-xs"
+                      style={{ backgroundColor: inputBg, color: textColor }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function CoActeurPanel({
   categories,
   onAdd,
@@ -276,6 +410,7 @@ export function FamilyCanvas() {
   const [draggedCard, setDraggedCard] = useState<RelationCardTemplate | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [addProcheOpen, setAddProcheOpen] = useState(false);
+  const [openConnId, setOpenConnId] = useState<string | null>(null);
 
   const textColor = useMemo(() => textOnColor(canvasColor), [canvasColor]);
   const sectionBg = useMemo(() => darken(canvasColor, 0.18), [canvasColor]);
@@ -305,13 +440,20 @@ export function FamilyCanvas() {
         evenements: [],
       };
       const newConns: Connection[] = [];
+      const mkConn = (a: string, b: string): Connection => ({
+        id: `conn-${a}-${b}-${Date.now()}`,
+        a, b,
+        color: "#a289f0",
+        sla: null, slsa: null, slpmo: null, slm: null,
+        token: "",
+      });
       for (const [tA, tB] of TEMPLATE_EDGES) {
         if (tpl.id === tA) {
           const match = cards.find((c) => c.template.id === tB);
-          if (match) newConns.push({ a: newCard.id, b: match.id });
+          if (match) newConns.push(mkConn(newCard.id, match.id));
         } else if (tpl.id === tB) {
           const match = cards.find((c) => c.template.id === tA);
-          if (match) newConns.push({ a: newCard.id, b: match.id });
+          if (match) newConns.push(mkConn(newCard.id, match.id));
         }
       }
       setCards((prev) => [...prev, newCard]);
@@ -338,6 +480,12 @@ export function FamilyCanvas() {
 
   const updateCard = useCallback((cardId: string, updates: Partial<LocalCard>) => {
     setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, ...updates } : c)));
+  }, []);
+
+  const updateConnection = useCallback((connId: string, updates: Partial<Connection>) => {
+    setConnections((prev) =>
+      prev.map((c) => (c.id === connId ? { ...c, ...updates } : c)),
+    );
   }, []);
 
   const removeCard = useCallback((cardId: string) => {
@@ -455,7 +603,8 @@ export function FamilyCanvas() {
 
           {/* SVG connection lines */}
           <svg
-            className="pointer-events-none absolute inset-0"
+            className="absolute inset-0"
+            style={{ pointerEvents: "none" }}
             width={CANVAS_W}
             height={layout.canvasH}
           >
@@ -463,23 +612,34 @@ export function FamilyCanvas() {
               const aPos = layout.positions.get(conn.a);
               const bPos = layout.positions.get(conn.b);
               if (!aPos || !bPos) return null;
-              const cardA = cards.find((c) => c.id === conn.a);
-              const cardB = cards.find((c) => c.id === conn.b);
-              // Use the lower-generation card's color for the line
-              const lineCard =
-                (cardA?.template.generation ?? 0) < (cardB?.template.generation ?? 0)
-                  ? cardA
-                  : cardB;
-              const color = lineCard ? connectionColor(lineCard) : "#94A3B8";
+              const isSelected = conn.id === openConnId;
               return (
-                <path
-                  key={`${conn.a}-${conn.b}`}
-                  d={bezierPath(aPos, bPos)}
-                  stroke={color}
-                  strokeWidth={2}
-                  fill="none"
-                  opacity={0.75}
-                />
+                <g key={conn.id} style={{ pointerEvents: "visibleStroke", cursor: "pointer" }}>
+                  {/* Wider invisible hit area */}
+                  <path
+                    d={bezierPath(aPos, bPos)}
+                    stroke="transparent"
+                    strokeWidth={16}
+                    fill="none"
+                    onClick={() => {
+                      setOpenConnId((prev) => (prev === conn.id ? null : conn.id));
+                      setOpenCardId(null);
+                    }}
+                  />
+                  {/* Visible arc */}
+                  <path
+                    d={bezierPath(aPos, bPos)}
+                    stroke={conn.color}
+                    strokeWidth={isSelected ? 3.5 : 2}
+                    fill="none"
+                    opacity={isSelected ? 1 : 0.7}
+                    strokeDasharray={isSelected ? "6 3" : undefined}
+                    onClick={() => {
+                      setOpenConnId((prev) => (prev === conn.id ? null : conn.id));
+                      setOpenCardId(null);
+                    }}
+                  />
+                </g>
               );
             })}
           </svg>
@@ -593,6 +753,19 @@ export function FamilyCanvas() {
           className="w-80 shrink-0 overflow-y-auto rounded-xl p-4 shadow-xl"
           style={{ backgroundColor: canvasColor, color: textColor }}
         >
+          {/* Relations de cette carte */}
+          <RelationsSection
+            card={openCard}
+            allCards={cards}
+            connections={connections}
+            openConnId={openConnId}
+            onSelectConn={(id) => setOpenConnId((prev) => (prev === id ? null : id))}
+            onUpdateConn={updateConnection}
+            sectionBg={sectionBg}
+            inputBg={inputBg}
+            textColor={textColor}
+          />
+
           {/* Header */}
           <div className="mb-4 flex items-center gap-3">
             <div
