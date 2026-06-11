@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { UserPlus, Pencil, Users, Trash2, Link2 } from "lucide-react";
 import {
   RELATION_CARD_TEMPLATES,
   PURPOSE_OPTIONS,
@@ -19,6 +20,12 @@ type LocalCard = {
   slm: number | null;
   nsb: number | null;
   scoreLumiere: number | null;
+  prenom: string;
+  nom: string;
+  autresPrenoms: string;
+  titre: string;
+  sexe: "F" | "M";
+  evenements: Array<{ type: string; date: string }>;
 };
 
 export function FamilyCanvas() {
@@ -51,6 +58,12 @@ export function FamilyCanvas() {
       slm: null,
       nsb: null,
       scoreLumiere: null,
+      prenom: "",
+      nom: "",
+      autresPrenoms: "",
+      titre: "",
+      sexe: draggedCard.gender,
+      evenements: [],
     };
     setCards((prev) => [...prev, newCard]);
     setOpenCardId(newCard.id);
@@ -70,19 +83,29 @@ export function FamilyCanvas() {
     setOpenCardId((prev) => (prev === cardId ? null : prev));
   }, []);
 
+  const addEvenement = useCallback((cardId: string) => {
+    setCards((prev) =>
+      prev.map((c) =>
+        c.id === cardId
+          ? { ...c, evenements: [...c.evenements, { type: "Événement", date: "" }] }
+          : c
+      )
+    );
+  }, []);
+
   const openCard = cards.find((c) => c.id === openCardId);
 
   return (
     <div className="flex gap-4">
-      {/* Zone de travail : cartes fermées + carte ouverte */}
+      {/* Zone de travail : cartes placées */}
       <div
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        className="relative min-h-[300px] flex-1 rounded-xl border bg-gradient-to-b from-neutral-50 to-white p-4"
+        className="relative min-h-[400px] flex-1 rounded-xl border bg-gradient-to-b from-neutral-50 to-white p-4"
       >
-        {/* Cartes fermées (vignettes cliquables) */}
+        {/* Cartes placées */}
         {cards.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             {cards.map((c) => {
               const isOpen = c.id === openCardId;
               return (
@@ -90,162 +113,26 @@ export function FamilyCanvas() {
                   key={c.id}
                   type="button"
                   onClick={() => toggleCard(c.id)}
-                  className={`group flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs transition ${
-                    isOpen
-                      ? "border-2 shadow-md"
-                      : "border-neutral-200 bg-white hover:bg-neutral-50"
+                  className={`flex flex-col items-center rounded-xl border-2 bg-white p-3 shadow-sm transition hover:shadow-md ${
+                    isOpen ? "ring-2 ring-offset-2" : ""
                   }`}
                   style={{
-                    borderColor: isOpen ? c.template.color : undefined,
-                    backgroundColor: isOpen ? `${c.template.color}10` : undefined,
+                    borderColor: c.template.color,
+                    boxShadow: isOpen ? `0 0 0 3px ${c.template.color}40` : undefined,
                   }}
                 >
-                  <span>{c.template.icon}</span>
-                  <span className="font-medium" style={{ color: isOpen ? c.template.color : "#374151" }}>
-                    {c.template.name}
-                  </span>
-                  <span className="text-[9px] text-neutral-400">{c.state}</span>
-                  <span
-                    onClick={(e) => { e.stopPropagation(); removeCard(c.id); }}
-                    className="ml-1 hidden text-red-500 hover:text-red-700 group-hover:inline"
-                  >
-                    ×
-                  </span>
+                  <span className="text-3xl">{c.template.icon}</span>
+                  <p className="mt-1 text-xs font-bold" style={{ color: c.template.color }}>
+                    {c.prenom || c.template.name}
+                  </p>
+                  <p className="text-[9px] text-neutral-500">{c.state}</p>
                 </button>
               );
             })}
           </div>
         )}
 
-        {/* Carte ouverte (détails complets) */}
-        {openCard && (
-          <div
-            className="rounded-xl border-2 bg-white p-4 shadow-lg"
-            style={{ borderColor: openCard.template.color }}
-          >
-            <div className="mb-3 flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{openCard.template.icon}</span>
-                <div>
-                  <h3 className="text-lg font-bold" style={{ color: openCard.template.color }}>
-                    {openCard.template.name}
-                  </h3>
-                  <p className="text-xs text-neutral-500">
-                    G{openCard.template.generation} · {openCard.template.gender === "F" ? "Féminin" : "Masculin"}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpenCardId(null)}
-                className="rounded-lg bg-neutral-100 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-200"
-              >
-                Fermer
-              </button>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              {/* But (dropdown) */}
-              <div>
-                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                  But
-                </label>
-                <select
-                  value={openCard.purpose}
-                  onChange={(e) => updateCard(openCard.id, { purpose: e.target.value })}
-                  className="w-full rounded-lg border px-2 py-1.5 text-sm"
-                >
-                  {PURPOSE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* État (dropdown) */}
-              <div>
-                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                  État
-                </label>
-                <select
-                  value={openCard.state}
-                  onChange={(e) => updateCard(openCard.id, { state: e.target.value })}
-                  className="w-full rounded-lg border px-2 py-1.5 text-sm"
-                >
-                  {RELATION_STATE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 4 Scores */}
-              <div className="col-span-2 grid grid-cols-4 gap-2">
-                {(["sla", "slsa", "slpmo", "slm"] as const).map((key) => (
-                  <div key={key}>
-                    <label className="mb-1 block text-[9px] font-bold uppercase tracking-wide text-neutral-400">
-                      {key.toUpperCase()}
-                    </label>
-                    <input
-                      type="number"
-                      value={openCard[key] ?? ""}
-                      onChange={(e) => updateCard(openCard.id, { [key]: e.target.value ? Number(e.target.value) : null })}
-                      onFocus={(e) => e.currentTarget.select()}
-                      placeholder="—"
-                      className="w-full rounded-lg border px-2 py-1 text-center font-mono text-sm"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* NSB */}
-              <div>
-                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                  Niveaux shamaniques bloqués
-                </label>
-                <input
-                  type="number"
-                  value={openCard.nsb ?? ""}
-                  onChange={(e) => updateCard(openCard.id, { nsb: e.target.value ? Number(e.target.value) : null })}
-                  onFocus={(e) => e.currentTarget.select()}
-                  placeholder="—"
-                  className="w-full rounded-lg border px-2 py-1.5 font-mono text-sm"
-                />
-              </div>
-
-              {/* Score Lumière */}
-              <div>
-                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                  Score Lumière
-                </label>
-                <input
-                  type="number"
-                  value={openCard.scoreLumiere ?? ""}
-                  onChange={(e) => updateCard(openCard.id, { scoreLumiere: e.target.value ? Number(e.target.value) : null })}
-                  onFocus={(e) => e.currentTarget.select()}
-                  placeholder="—"
-                  className="w-full rounded-lg border px-2 py-1.5 font-mono text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Menu Sentiers */}
-            <div className="mt-4 flex gap-2">
-              <a
-                href="/parasites"
-                className="rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-200"
-              >
-                Parasites
-              </a>
-              <a
-                href="/soul-mission"
-                className="rounded-lg bg-purple-100 px-3 py-1.5 text-xs font-medium text-purple-800 hover:bg-purple-200"
-              >
-                Scores de lumière
-              </a>
-            </div>
-          </div>
-        )}
-
-        {/* Indicateur drop zone */}
+        {/* Drop zone indicator */}
         {draggedCard && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-blue-500/5">
             <p className="rounded-lg bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-700">
@@ -256,7 +143,7 @@ export function FamilyCanvas() {
 
         {/* État vide */}
         {cards.length === 0 && !draggedCard && (
-          <div className="flex h-full min-h-[200px] items-center justify-center">
+          <div className="flex h-full min-h-[300px] items-center justify-center">
             <p className="text-sm text-neutral-400">
               Glissez des cartes depuis le drawer pour créer la structure familiale
             </p>
@@ -264,31 +151,246 @@ export function FamilyCanvas() {
         )}
       </div>
 
-      {/* Drawer à droite : 6 cartes de base */}
-      <div className="w-48 shrink-0 space-y-2 rounded-xl border bg-neutral-50 p-3">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-          6 cartes de base
-        </p>
-        <div className="space-y-1.5">
-          {RELATION_CARD_TEMPLATES.map((card) => (
+      {/* Panneau latéral sombre (ouvert quand une carte est sélectionnée) */}
+      {openCard && (
+        <div className="w-80 shrink-0 overflow-y-auto rounded-xl bg-slate-800 p-4 text-white shadow-xl">
+          {/* Header avec avatar */}
+          <div className="mb-4 flex items-center gap-3">
             <div
-              key={card.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, card)}
-              className="flex cursor-grab items-center gap-2 rounded-lg border bg-white px-2 py-2 text-xs shadow-sm transition hover:shadow-md active:cursor-grabbing"
-              style={{ borderLeftWidth: 4, borderLeftColor: card.color }}
+              className="flex h-14 w-14 items-center justify-center rounded-lg text-3xl"
+              style={{ backgroundColor: `${openCard.template.color}30` }}
             >
-              <span className="text-base">{card.icon}</span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-neutral-800">{card.name}</p>
-                <p className="text-[9px] text-neutral-400">
-                  {card.generation === 0 ? "Origine" : `G${card.generation}`} · {card.gender === "F" ? "Fém" : "Masc"}
-                </p>
+              {openCard.template.icon}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-white">
+                {openCard.prenom || openCard.template.name} {openCard.nom}
+              </p>
+              <p className="truncate text-xs text-slate-400">{openCard.titre || openCard.template.relation_type}</p>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="mb-4 rounded-lg bg-slate-700/50 p-3">
+            <p className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-300">
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-cyan-500 text-[10px]">▶</span>
+              Actions
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button className="flex flex-col items-center gap-1 rounded-lg bg-slate-600/50 p-2 text-[10px] text-cyan-400 hover:bg-slate-600">
+                <UserPlus className="h-5 w-5" />
+                Ajouter des proches
+              </button>
+              <button className="flex flex-col items-center gap-1 rounded-lg bg-slate-600/50 p-2 text-[10px] text-cyan-400 hover:bg-slate-600">
+                <Pencil className="h-5 w-5" />
+                Éditer la personne
+              </button>
+              <button className="flex flex-col items-center gap-1 rounded-lg bg-slate-600/50 p-2 text-[10px] text-cyan-400 hover:bg-slate-600">
+                <Users className="h-5 w-5" />
+                Personnes influentes (0)
+              </button>
+              <button
+                onClick={() => removeCard(openCard.id)}
+                className="flex flex-col items-center gap-1 rounded-lg bg-red-900/50 p-2 text-[10px] text-red-400 hover:bg-red-900"
+              >
+                <Trash2 className="h-5 w-5" />
+                Supprimer
+              </button>
+              <button className="col-span-2 flex items-center justify-center gap-2 rounded-lg bg-slate-600/50 p-2 text-[10px] text-cyan-400 hover:bg-slate-600">
+                <Link2 className="h-4 w-4" />
+                Sélectionner une famille...
+              </button>
+            </div>
+          </div>
+
+          {/* Nom & sexe */}
+          <div className="mb-4 rounded-lg bg-slate-700/50 p-3">
+            <p className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-300">
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-cyan-500 text-[10px]">👤</span>
+              Nom & sexe
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="mb-1 block text-[9px] text-slate-400">Prénom</label>
+                <input
+                  type="text"
+                  value={openCard.prenom}
+                  onChange={(e) => updateCard(openCard.id, { prenom: e.target.value })}
+                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white placeholder-slate-400"
+                  placeholder="Prénom"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[9px] text-slate-400">Nom</label>
+                <input
+                  type="text"
+                  value={openCard.nom}
+                  onChange={(e) => updateCard(openCard.id, { nom: e.target.value })}
+                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white placeholder-slate-400"
+                  placeholder="Nom"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[9px] text-slate-400">Autres prénoms</label>
+                <input
+                  type="text"
+                  value={openCard.autresPrenoms}
+                  onChange={(e) => updateCard(openCard.id, { autresPrenoms: e.target.value })}
+                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white placeholder-slate-400"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[9px] text-slate-400">Titre</label>
+                <input
+                  type="text"
+                  value={openCard.titre}
+                  onChange={(e) => updateCard(openCard.id, { titre: e.target.value })}
+                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white placeholder-slate-400"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="mb-1 block text-[9px] text-slate-400">Sexe</label>
+                <select
+                  value={openCard.sexe}
+                  onChange={(e) => updateCard(openCard.id, { sexe: e.target.value as "F" | "M" })}
+                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white"
+                >
+                  <option value="F">🔴 Féminin</option>
+                  <option value="M">🔵 Masculin</option>
+                </select>
               </div>
             </div>
-          ))}
+          </div>
+
+          {/* Scores */}
+          <div className="mb-4 rounded-lg bg-slate-700/50 p-3">
+            <p className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-300">
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-amber-500 text-[10px]">📊</span>
+              Scores
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="mb-1 block text-[9px] text-slate-400">But</label>
+                <select
+                  value={openCard.purpose}
+                  onChange={(e) => updateCard(openCard.id, { purpose: e.target.value })}
+                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white"
+                >
+                  {PURPOSE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-[9px] text-slate-400">État</label>
+                <select
+                  value={openCard.state}
+                  onChange={(e) => updateCard(openCard.id, { state: e.target.value })}
+                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white"
+                >
+                  {RELATION_STATE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              {(["sla", "slsa", "slpmo", "slm"] as const).map((key) => (
+                <div key={key}>
+                  <label className="mb-1 block text-[9px] text-slate-400">{key.toUpperCase()}</label>
+                  <input
+                    type="number"
+                    value={openCard[key] ?? ""}
+                    onChange={(e) => updateCard(openCard.id, { [key]: e.target.value ? Number(e.target.value) : null })}
+                    onFocus={(e) => e.currentTarget.select()}
+                    placeholder="—"
+                    className="w-full rounded bg-slate-600 px-2 py-1 text-center font-mono text-xs text-white"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="mb-1 block text-[9px] text-slate-400">NSB</label>
+                <input
+                  type="number"
+                  value={openCard.nsb ?? ""}
+                  onChange={(e) => updateCard(openCard.id, { nsb: e.target.value ? Number(e.target.value) : null })}
+                  onFocus={(e) => e.currentTarget.select()}
+                  placeholder="—"
+                  className="w-full rounded bg-slate-600 px-2 py-1 text-center font-mono text-xs text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[9px] text-slate-400">Score Lumière</label>
+                <input
+                  type="number"
+                  value={openCard.scoreLumiere ?? ""}
+                  onChange={(e) => updateCard(openCard.id, { scoreLumiere: e.target.value ? Number(e.target.value) : null })}
+                  onFocus={(e) => e.currentTarget.select()}
+                  placeholder="—"
+                  className="w-full rounded bg-slate-600 px-2 py-1 text-center font-mono text-xs text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Événements */}
+          <div className="rounded-lg bg-slate-700/50 p-3">
+            <p className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-300">
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-yellow-500 text-[10px]">⭐</span>
+              Événements ({openCard.evenements.length})
+            </p>
+            {openCard.evenements.map((evt, i) => (
+              <div key={i} className="mb-2 flex items-center gap-2 rounded bg-slate-600/50 p-2 text-xs">
+                <span>📜</span>
+                <div className="flex-1">
+                  <p className="font-medium text-white">{evt.type}</p>
+                  <p className="text-slate-400">{evt.date || "Aucune date saisie"}</p>
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={() => addEvenement(openCard.id)}
+              className="mt-2 w-full rounded bg-slate-600 py-1 text-[10px] text-cyan-400 hover:bg-slate-500"
+            >
+              + Ajouter un événement
+            </button>
+          </div>
+
+          {/* Fermer */}
+          <button
+            onClick={() => setOpenCardId(null)}
+            className="mt-4 w-full rounded-lg bg-slate-600 py-2 text-xs font-medium text-slate-300 hover:bg-slate-500"
+          >
+            Fermer
+          </button>
         </div>
-      </div>
+      )}
+
+      {/* Drawer à droite : 6 cartes de base (masqué si panneau ouvert) */}
+      {!openCard && (
+        <div className="w-48 shrink-0 space-y-2 rounded-xl border bg-neutral-50 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+            6 cartes de base
+          </p>
+          <div className="space-y-1.5">
+            {RELATION_CARD_TEMPLATES.map((card) => (
+              <div
+                key={card.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, card)}
+                className="flex cursor-grab items-center gap-2 rounded-lg border bg-white px-2 py-2 text-xs shadow-sm transition hover:shadow-md active:cursor-grabbing"
+                style={{ borderLeftWidth: 4, borderLeftColor: card.color }}
+              >
+                <span className="text-base">{card.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-neutral-800">{card.name}</p>
+                  <p className="text-[9px] text-neutral-400">
+                    {card.generation === 0 ? "Origine" : `G${card.generation}`} · {card.gender === "F" ? "Fém" : "Masc"}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
