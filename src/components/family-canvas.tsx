@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { UserPlus, Pencil, Users, Trash2, Link2 } from "lucide-react";
 import {
   RELATION_CARD_TEMPLATES,
@@ -10,15 +10,15 @@ import {
 } from "@/lib/cercle/audit-entites";
 
 const PLATON_SOLIDS = [
-  { id: "circle", name: "Cercle", icon: "⬤", clipPath: "circle(50%)" },
-  { id: "tetrahedron", name: "Tétraèdre", icon: "△", clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)" },
-  { id: "cube", name: "Cube", icon: "◼", clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)" },
-  { id: "octahedron", name: "Octaèdre", icon: "◆", clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" },
-  { id: "dodecahedron", name: "Dodécaèdre", icon: "⬠", clipPath: "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)" },
-  { id: "icosahedron", name: "Icosaèdre", icon: "⬡", clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" },
+  { id: "circle", name: "Cercle", clipPath: "circle(50%)" },
+  { id: "tetrahedron", name: "Tétraèdre", clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)" },
+  { id: "cube", name: "Cube", clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)" },
+  { id: "octahedron", name: "Octaèdre", clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" },
+  { id: "dodecahedron", name: "Dodécaèdre", clipPath: "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)" },
+  { id: "icosahedron", name: "Icosaèdre", clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" },
 ] as const;
 
-type PlatonSolidId = typeof PLATON_SOLIDS[number]["id"];
+type PlatonSolidId = (typeof PLATON_SOLIDS)[number]["id"];
 
 type LocalCard = {
   id: string;
@@ -40,10 +40,83 @@ type LocalCard = {
   evenements: Array<{ type: string; date: string }>;
 };
 
+// Undirected edges: templateId A ↔ templateId B (parent ↔ child in family tree)
+const TEMPLATE_EDGES: Array<[string, string]> = [
+  ["pere", "consultante"],
+  ["mere", "consultante"],
+  ["grand-pere", "pere"],
+  ["grand-mere-paternelle", "pere"],
+  ["arriere-grand-mere-paternelle", "grand-pere"],
+];
+
+// Connection is simply a pair of card IDs; direction determined by y-position at render time
+type Connection = { a: string; b: string };
+
+const GEN_LABELS: Record<number, string> = {
+  3: "G3 · Arrière-grands-parents",
+  2: "G2 · Grands-parents",
+  1: "G1 · Parents",
+  0: "G0 · Consultante",
+};
+
+const CANVAS_W = 960;
+const ROW_H = 150;
+const CARD_SZ = 76;
+const CANVAS_H = 4 * ROW_H; // 600px
+
+function genCY(generation: number): number {
+  // G3 at top (row 0), G0 at bottom (row 3)
+  return (3 - generation) * ROW_H + ROW_H / 2;
+}
+
+function computePositions(cards: LocalCard[]): Map<string, { cx: number; cy: number }> {
+  const byGen = new Map<number, LocalCard[]>();
+  for (const card of cards) {
+    const g = card.template.generation;
+    if (!byGen.has(g)) byGen.set(g, []);
+    byGen.get(g)!.push(card);
+  }
+  const pos = new Map<string, { cx: number; cy: number }>();
+  for (const [gen, genCards] of byGen) {
+    const cy = genCY(gen);
+    const gap = 60;
+    const totalW = genCards.length * CARD_SZ + (genCards.length - 1) * gap;
+    let x = (CANVAS_W - totalW) / 2 + CARD_SZ / 2;
+    for (const card of genCards) {
+      pos.set(card.id, { cx: x, cy });
+      x += CARD_SZ + gap;
+    }
+  }
+  return pos;
+}
+
+function connectionColor(card: LocalCard): string {
+  if (card.template.lignee === "paternelle") return "#F97316";
+  if (card.template.lignee === "maternelle") return "#EC4899";
+  return "#94A3B8";
+}
+
+function bezierPath(
+  aPos: { cx: number; cy: number },
+  bPos: { cx: number; cy: number },
+): string {
+  // Connect bottom of upper card to top of lower card; control points at midpoint y
+  const upper = aPos.cy <= bPos.cy ? aPos : bPos;
+  const lower = aPos.cy <= bPos.cy ? bPos : aPos;
+  const y1 = upper.cy + CARD_SZ / 2;
+  const y2 = lower.cy - CARD_SZ / 2;
+  const my = (y1 + y2) / 2;
+  return `M ${upper.cx} ${y1} C ${upper.cx} ${my}, ${lower.cx} ${my}, ${lower.cx} ${y2}`;
+}
+
 export function FamilyCanvas() {
   const [cards, setCards] = useState<LocalCard[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [draggedCard, setDraggedCard] = useState<RelationCardTemplate | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const positions = useMemo(() => computePositions(cards), [cards]);
 
   const handleDragStart = useCallback((e: React.DragEvent, card: RelationCardTemplate) => {
     setDraggedCard(card);
@@ -51,37 +124,44 @@ export function FamilyCanvas() {
     e.dataTransfer.effectAllowed = "copy";
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-  }, []);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      if (!draggedCard) return;
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    if (!draggedCard) return;
-    const newCard: LocalCard = {
-      id: `${draggedCard.id}-${Date.now()}`,
-      template: draggedCard,
-      purpose: "soul_mission",
-      state: "absente",
-      sla: null,
-      slsa: null,
-      slpmo: null,
-      slm: null,
-      nsb: null,
-      scoreLumiere: null,
-      prenom: "",
-      nom: "",
-      autresPrenoms: "",
-      titre: "",
-      sexe: draggedCard.gender,
-      shape: draggedCard.gender === "F" ? "circle" : "cube",
-      evenements: [],
-    };
-    setCards((prev) => [...prev, newCard]);
-    setOpenCardId(newCard.id);
-    setDraggedCard(null);
-  }, [draggedCard]);
+      const newCard: LocalCard = {
+        id: `${draggedCard.id}-${Date.now()}`,
+        template: draggedCard,
+        purpose: "soul_mission",
+        state: "absente",
+        sla: null, slsa: null, slpmo: null, slm: null,
+        nsb: null, scoreLumiere: null,
+        prenom: "", nom: "", autresPrenoms: "", titre: "",
+        sexe: draggedCard.gender,
+        shape: draggedCard.gender === "F" ? "circle" : "cube",
+        evenements: [],
+      };
+
+      // Auto-connect based on template edges
+      const newConns: Connection[] = [];
+      for (const [tA, tB] of TEMPLATE_EDGES) {
+        if (draggedCard.id === tA) {
+          const match = cards.find((c) => c.template.id === tB);
+          if (match) newConns.push({ a: newCard.id, b: match.id });
+        } else if (draggedCard.id === tB) {
+          const match = cards.find((c) => c.template.id === tA);
+          if (match) newConns.push({ a: newCard.id, b: match.id });
+        }
+      }
+
+      setCards((prev) => [...prev, newCard]);
+      if (newConns.length > 0) setConnections((prev) => [...prev, ...newConns]);
+      setOpenCardId(newCard.id);
+      setDraggedCard(null);
+    },
+    [draggedCard, cards],
+  );
 
   const toggleCard = useCallback((cardId: string) => {
     setOpenCardId((prev) => (prev === cardId ? null : cardId));
@@ -93,6 +173,7 @@ export function FamilyCanvas() {
 
   const removeCard = useCallback((cardId: string) => {
     setCards((prev) => prev.filter((c) => c.id !== cardId));
+    setConnections((prev) => prev.filter((c) => c.a !== cardId && c.b !== cardId));
     setOpenCardId((prev) => (prev === cardId ? null : prev));
   }, []);
 
@@ -101,8 +182,8 @@ export function FamilyCanvas() {
       prev.map((c) =>
         c.id === cardId
           ? { ...c, evenements: [...c.evenements, { type: "Événement", date: "" }] }
-          : c
-      )
+          : c,
+      ),
     );
   }, []);
 
@@ -110,72 +191,196 @@ export function FamilyCanvas() {
 
   return (
     <div className="flex gap-4">
-      {/* Zone de travail : cartes placées */}
-      <div
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        className="relative min-h-[400px] flex-1 rounded-xl border bg-gradient-to-b from-neutral-50 to-white p-4"
-      >
-        {/* Cartes placées avec formes Platon */}
-        {cards.length > 0 && (
-          <div className="flex flex-wrap gap-4">
-            {cards.map((c) => {
-              const isOpen = c.id === openCardId;
-              const solid = PLATON_SOLIDS.find((s) => s.id === c.shape) ?? PLATON_SOLIDS[0];
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => toggleCard(c.id)}
-                  className="group flex flex-col items-center"
-                >
-                  {/* Forme avec clip-path */}
+      {/* Canvas — dark MacFamilyTree style */}
+      <div className="flex-1 overflow-x-auto rounded-xl border border-slate-700">
+        <div
+          className="relative"
+          style={{
+            width: CANVAS_W,
+            height: CANVAS_H,
+            backgroundColor: "#0f172a",
+            backgroundImage:
+              "linear-gradient(rgba(148,163,184,.07) 1px, transparent 1px)," +
+              "linear-gradient(90deg, rgba(148,163,184,.07) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+            setIsDragOver(true);
+          }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={handleDrop}
+        >
+          {/* Generation row dividers + labels */}
+          {[3, 2, 1, 0].map((gen) => {
+            const rowTop = (3 - gen) * ROW_H;
+            return (
+              <div key={gen}>
+                {gen < 3 && (
                   <div
-                    className={`flex h-20 w-20 items-center justify-center border-4 bg-white shadow-lg transition hover:scale-105 ${
-                      isOpen ? "ring-4 ring-offset-2" : ""
-                    }`}
+                    className="absolute left-0 right-0 h-px"
+                    style={{ top: rowTop, backgroundColor: "rgba(148,163,184,.15)" }}
+                  />
+                )}
+                <div
+                  className="pointer-events-none absolute left-2"
+                  style={{ top: rowTop + 6 }}
+                >
+                  <span
+                    className="rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wider"
                     style={{
-                      clipPath: solid.clipPath,
-                      borderColor: c.template.color,
-                      backgroundColor: `${c.template.color}15`,
-                      boxShadow: isOpen ? `0 0 0 4px ${c.template.color}` : undefined,
+                      backgroundColor: "rgba(15,23,42,.85)",
+                      color:
+                        gen === 0 ? "#C4A35A"
+                        : gen === 1 ? "#94A3B8"
+                        : "#64748B",
                     }}
                   >
-                    <span className="text-2xl">{c.template.icon}</span>
-                  </div>
-                  <p className="mt-2 max-w-[80px] truncate text-center text-xs font-bold" style={{ color: c.template.color }}>
-                    {c.prenom || c.template.name}
-                  </p>
-                  <p className="text-[9px] text-neutral-500">{c.state}</p>
-                </button>
+                    {GEN_LABELS[gen]}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* SVG connection lines */}
+          <svg
+            className="pointer-events-none absolute inset-0"
+            width={CANVAS_W}
+            height={CANVAS_H}
+          >
+            {connections.map((conn) => {
+              const aPos = positions.get(conn.a);
+              const bPos = positions.get(conn.b);
+              if (!aPos || !bPos) return null;
+              const cardA = cards.find((c) => c.id === conn.a);
+              const cardB = cards.find((c) => c.id === conn.b);
+              // Use the lower-generation card's color for the line
+              const lineCard =
+                (cardA?.template.generation ?? 0) < (cardB?.template.generation ?? 0)
+                  ? cardA
+                  : cardB;
+              const color = lineCard ? connectionColor(lineCard) : "#94A3B8";
+              return (
+                <path
+                  key={`${conn.a}-${conn.b}`}
+                  d={bezierPath(aPos, bPos)}
+                  stroke={color}
+                  strokeWidth={2}
+                  fill="none"
+                  opacity={0.75}
+                />
               );
             })}
-          </div>
-        )}
+          </svg>
 
-        {/* Drop zone indicator */}
-        {draggedCard && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-blue-500/5">
-            <p className="rounded-lg bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-700">
-              Relâchez pour ajouter {draggedCard.name}
-            </p>
-          </div>
-        )}
+          {/* Cards */}
+          {cards.map((card) => {
+            const pos = positions.get(card.id);
+            if (!pos) return null;
+            const solid = PLATON_SOLIDS.find((s) => s.id === card.shape) ?? PLATON_SOLIDS[0];
+            const isOpen = card.id === openCardId;
+            const isConsultante = card.template.id === "consultante";
 
-        {/* État vide */}
-        {cards.length === 0 && !draggedCard && (
-          <div className="flex h-full min-h-[300px] items-center justify-center">
-            <p className="text-sm text-neutral-400">
-              Glissez des cartes depuis le drawer pour créer la structure familiale
-            </p>
-          </div>
-        )}
+            return (
+              <button
+                key={card.id}
+                type="button"
+                onClick={() => toggleCard(card.id)}
+                className="absolute flex flex-col items-center transition-transform hover:scale-105"
+                style={{
+                  left: pos.cx - CARD_SZ / 2,
+                  top: pos.cy - CARD_SZ / 2,
+                  width: CARD_SZ,
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  overflow: "visible",
+                  transformOrigin: "center center",
+                }}
+              >
+                {/* Shape container */}
+                <div style={{ position: "relative", width: CARD_SZ, height: CARD_SZ }}>
+                  {/* Outer ring — circle for consultante, rounded-rect for others */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      borderRadius: isConsultante ? "50%" : 8,
+                      border: `2px ${isConsultante ? "dashed" : "solid"} ${card.template.color}`,
+                      boxShadow: isOpen
+                        ? `0 0 0 3px ${card.template.color}50, 0 0 18px ${card.template.color}30`
+                        : `0 0 8px ${card.template.color}20`,
+                    }}
+                  />
+                  {/* Inner clip-path fill */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 8,
+                      clipPath: solid.clipPath,
+                      backgroundColor: `${card.template.color}22`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 20,
+                    }}
+                  >
+                    {card.template.icon}
+                  </div>
+                </div>
+                {/* Labels */}
+                <p
+                  className="mt-1 truncate text-center text-[10px] font-semibold leading-tight"
+                  style={{ color: card.template.color, maxWidth: CARD_SZ + 24, marginLeft: -12 }}
+                >
+                  {card.prenom || card.template.name}
+                </p>
+                <p
+                  className="text-[8px]"
+                  style={{ color: "#64748B", maxWidth: CARD_SZ + 24, marginLeft: -12 }}
+                >
+                  {card.state}
+                </p>
+              </button>
+            );
+          })}
+
+          {/* Drag-over overlay */}
+          {isDragOver && draggedCard && (
+            <div
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              style={{ backgroundColor: "rgba(59,130,246,.05)" }}
+            >
+              <p className="rounded-lg px-4 py-2 text-sm font-medium"
+                style={{ backgroundColor: "rgba(59,130,246,.12)", color: "#93C5FD" }}>
+                Relâchez pour placer {draggedCard.name} en G{draggedCard.generation}
+              </p>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {cards.length === 0 && !isDragOver && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-sm font-medium" style={{ color: "#475569" }}>
+                  Glissez des cartes pour construire la structure familiale
+                </p>
+                <p className="mt-1 text-xs" style={{ color: "#334155" }}>
+                  Commencez par la Consultante (G0), puis ajoutez Père et Mère (G1)…
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Panneau latéral sombre (ouvert quand une carte est sélectionnée) */}
+      {/* Side panel — sombre */}
       {openCard && (
         <div className="w-80 shrink-0 overflow-y-auto rounded-xl bg-slate-800 p-4 text-white shadow-xl">
-          {/* Header avec avatar */}
+          {/* Header */}
           <div className="mb-4 flex items-center gap-3">
             <div
               className="flex h-14 w-14 items-center justify-center rounded-lg text-3xl"
@@ -187,7 +392,9 @@ export function FamilyCanvas() {
               <p className="truncate text-sm font-bold text-white">
                 {openCard.prenom || openCard.template.name} {openCard.nom}
               </p>
-              <p className="truncate text-xs text-slate-400">{openCard.titre || openCard.template.relation_type}</p>
+              <p className="truncate text-xs text-slate-400">
+                {openCard.titre || openCard.template.relation_type}
+              </p>
             </div>
           </div>
 
@@ -219,7 +426,7 @@ export function FamilyCanvas() {
               </button>
               <button className="col-span-2 flex items-center justify-center gap-2 rounded-lg bg-slate-600/50 p-2 text-[10px] text-cyan-400 hover:bg-slate-600">
                 <Link2 className="h-4 w-4" />
-                Sélectionner une famille...
+                Sélectionner une famille…
               </button>
             </div>
           </div>
@@ -276,8 +483,8 @@ export function FamilyCanvas() {
                   onChange={(e) => updateCard(openCard.id, { sexe: e.target.value as "F" | "M" })}
                   className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white"
                 >
-                  <option value="F">🔴 Féminin</option>
-                  <option value="M">🔵 Masculin</option>
+                  <option value="F">Féminin</option>
+                  <option value="M">Masculin</option>
                 </select>
               </div>
               <div>
@@ -288,7 +495,7 @@ export function FamilyCanvas() {
                   className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white"
                 >
                   {PLATON_SOLIDS.map((s) => (
-                    <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+                    <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
               </div>
@@ -332,7 +539,11 @@ export function FamilyCanvas() {
                   <input
                     type="number"
                     value={openCard[key] ?? ""}
-                    onChange={(e) => updateCard(openCard.id, { [key]: e.target.value ? Number(e.target.value) : null })}
+                    onChange={(e) =>
+                      updateCard(openCard.id, {
+                        [key]: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
                     onFocus={(e) => e.currentTarget.select()}
                     placeholder="—"
                     className="w-full rounded bg-slate-600 px-2 py-1 text-center font-mono text-xs text-white"
@@ -344,7 +555,9 @@ export function FamilyCanvas() {
                 <input
                   type="number"
                   value={openCard.nsb ?? ""}
-                  onChange={(e) => updateCard(openCard.id, { nsb: e.target.value ? Number(e.target.value) : null })}
+                  onChange={(e) =>
+                    updateCard(openCard.id, { nsb: e.target.value ? Number(e.target.value) : null })
+                  }
                   onFocus={(e) => e.currentTarget.select()}
                   placeholder="—"
                   className="w-full rounded bg-slate-600 px-2 py-1 text-center font-mono text-xs text-white"
@@ -355,7 +568,11 @@ export function FamilyCanvas() {
                 <input
                   type="number"
                   value={openCard.scoreLumiere ?? ""}
-                  onChange={(e) => updateCard(openCard.id, { scoreLumiere: e.target.value ? Number(e.target.value) : null })}
+                  onChange={(e) =>
+                    updateCard(openCard.id, {
+                      scoreLumiere: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
                   onFocus={(e) => e.currentTarget.select()}
                   placeholder="—"
                   className="w-full rounded bg-slate-600 px-2 py-1 text-center font-mono text-xs text-white"
@@ -387,7 +604,6 @@ export function FamilyCanvas() {
             </button>
           </div>
 
-          {/* Fermer */}
           <button
             onClick={() => setOpenCardId(null)}
             className="mt-4 w-full rounded-lg bg-slate-600 py-2 text-xs font-medium text-slate-300 hover:bg-slate-500"
@@ -397,10 +613,10 @@ export function FamilyCanvas() {
         </div>
       )}
 
-      {/* Drawer à droite : 6 cartes de base (masqué si panneau ouvert) */}
+      {/* Drawer — dark theme aligné sur le canvas */}
       {!openCard && (
-        <div className="w-48 shrink-0 space-y-2 rounded-xl border bg-neutral-50 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+        <div className="w-48 shrink-0 space-y-2 rounded-xl border border-slate-700 bg-slate-900 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
             6 cartes de base
           </p>
           <div className="space-y-1.5">
@@ -409,14 +625,15 @@ export function FamilyCanvas() {
                 key={card.id}
                 draggable
                 onDragStart={(e) => handleDragStart(e, card)}
-                className="flex cursor-grab items-center gap-2 rounded-lg border bg-white px-2 py-2 text-xs shadow-sm transition hover:shadow-md active:cursor-grabbing"
+                className="flex cursor-grab items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-2 py-2 text-xs shadow-sm transition hover:border-slate-500 hover:bg-slate-700 active:cursor-grabbing"
                 style={{ borderLeftWidth: 4, borderLeftColor: card.color }}
               >
                 <span className="text-base">{card.icon}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-neutral-800">{card.name}</p>
-                  <p className="text-[9px] text-neutral-400">
-                    {card.generation === 0 ? "Origine" : `G${card.generation}`} · {card.gender === "F" ? "Fém" : "Masc"}
+                  <p className="truncate font-medium text-slate-200">{card.name}</p>
+                  <p className="text-[9px] text-slate-500">
+                    {card.generation === 0 ? "Origine" : `G${card.generation}`} ·{" "}
+                    {card.gender === "F" ? "Fém" : "Masc"}
                   </p>
                 </div>
               </div>
