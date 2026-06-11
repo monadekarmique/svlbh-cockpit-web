@@ -9,6 +9,17 @@ import {
   type RelationCardTemplate,
 } from "@/lib/cercle/audit-entites";
 
+const PLATON_SOLIDS = [
+  { id: "circle", name: "Cercle", icon: "⬤", clipPath: "circle(50%)" },
+  { id: "tetrahedron", name: "Tétraèdre", icon: "△", clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)" },
+  { id: "cube", name: "Cube", icon: "◼", clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)" },
+  { id: "octahedron", name: "Octaèdre", icon: "◆", clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" },
+  { id: "dodecahedron", name: "Dodécaèdre", icon: "⬠", clipPath: "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)" },
+  { id: "icosahedron", name: "Icosaèdre", icon: "⬡", clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)" },
+] as const;
+
+type PlatonSolidId = typeof PLATON_SOLIDS[number]["id"];
+
 type LocalCard = {
   id: string;
   template: RelationCardTemplate;
@@ -25,6 +36,7 @@ type LocalCard = {
   autresPrenoms: string;
   titre: string;
   sexe: "F" | "M";
+  shape: PlatonSolidId;
   evenements: Array<{ type: string; date: string }>;
 };
 
@@ -63,6 +75,7 @@ export function FamilyCanvas() {
       autresPrenoms: "",
       titre: "",
       sexe: draggedCard.gender,
+      shape: draggedCard.gender === "F" ? "circle" : "cube",
       evenements: [],
     };
     setCards((prev) => [...prev, newCard]);
@@ -103,26 +116,34 @@ export function FamilyCanvas() {
         onDrop={handleDrop}
         className="relative min-h-[400px] flex-1 rounded-xl border bg-gradient-to-b from-neutral-50 to-white p-4"
       >
-        {/* Cartes placées */}
+        {/* Cartes placées avec formes Platon */}
         {cards.length > 0 && (
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-4">
             {cards.map((c) => {
               const isOpen = c.id === openCardId;
+              const solid = PLATON_SOLIDS.find((s) => s.id === c.shape) ?? PLATON_SOLIDS[0];
               return (
                 <button
                   key={c.id}
                   type="button"
                   onClick={() => toggleCard(c.id)}
-                  className={`flex flex-col items-center rounded-xl border-2 bg-white p-3 shadow-sm transition hover:shadow-md ${
-                    isOpen ? "ring-2 ring-offset-2" : ""
-                  }`}
-                  style={{
-                    borderColor: c.template.color,
-                    boxShadow: isOpen ? `0 0 0 3px ${c.template.color}40` : undefined,
-                  }}
+                  className="group flex flex-col items-center"
                 >
-                  <span className="text-3xl">{c.template.icon}</span>
-                  <p className="mt-1 text-xs font-bold" style={{ color: c.template.color }}>
+                  {/* Forme avec clip-path */}
+                  <div
+                    className={`flex h-20 w-20 items-center justify-center border-4 bg-white shadow-lg transition hover:scale-105 ${
+                      isOpen ? "ring-4 ring-offset-2" : ""
+                    }`}
+                    style={{
+                      clipPath: solid.clipPath,
+                      borderColor: c.template.color,
+                      backgroundColor: `${c.template.color}15`,
+                      boxShadow: isOpen ? `0 0 0 4px ${c.template.color}` : undefined,
+                    }}
+                  >
+                    <span className="text-2xl">{c.template.icon}</span>
+                  </div>
+                  <p className="mt-2 max-w-[80px] truncate text-center text-xs font-bold" style={{ color: c.template.color }}>
                     {c.prenom || c.template.name}
                   </p>
                   <p className="text-[9px] text-neutral-500">{c.state}</p>
@@ -248,7 +269,7 @@ export function FamilyCanvas() {
                   className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white placeholder-slate-400"
                 />
               </div>
-              <div className="col-span-2">
+              <div>
                 <label className="mb-1 block text-[9px] text-slate-400">Sexe</label>
                 <select
                   value={openCard.sexe}
@@ -257,6 +278,18 @@ export function FamilyCanvas() {
                 >
                   <option value="F">🔴 Féminin</option>
                   <option value="M">🔵 Masculin</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-[9px] text-slate-400">Forme</label>
+                <select
+                  value={openCard.shape}
+                  onChange={(e) => updateCard(openCard.id, { shape: e.target.value as PlatonSolidId })}
+                  className="w-full rounded bg-slate-600 px-2 py-1 text-xs text-white"
+                >
+                  {PLATON_SOLIDS.map((s) => (
+                    <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
