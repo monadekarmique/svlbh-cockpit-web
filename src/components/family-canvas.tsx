@@ -1553,15 +1553,18 @@ export function FamilyCanvas() {
           ))}
           <button
             type="button"
+            disabled={layers.filter((x) => x.side === "M").length >= 5}
             onClick={() =>
               setLayers((prev) => {
+                if (prev.filter((x) => x.side === "M").length >= 5) return prev;
                 const n = prev.filter((x) => x.side === "M").length + 1;
                 return [...prev, { id: `M${n}`, name: `♂ Masculine ${n}`, side: "M", opacity: 0.55, visible: true }];
               })
             }
-            className="rounded-full border border-dashed border-neutral-300 px-2 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-50"
+            className="rounded-full border border-dashed border-neutral-300 px-2 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-50 disabled:opacity-30"
+            title="Jusqu'à 5 structures masculines"
           >
-            ＋ structure ♂
+            ＋ structure ♂ ({layers.filter((x) => x.side === "M").length}/5)
           </button>
           <span className="text-[10px] text-neutral-400">nouvelle carte → calque actif</span>
         </div>
@@ -1860,6 +1863,30 @@ export function FamilyCanvas() {
           className="w-full overflow-y-auto rounded-xl p-4 shadow-xl lg:w-80 lg:shrink-0"
           style={{ backgroundColor: canvasColor, color: textColor }}
         >
+          {/* Calques — affecter la carte ouverte à ♀ ou à une structure ♂
+              (placés au-dessus de Relations — DEC Patrick 2026-06-11) */}
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            {layers.map((l) => {
+              const isCardLayer = (openCard.layer ?? "F") === l.id;
+              return (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => updateCard(openCard.id, { layer: l.id })}
+                  className="rounded-full px-2.5 py-1 text-[10px] font-semibold transition hover:brightness-110"
+                  style={{
+                    backgroundColor: isCardLayer ? (l.side === "F" ? "#BE185D" : "#1D4ED8") : sectionBg,
+                    color: isCardLayer ? "#FFFFFF" : textColor,
+                    opacity: isCardLayer ? 1 : 0.75,
+                  }}
+                  title={`Placer cette carte sur le calque ${l.name}`}
+                >
+                  {l.name}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Relations de cette carte */}
           <RelationsSection
             card={openCard}
@@ -1888,6 +1915,43 @@ export function FamilyCanvas() {
               <p className="truncate text-xs" style={{ color: textColor, opacity: 0.65 }}>
                 {openCard.titre || openCard.template.relation_type}
               </p>
+            </div>
+            {/* Niveaux — à droite du nom de la carte (DEC Patrick 2026-06-11) */}
+            <div className="flex shrink-0 flex-col items-center gap-0.5">
+              <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: textColor, opacity: 0.6 }}>
+                Niveaux
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => updateCard(openCard.id, { niveau: Math.max(0, openCard.niveau - 1) })}
+                  className="flex h-5 w-5 items-center justify-center rounded text-xs font-bold transition hover:brightness-110"
+                  style={{ backgroundColor: inputBg, color: textColor }}
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  value={openCard.niveau}
+                  onChange={(e) =>
+                    updateCard(openCard.id, {
+                      niveau: isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value),
+                    })
+                  }
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="w-10 rounded px-1 py-0.5 text-center font-mono text-xs font-bold"
+                  style={{ backgroundColor: inputBg, color: textColor }}
+                  min={0}
+                />
+                <button
+                  type="button"
+                  onClick={() => updateCard(openCard.id, { niveau: openCard.niveau + 1 })}
+                  className="flex h-5 w-5 items-center justify-center rounded text-xs font-bold transition hover:brightness-110"
+                  style={{ backgroundColor: inputBg, color: textColor }}
+                >
+                  +
+                </button>
+              </div>
             </div>
             <button
               type="button"
@@ -2026,48 +2090,6 @@ export function FamilyCanvas() {
                 </select>
               </div>
             </div>
-          </div>
-
-          {/* Niveau */}
-          <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: sectionBg }}>
-            <p className="mb-2 flex items-center gap-2 text-xs font-bold" style={{ color: textColor, opacity: 0.85 }}>
-              <span className="flex h-5 w-5 items-center justify-center rounded bg-violet-500 text-[10px]">N</span>
-              Niveau dans la séquence
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => updateCard(openCard.id, { niveau: Math.max(0, openCard.niveau - 1) })}
-                className="flex h-8 w-8 items-center justify-center rounded text-lg font-bold transition hover:brightness-110"
-                style={{ backgroundColor: inputBg, color: textColor }}
-              >
-                −
-              </button>
-              <input
-                type="number"
-                value={openCard.niveau}
-                onChange={(e) =>
-                  updateCard(openCard.id, {
-                    niveau: isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value),
-                  })
-                }
-                onFocus={(e) => e.currentTarget.select()}
-                className="w-full rounded px-2 py-1.5 text-center font-mono text-lg font-bold"
-                style={{ backgroundColor: inputBg, color: textColor }}
-                min={0}
-              />
-              <button
-                type="button"
-                onClick={() => updateCard(openCard.id, { niveau: openCard.niveau + 1 })}
-                className="flex h-8 w-8 items-center justify-center rounded text-lg font-bold transition hover:brightness-110"
-                style={{ backgroundColor: inputBg, color: textColor }}
-              >
-                +
-              </button>
-            </div>
-            <p className="mt-1 text-center text-[9px]" style={{ color: textColor, opacity: 0.5 }}>
-              {levelLabel(openCard.niveau, viewMode)} · positionne la carte sur le canvas
-            </p>
           </div>
 
           {/* Scores */}
