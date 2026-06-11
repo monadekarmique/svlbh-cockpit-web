@@ -52,6 +52,45 @@ const TEMPLATE_EDGES: Array<[string, string]> = [
 // Connection is simply a pair of card IDs; direction determined by y-position at render time
 type Connection = { a: string; b: string };
 
+// Co-acteur categories for the "Ajouter des co-acteurs" panel
+type CoActeurCategory = {
+  id: string;
+  name: string;
+  icon: string;
+  templates: RelationCardTemplate[];
+};
+
+const CO_ACTEUR_CATEGORIES: CoActeurCategory[] = [
+  {
+    id: "guides",
+    name: "Guides",
+    icon: "✨",
+    templates: [
+      { id: "guide-lumiere",  name: "Guide de Lumière",  relation_type: "guide de lumière",  generation: 2, lignee: "consultante", gender: "F", color: "#F59E0B", icon: "✨" },
+      { id: "ange-gardien",   name: "Ange Gardien",       relation_type: "ange gardien",       generation: 2, lignee: "consultante", gender: "F", color: "#A78BFA", icon: "🕊️" },
+      { id: "ancetre-guide",  name: "Ancêtre Guide",      relation_type: "ancêtre guide",      generation: 3, lignee: "paternelle", gender: "M", color: "#6366F1", icon: "👴" },
+      { id: "guide-totem",    name: "Guide Totem",        relation_type: "guide totem",        generation: 0, lignee: "consultante", gender: "M", color: "#10B981", icon: "🦅" },
+    ],
+  },
+  {
+    id: "mentors",
+    name: "Mentors",
+    icon: "🎓",
+    templates: [
+      { id: "mentor-m",       name: "Mentor",             relation_type: "mentor",             generation: 1, lignee: "paternelle", gender: "M", color: "#0EA5E9", icon: "🎓" },
+      { id: "mentore-f",      name: "Mentore",            relation_type: "mentore",            generation: 1, lignee: "maternelle", gender: "F", color: "#EC4899", icon: "🎓" },
+      { id: "enseignant",     name: "Enseignant·e",       relation_type: "enseignant",         generation: 1, lignee: "consultante", gender: "F", color: "#F97316", icon: "📚" },
+      { id: "therapeute",     name: "Thérapeute",         relation_type: "thérapeute",         generation: 0, lignee: "consultante", gender: "F", color: "#14B8A6", icon: "💆" },
+    ],
+  },
+  {
+    id: "roles-familiaux",
+    name: "Rôles familiaux",
+    icon: "👨‍👩‍👧",
+    templates: RELATION_CARD_TEMPLATES as unknown as RelationCardTemplate[],
+  },
+];
+
 type ViewMode = "generations" | "niveaux" | "incarnations";
 
 const VIEW_MODE_LABELS: Record<ViewMode, Record<number, string>> = {
@@ -142,6 +181,68 @@ function bezierPath(
   const y2 = lower.cy - CARD_SZ / 2;
   const my = (y1 + y2) / 2;
   return `M ${upper.cx} ${y1} C ${upper.cx} ${my}, ${lower.cx} ${my}, ${lower.cx} ${y2}`;
+}
+
+function CoActeurPanel({
+  categories,
+  onAdd,
+  sectionBg,
+  inputBg,
+  textColor,
+}: {
+  categories: CoActeurCategory[];
+  onAdd: (tpl: RelationCardTemplate) => void;
+  sectionBg: string;
+  inputBg: string;
+  textColor: string;
+}) {
+  const [openCat, setOpenCat] = useState<string | null>(categories[0]?.id ?? null);
+
+  return (
+    <div className="mt-2 space-y-1 rounded-lg p-2" style={{ backgroundColor: inputBg }}>
+      <p className="mb-1.5 text-[9px] font-bold uppercase tracking-wide" style={{ color: textColor, opacity: 0.6 }}>
+        Ajouter un co-acteur
+      </p>
+      {categories.map((cat) => (
+        <div key={cat.id}>
+          <button
+            type="button"
+            onClick={() => setOpenCat((o) => (o === cat.id ? null : cat.id))}
+            className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-xs font-semibold transition hover:brightness-110"
+            style={{ backgroundColor: sectionBg, color: textColor }}
+          >
+            <span>{cat.icon}</span>
+            <span>{cat.name}</span>
+            <span className="ml-auto text-[10px]" style={{ opacity: 0.5 }}>
+              {openCat === cat.id ? "▾" : "▸"}
+            </span>
+          </button>
+          {openCat === cat.id && (
+            <div className="mt-0.5 space-y-0.5 pl-1">
+              {cat.templates.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => onAdd(tpl)}
+                  className="flex w-full items-center gap-2 rounded px-2 py-1 text-[11px] transition hover:brightness-110"
+                  style={{ backgroundColor: darken(sectionBg, 0.08) }}
+                >
+                  <span className="text-sm">{tpl.icon}</span>
+                  <span style={{ color: textColor }}>{tpl.name}</span>
+                  <span
+                    className="ml-auto rounded px-1 py-0.5 text-[9px] font-bold"
+                    style={{ backgroundColor: `${tpl.color}30`, color: tpl.color }}
+                  >
+                    G{tpl.generation}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function FamilyCanvas() {
@@ -498,7 +599,7 @@ export function FamilyCanvas() {
                 style={{ backgroundColor: addProcheOpen ? darken(inputBg, 0.1) : inputBg }}
               >
                 <UserPlus className="h-5 w-5" />
-                Ajouter des proches
+                Ajouter co-acteurs
               </button>
               <button className="flex flex-col items-center gap-1 rounded-lg p-2 text-[10px] text-cyan-300 transition hover:brightness-110"
                 style={{ backgroundColor: inputBg }}>
@@ -524,36 +625,15 @@ export function FamilyCanvas() {
               </button>
             </div>
 
-            {/* Popup ajout proche */}
+            {/* Popup co-acteurs — 3 catégories */}
             {addProcheOpen && (
-              <div className="mt-2 rounded-lg p-2" style={{ backgroundColor: inputBg }}>
-                <p className="mb-1.5 text-[9px] font-bold uppercase tracking-wide" style={{ color: textColor, opacity: 0.65 }}>
-                  Choisir un proche à ajouter
-                </p>
-                <div className="space-y-1">
-                  {RELATION_CARD_TEMPLATES.map((tpl) => (
-                    <button
-                      key={tpl.id}
-                      type="button"
-                      onClick={() => {
-                        addCardFromTemplate(tpl);
-                        setAddProcheOpen(false);
-                      }}
-                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition hover:brightness-110"
-                      style={{ backgroundColor: sectionBg }}
-                    >
-                      <span className="text-base">{tpl.icon}</span>
-                      <span style={{ color: textColor }}>{tpl.name}</span>
-                      <span
-                        className="ml-auto rounded px-1 py-0.5 text-[9px] font-bold"
-                        style={{ backgroundColor: `${tpl.color}30`, color: tpl.color }}
-                      >
-                        G{tpl.generation}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <CoActeurPanel
+                categories={CO_ACTEUR_CATEGORIES}
+                onAdd={(tpl) => { addCardFromTemplate(tpl); setAddProcheOpen(false); }}
+                sectionBg={sectionBg}
+                inputBg={inputBg}
+                textColor={textColor}
+              />
             )}
           </div>
 
