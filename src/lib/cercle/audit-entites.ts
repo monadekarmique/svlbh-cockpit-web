@@ -63,6 +63,134 @@ export const RELATION_CATEGORIES = [
   "attachements à des systèmes qui aident des entités",
 ] as const;
 
+// ── Templates de structures familiales ──
+
+export type FamilyRelationTemplate = {
+  relation_type: string;
+  generation: number; // 1 = parents, 2 = grands-parents, 3 = arrière-grands-parents
+  lignee: "maternelle" | "paternelle" | "both";
+  default_purpose: string;
+  default_state: string;
+};
+
+export type FamilyStructureTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  relations: FamilyRelationTemplate[];
+};
+
+export const FAMILY_STRUCTURE_TEMPLATES: FamilyStructureTemplate[] = [
+  {
+    id: "carte-mere",
+    name: "Carte de la Mère",
+    description: "Lignée féminine 3 générations (Lfem)",
+    color: "#E91E63",
+    relations: [
+      { relation_type: "mère", generation: 1, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "grand-mère maternelle", generation: 2, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "arrière-grand-mère maternelle", generation: 3, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+    ],
+  },
+  {
+    id: "carte-pere",
+    name: "Carte du Père",
+    description: "Lignée masculine 3 générations (Lmasc)",
+    color: "#2196F3",
+    relations: [
+      { relation_type: "père", generation: 1, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "grand-père paternel", generation: 2, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "arrière-grand-père paternel", generation: 3, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+    ],
+  },
+  {
+    id: "carte-parents",
+    name: "Parents G1",
+    description: "Père + Mère uniquement",
+    color: "#9C27B0",
+    relations: [
+      { relation_type: "mère", generation: 1, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "père", generation: 1, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+    ],
+  },
+  {
+    id: "carte-grands-parents",
+    name: "Grands-parents G2",
+    description: "4 grands-parents",
+    color: "#FF9800",
+    relations: [
+      { relation_type: "grand-mère maternelle", generation: 2, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "grand-père maternel", generation: 2, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "grand-mère paternelle", generation: 2, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "grand-père paternel", generation: 2, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+    ],
+  },
+  {
+    id: "carte-bilaterale-3g",
+    name: "Bilatérale complète 3G",
+    description: "Parents + 4 grands-parents + 8 arrière-grands-parents",
+    color: "#4CAF50",
+    relations: [
+      // G1
+      { relation_type: "mère", generation: 1, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "père", generation: 1, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+      // G2 maternelle
+      { relation_type: "grand-mère maternelle", generation: 2, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "grand-père maternel", generation: 2, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      // G2 paternelle
+      { relation_type: "grand-mère paternelle", generation: 2, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "grand-père paternel", generation: 2, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+      // G3 maternelle (côté mère de la mère)
+      { relation_type: "arrière-grand-mère maternelle (côté mère)", generation: 3, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "arrière-grand-père maternel (côté mère)", generation: 3, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      // G3 maternelle (côté père de la mère)
+      { relation_type: "arrière-grand-mère maternelle (côté père)", generation: 3, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "arrière-grand-père maternel (côté père)", generation: 3, lignee: "maternelle", default_purpose: "soul_mission", default_state: "absente" },
+      // G3 paternelle (côté mère du père)
+      { relation_type: "arrière-grand-mère paternelle (côté mère)", generation: 3, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "arrière-grand-père paternel (côté mère)", generation: 3, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+      // G3 paternelle (côté père du père)
+      { relation_type: "arrière-grand-mère paternelle (côté père)", generation: 3, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+      { relation_type: "arrière-grand-père paternel (côté père)", generation: 3, lignee: "paternelle", default_purpose: "soul_mission", default_state: "absente" },
+    ],
+  },
+];
+
+// ── Fonction pour créer une structure familiale ──
+
+export async function createFamilyStructure(
+  supabase: SupabaseClient,
+  templateId: string,
+  consultanteId: string,
+): Promise<{ success: boolean; count: number; error?: string }> {
+  const template = FAMILY_STRUCTURE_TEMPLATES.find((t) => t.id === templateId);
+  if (!template) {
+    return { success: false, count: 0, error: "Template non trouvé" };
+  }
+
+  const relationsToInsert = template.relations.map((r) => ({
+    relation_id: crypto.randomUUID(),
+    consultante_record_id: consultanteId,
+    relation_type: r.relation_type,
+    relation_state: r.default_state,
+    purpose: r.default_purpose,
+    categories: [],
+    systemes_a_liberer: [],
+    score_lumiere: null,
+    niveau_shamanique_bloques: null,
+    color_hex: template.color,
+  }));
+
+  const { error } = await supabase.from("relation").insert(relationsToInsert);
+
+  if (error) {
+    return { success: false, count: 0, error: error.message };
+  }
+
+  return { success: true, count: relationsToInsert.length };
+}
+
 // ── Requêtes Supabase ──
 
 export type AuditRelation = {
