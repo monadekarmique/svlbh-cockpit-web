@@ -63,6 +63,11 @@ export function Z3InboxClient({ initial }: { initial: Z3Message[] }) {
       .sort((a, b) => (b.last.created_at > a.last.created_at ? 1 : -1));
   }, [messages]);
 
+  const selectedLabel = useMemo(() => {
+    const c = conversations.find((c) => c.jid === selected);
+    return c?.label ?? "";
+  }, [conversations, selected]);
+
   const thread = useMemo(
     () =>
       messages
@@ -120,9 +125,9 @@ export function Z3InboxClient({ initial }: { initial: Z3Message[] }) {
   }
 
   return (
-    <div className="flex gap-4" style={{ height: "calc(100vh - 180px)" }}>
-      {/* Conversations */}
-      <div className="w-72 shrink-0 overflow-y-auto border rounded-lg bg-white">
+    <div style={{ height: "calc(100vh - 180px)" }}>
+      {/* Conversations — clic = la discussion s'ouvre dans une fenêtre */}
+      <div className="max-w-xl h-full overflow-y-auto border rounded-lg bg-white">
         {conversations.length === 0 && (
           <p className="p-4 text-sm text-gray-400">
             Aucun message pour l&apos;instant — la queue se remplit dès qu&apos;une
@@ -153,10 +158,25 @@ export function Z3InboxClient({ initial }: { initial: Z3Message[] }) {
         ))}
       </div>
 
-      {/* Fil */}
-      <div className="flex-1 flex flex-col border rounded-lg bg-white">
-        {selected ? (
-          <>
+      {/* Fenêtre de conversation (refermable à la fin de la discussion) */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="w-[640px] max-w-[92vw] h-[78vh] flex flex-col border rounded-xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <p className="font-semibold text-sm">💬 {selectedLabel}</p>
+              <button
+                onClick={() => setSelected(null)}
+                className="text-sm px-3 py-1 rounded-lg border hover:bg-gray-50"
+              >
+                Fermer ✕
+              </button>
+            </div>
             <div ref={threadRef} className="flex-1 overflow-y-auto p-4 space-y-2">
               {thread.map((m) => (
                 <div
@@ -202,13 +222,9 @@ export function Z3InboxClient({ initial }: { initial: Z3Message[] }) {
               </button>
             </div>
             {error && <p className="px-4 pb-2 text-xs text-red-600">{error}</p>}
-          </>
-        ) : (
-          <p className="m-auto text-sm text-gray-400">
-            Choisis une conversation à gauche.
-          </p>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
