@@ -91,33 +91,48 @@ export async function setApprenanteCacheeCount(formData: FormData) {
 
   const { sb, me } = await assertCanWrite();
 
-  const { data: existing } = await sb
+  // .range explicite : PostgREST plafonne à 1000 lignes par défaut, ce qui
+  // empêchait de voir/réduire les hôtes ayant > 1000 cachées.
+  const { data: existing, error: selErr } = await sb
     .from("apprenante_cachee")
     .select("id, svlbh_id, display_order")
     .eq("host_svlbh_id", hostSvlbhId)
-    .order("display_order", { ascending: true });
-  const current = (existing ?? []) as Array<{ id: string; svlbh_id: string; display_order: number }>;
+    .order("display_order", { ascending: true })
+    .range(0, 99999);
+  if (selErr) throw new Error(`Cachées (select) : ${selErr.message}`);
+  const current = (existing ?? []) as Array<{ id: string; svlbh_id: string | null; display_order: number }>;
   const currentCount = current.length;
 
+  // Lots de 100 : un .in()/insert géant dépasse la limite de longueur d'URL
+  // PostgREST (échec silencieux sur les grandes variations, ex. 1000 → 15).
+  const CHUNK = 100;
+
   if (targetInt > currentCount) {
-    // INSERT diff
     const toInsert = Array.from({ length: targetInt - currentCount }, (_, i) => ({
       host_svlbh_id: hostSvlbhId,
       display_order: (current[currentCount - 1]?.display_order ?? -1) + 1 + i,
       created_by_svlbh_id: me.svlbh_id,
     }));
-    const { error } = await sb.from("apprenante_cachee").insert(toInsert);
-    if (error) throw new Error(`Cachées (insert) : ${error.message}`);
-  } else if (targetInt < currentCount) {
-    // DELETE les (currentCount - targetInt) dernières (display_order top).
-    const toDelete = current.slice(targetInt); // garde les targetInt premières
-    const ids = toDelete.map((r) => r.id);
-    const svlbhIds = toDelete.map((r) => r.svlbh_id);
-    if (svlbhIds.length > 0) {
-      await sb.from("praticienne_desa_capacity").delete().in("svlbh_id", svlbhIds);
+    for (let i = 0; i < toInsert.length; i += CHUNK) {
+      const { error } = await sb.from("apprenante_cachee").insert(toInsert.slice(i, i + CHUNK));
+      if (error) throw new Error(`Cachées (insert) : ${error.message}`);
     }
-    const { error } = await sb.from("apprenante_cachee").delete().in("id", ids);
-    if (error) throw new Error(`Cachées (delete) : ${error.message}`);
+  } else if (targetInt < currentCount) {
+    // Garde les targetInt premières (display_order bas), supprime le reste.
+    const toDelete = current.slice(targetInt);
+    const ids = toDelete.map((r) => r.id);
+    const svlbhIds = toDelete.map((r) => r.svlbh_id).filter((x): x is string => !!x);
+    for (let i = 0; i < svlbhIds.length; i += CHUNK) {
+      const { error } = await sb
+        .from("praticienne_desa_capacity")
+        .delete()
+        .in("svlbh_id", svlbhIds.slice(i, i + CHUNK));
+      if (error) throw new Error(`Cachées (desa cleanup) : ${error.message}`);
+    }
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const { error } = await sb.from("apprenante_cachee").delete().in("id", ids.slice(i, i + CHUNK));
+      if (error) throw new Error(`Cachées (delete) : ${error.message}`);
+    }
   }
   revalidatePath("/shamanes");
 }
