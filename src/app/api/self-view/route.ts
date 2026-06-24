@@ -1,15 +1,12 @@
-// POST /api/self-view — magic link Supabase pour que la praticienne s'authentifie sur
-// cockpit.svlbh.com DANS le WebView embarqué de Pro 1 (Shamanes…) SANS re-saisir
-// Apple/Google : elle est déjà loguée en natif. Jumeau « moi-même » côté cockpit.
+// POST /api/self-view — pont SSO natif → WebView embarquée (cockpit.svlbh.com).
 //
-// Auth : Bearer <access_token de la praticienne> (JWT Supabase natif Pro 1).
-// Body : { next?: string } — chemin relatif same-origin.
-// Retour 200 : { url } — action_link single-use → /auth/callback (écrivain de cookie).
-//
-// Sécurité : token vérifié (getUser), email résolu CÔTÉ SERVEUR depuis praticienne_profile
-// par user.id (jamais du body), next validé relatif, redirect_to = /auth/callback de cockpit.
+// Le natif POST son access_token (Bearer) + refresh_token + next ; on mint un code de
+// handoff single-use (extension_pairing_code, TTL 2 min) ; on renvoie /auth/web-enter?h=…
+// que la WebView charge → setSession() y pose le vrai cookie sb-* (zéro PKCE, déterministe).
+// (Remplace l'ancien generateLink, cassé : un magic-link admin n'a pas de code_verifier PKCE.)
 
 import { NextResponse } from "next/server";
+import { randomBytes } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -29,48 +26,49 @@ export async function POST(req: Request) {
   const auth = req.headers.get("authorization") ?? "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
   if (!m) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const jwt = m[1];
+  const accessToken = m[1];
 
   const admin = createAdminClient();
 
   const {
     data: { user },
     error: authErr,
-  } = await admin.auth.getUser(jwt);
+  } = await admin.auth.getUser(accessToken);
   if (authErr || !user) {
     return NextResponse.json({ error: "Token invalide" }, { status: 401 });
   }
 
-  const { data: profile } = await admin
-    .from("praticienne_profile")
-    .select("email")
-    .eq("supabase_user_id", user.id)
-    .maybeSingle();
-  const email = profile?.email ?? user.email;
-  if (!email) {
-    return NextResponse.json({ error: "Email praticienne introuvable" }, { status: 404 });
-  }
-
-  let body: { next?: unknown } = {};
+  let body: { next?: unknown; refresh_token?: unknown } = {};
   try {
     body = await req.json();
   } catch {
     /* body optionnel */
   }
   const next = safeNext(body.next);
-
-  const redirectTo = `${ORIGIN}/auth/callback?next=${encodeURIComponent(next)}`;
-  const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-    type: "magiclink",
-    email,
-    options: { redirectTo },
-  });
-  if (linkErr || !linkData?.properties?.action_link) {
-    return NextResponse.json(
-      { error: linkErr?.message ?? "Génération du lien échouée" },
-      { status: 500 },
-    );
+  const refreshToken = typeof body.refresh_token === "string" ? body.refresh_token.trim() : "";
+  if (!refreshToken) {
+    return NextResponse.json({ error: "refresh_token requis" }, { status: 400 });
   }
 
-  return NextResponse.json({ url: linkData.properties.action_link });
+  const { data: profile } = await admin
+    .from("praticienne_profile")
+    .select("svlbh_id")
+    .eq("supabase_user_id", user.id)
+    .maybeSingle();
+
+  const code = randomBytes(24).toString("hex");
+  const expiresAt = new Date(Date.now() + 120_000).toISOString(); // 2 min
+  const { error: insErr } = await admin.from("extension_pairing_code").insert({
+    code,
+    praticienne_svlbh_id: profile?.svlbh_id ?? null,
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expires_at: expiresAt,
+  });
+  if (insErr) {
+    return NextResponse.json({ error: "Handoff non créé" }, { status: 500 });
+  }
+
+  const url = `${ORIGIN}/auth/web-enter?h=${code}&next=${encodeURIComponent(next)}`;
+  return NextResponse.json({ url });
 }
