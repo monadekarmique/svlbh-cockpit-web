@@ -155,6 +155,12 @@ export default async function CockpitLayout({
               color="#DB338C"
               title="Ouvrir pwa.app.svlbh.com (PWA Pro 1)"
             />
+            <ExternalAppLink
+              href="https://svlbh.com/verify"
+              label="Vérifier"
+              color="#caa163"
+              title="Vérifier une attestation de praticienne — registre public SVLBH"
+            />
           </nav>
         </div>
       </header>
