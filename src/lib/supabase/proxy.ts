@@ -100,7 +100,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/api/ping") || // Diagnostic RTT (mesure pure réseau)
     pathname.startsWith("/api/speedtest/") || // Diagnostic upload/download
     pathname.startsWith("/api/webhooks/postfinance/") || // Webhook PF (auth via token URL)
-    pathname.startsWith("/api/self-view") || // Bearer (app native Pro 1) → magic-link self-SSO WebView ; le handler vérifie getUser()
+    pathname.startsWith("/api/self-view") ||
+    pathname.startsWith("/api/clear-cookies") || // issue de secours Apple Sign-In (purge sb-*) // Bearer (app native Pro 1) → magic-link self-SSO WebView ; le handler vérifie getUser()
     pathname.startsWith("/recherches/") || // Prototypes statiques internes (DEC Patrick 2026-06-02) — chaque fichier doit porter <meta robots="noindex,nofollow">
     pathname === "/";
 

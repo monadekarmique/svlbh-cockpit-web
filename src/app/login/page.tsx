@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { StuckHatch } from "./stuck-hatch";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState<string | null>(null);
@@ -53,6 +54,8 @@ export default function LoginPage() {
         {error && (
           <p className="text-center text-sm text-red-600">{error}</p>
         )}
+
+        <StuckHatch />
       </div>
     </main>
   );
