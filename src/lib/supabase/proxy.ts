@@ -71,6 +71,24 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
+  // ── Enquête Apple Sign-In 2026-07-08 (télémétrie collision + rang 4) ────
+  const rawCookieHeader = request.headers.get("cookie") ?? "";
+  const sbNames = rawCookieHeader
+    .split(";")
+    .map((s) => s.split("=")[0].trim())
+    .filter((n) => n.startsWith("sb-"));
+  const sbDupes = [...new Set(sbNames.filter((n, i) => sbNames.indexOf(n) !== i))];
+  if (sbDupes.length > 0) {
+    console.warn(
+      `[auth-collision] cookies sb-* homonymes sur ${request.nextUrl.pathname}: ${sbDupes.join(", ")} (user=${user ? "oui" : "non"})`,
+    );
+  }
+  const redirectWithCookies = (url: URL | string) => {
+    const r = NextResponse.redirect(url);
+    for (const c of response.cookies.getAll()) r.cookies.set(c);
+    return r;
+  };
+
   const { pathname } = request.nextUrl;
   const isPublic =
     pathname.startsWith("/login") ||
@@ -106,7 +124,7 @@ export async function updateSession(request: NextRequest) {
 
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return redirectWithCookies(url);
   }
 
   return response;

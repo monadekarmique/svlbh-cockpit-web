@@ -16,5 +16,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback`);
+  // Rang 6 (enquête Apple Sign-In 2026-07-08) : préserver la destination sur échec.
+  const nextParam = next && next !== "/dashboard" ? `&next=${encodeURIComponent(next)}` : "";
+  return NextResponse.redirect(`${origin}/login?error=auth_callback${nextParam}`);
 }
