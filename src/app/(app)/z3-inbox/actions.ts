@@ -1,13 +1,27 @@
 "use server";
 
-// Actions serveur de l'inbox z3 (certifiées-pro) — gate ST4+ (alias-aware).
-// Envoi : POST sur le bridge z3 exposé (z3-bridge.svlbh.com) avec le JID
-// complet du chat, puis trace 'out' dans z3_message (RLS insert ST4+).
+// Actions serveur de l'inbox z3+z4 — gate ST4+ (alias-aware).
+// Envoi : POST sur le bridge du chat (z3-bridge / z4-bridge .svlbh.com) avec
+// le JID complet, puis trace 'out' dans z3_message (RLS insert ST4+).
+// z4 est derrière Cloudflare Access → headers service token requis
+// (env Z4_CF_ACCESS_CLIENT_ID / Z4_CF_ACCESS_CLIENT_SECRET).
 
 import { createClient } from "@/lib/supabase/server";
 import { resolveProfile } from "@/lib/resolve-profile";
 
-const Z3_SEND_URL = "https://z3-bridge.svlbh.com/api/send";
+const BRIDGE_SEND: Record<string, { url: string; headers: () => Record<string, string> }> = {
+  z3: {
+    url: "https://z3-bridge.svlbh.com/api/send",
+    headers: () => ({}),
+  },
+  z4: {
+    url: "https://z4-bridge.svlbh.com/api/send",
+    headers: () => ({
+      "CF-Access-Client-Id": process.env.Z4_CF_ACCESS_CLIENT_ID ?? "",
+      "CF-Access-Client-Secret": process.env.Z4_CF_ACCESS_CLIENT_SECRET ?? "",
+    }),
+  },
+};
 const ALLOWED = ["ST4", "ST5", "ST6"];
 
 async function requireSt4() {
@@ -34,6 +48,7 @@ export type Z3Message = {
   wa_timestamp: string | null;
   read_at: string | null;
   created_at: string;
+  bridge: string;
 };
 
 export async function fetchZ3Messages(sinceIso?: string): Promise<Z3Message[]> {
@@ -41,7 +56,7 @@ export async function fetchZ3Messages(sinceIso?: string): Promise<Z3Message[]> {
   let q = supabase
     .from("z3_message")
     .select(
-      "id, wa_message_id, chat_jid, chat_name, sender, sender_name, direction, content, media_type, wa_timestamp, read_at, created_at",
+      "id, wa_message_id, chat_jid, chat_name, sender, sender_name, direction, content, media_type, wa_timestamp, read_at, created_at, bridge",
     )
     .order("created_at", { ascending: false })
     .limit(500);
@@ -54,6 +69,7 @@ export async function fetchZ3Messages(sinceIso?: string): Promise<Z3Message[]> {
 export async function sendZ3Message(
   chatJid: string,
   content: string,
+  bridge: string = "z3",
 ): Promise<{ ok: boolean; error?: string }> {
   const { supabase, user } = await requireSt4();
   const text = content.trim();
@@ -61,9 +77,11 @@ export async function sendZ3Message(
   if (!/^[0-9]+@(s\.whatsapp\.net|lid|g\.us)$/.test(chatJid)) {
     return { ok: false, error: "JID invalide" };
   }
-  const resp = await fetch(Z3_SEND_URL, {
+  const send = BRIDGE_SEND[bridge];
+  if (!send) return { ok: false, error: `Bridge inconnu : ${bridge}` };
+  const resp = await fetch(send.url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...send.headers() },
     body: JSON.stringify({ recipient: chatJid, message: text }),
   });
   const body = (await resp.json().catch(() => ({}))) as {
@@ -81,16 +99,18 @@ export async function sendZ3Message(
     content: text,
     sent_by: user.id,
     wa_timestamp: new Date().toISOString(),
+    bridge,
   });
   return { ok: true };
 }
 
-export async function markChatRead(chatJid: string): Promise<void> {
+export async function markChatRead(chatJid: string, bridge: string = "z3"): Promise<void> {
   const { supabase } = await requireSt4();
   await supabase
     .from("z3_message")
     .update({ read_at: new Date().toISOString() })
     .eq("chat_jid", chatJid)
+    .eq("bridge", bridge)
     .is("read_at", null)
     .eq("direction", "in");
 }

@@ -21,9 +21,10 @@ export default async function Z3InboxPage() {
   const messages = await fetchZ3Messages();
   return (
     <div className="p-4">
-      <h1 className="text-xl font-semibold mb-1">📥 Queue z3 — certifiées-pro</h1>
+      <h1 className="text-xl font-semibold mb-1">📥 Queue z3 + z4 — certifiées & pédago</h1>
       <p className="text-sm text-gray-500 mb-4">
-        WhatsApp +41 79 930 28 00 · réponses envoyées depuis le numéro z3 · réservé ST4+
+        WhatsApp +41 79 930 28 00 (z3) et +41 79 913 82 00 (z4) · chaque fil répond
+        depuis son propre numéro · réservé ST4+
       </p>
       <Z3InboxClient initial={messages} />
     </div>
