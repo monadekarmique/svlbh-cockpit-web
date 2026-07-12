@@ -1,27 +1,14 @@
 "use server";
 
 // Actions serveur de l'inbox z3+z4 — gate ST4+ (alias-aware).
-// Envoi : POST sur le bridge du chat (z3-bridge / z4-bridge .svlbh.com) avec
-// le JID complet, puis trace 'out' dans z3_message (RLS insert ST4+).
-// z4 est derrière Cloudflare Access → headers service token requis
-// (env Z4_CF_ACCESS_CLIENT_ID / Z4_CF_ACCESS_CLIENT_SECRET).
+// Envoi : POST sur le bridge du chat, puis trace 'out' dans z3_message
+// (RLS insert ST4+). L'URL d'envoi et le besoin CF Access viennent du
+// REGISTRE public.bridge (source de vérité unique, DEC Patrick 2026-07-12) —
+// seuls les secrets restent en env (Z4_CF_ACCESS_CLIENT_ID / _SECRET).
 
 import { createClient } from "@/lib/supabase/server";
 import { resolveProfile } from "@/lib/resolve-profile";
 
-const BRIDGE_SEND: Record<string, { url: string; headers: () => Record<string, string> }> = {
-  z3: {
-    url: "https://z3-bridge.svlbh.com/api/send",
-    headers: () => ({}),
-  },
-  z4: {
-    url: "https://z4-bridge.svlbh.com/api/send",
-    headers: () => ({
-      "CF-Access-Client-Id": process.env.Z4_CF_ACCESS_CLIENT_ID ?? "",
-      "CF-Access-Client-Secret": process.env.Z4_CF_ACCESS_CLIENT_SECRET ?? "",
-    }),
-  },
-};
 const ALLOWED = ["ST4", "ST5", "ST6"];
 
 async function requireSt4() {
@@ -77,11 +64,25 @@ export async function sendZ3Message(
   if (!/^[0-9]+@(s\.whatsapp\.net|lid|g\.us)$/.test(chatJid)) {
     return { ok: false, error: "JID invalide" };
   }
-  const send = BRIDGE_SEND[bridge];
-  if (!send) return { ok: false, error: `Bridge inconnu : ${bridge}` };
-  const resp = await fetch(send.url, {
+  const { data: reg } = await supabase
+    .from("bridge")
+    .select("public_send_url, cf_access, is_active")
+    .eq("id", bridge)
+    .maybeSingle();
+  if (!reg) return { ok: false, error: `Bridge inconnu au registre : ${bridge}` };
+  if (!reg.is_active) return { ok: false, error: `Bridge ${bridge} inactif` };
+  if (!reg.public_send_url) {
+    return { ok: false, error: `Bridge ${bridge} sans URL d'envoi publique (registre)` };
+  }
+  const cfHeaders: Record<string, string> = reg.cf_access
+    ? {
+        "CF-Access-Client-Id": process.env.Z4_CF_ACCESS_CLIENT_ID ?? "",
+        "CF-Access-Client-Secret": process.env.Z4_CF_ACCESS_CLIENT_SECRET ?? "",
+      }
+    : {};
+  const resp = await fetch(reg.public_send_url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...send.headers() },
+    headers: { "Content-Type": "application/json", ...cfHeaders },
     body: JSON.stringify({ recipient: chatJid, message: text }),
   });
   const body = (await resp.json().catch(() => ({}))) as {
