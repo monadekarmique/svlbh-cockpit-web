@@ -13,13 +13,11 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { resolveProfile } from "@/lib/resolve-profile";
+// Un fichier "use server" ne peut exporter QUE des fonctions async —
+// les constantes partagées vivent dans ./pro-status (leçon build 26.07).
+import { PRO_STATUSES } from "./pro-status";
 
 const ALLOWED_STX = ["ST0", "ST1", "ST2", "ST3", "ST4", "ST5", "ST6"] as const;
-
-// Valeurs RÉELLES de l'enum Postgres pro_status — source unique partagée avec
-// la page (« INACTIVE » n'existait pas et tuait la page, incident 26.07).
-export const PRO_STATUSES = ["ACTIVE", "SUSPENDED", "REVOKED", "MIGRATED"] as const;
-export type ProStatus = (typeof PRO_STATUSES)[number];
 
 async function ensureAdmin(): Promise<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
