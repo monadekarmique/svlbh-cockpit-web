@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { resolveProfile } from "@/lib/resolve-profile";
 import { setPraticienneStx, setPraticienneProStatus } from "./actions";
 
 export const metadata: Metadata = { title: "Admin" };
@@ -9,16 +10,17 @@ export const dynamic = "force-dynamic";
 
 // DEC Patrick 2026-05-20 — Cockpit Admin disponible pour ST5 (Anne) et ST6.
 // ST5 ne peut pas toucher au stx/statut des ST5/ST6 (gardé côté actions).
+// Alias-aware (doctrine #11) + pro_status ACTIVE exigé — revue 26.07.
 async function requireAdminStx(): Promise<"ST5" | "ST6"> {
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) redirect("/login");
-  const { data: me } = await sb
-    .from("praticienne_profile")
-    .select("stx")
-    .eq("supabase_user_id", user.id)
-    .maybeSingle();
-  if (me?.stx !== "ST5" && me?.stx !== "ST6") redirect("/dashboard");
+  const me = await resolveProfile<{ stx: string | null; pro_status: string | null }>(
+    sb, user.id, "stx, pro_status",
+  );
+  if ((me?.stx !== "ST5" && me?.stx !== "ST6") || me.pro_status !== "ACTIVE") {
+    redirect("/dashboard");
+  }
   return me.stx as "ST5" | "ST6";
 }
 
@@ -48,10 +50,13 @@ const STAGE_META: Record<Stage, { label: string; bg: string; ring: string; emoji
   ST6: { label: "Owner", bg: "bg-blue-50", ring: "ring-blue-400", emoji: "👑" },
 };
 
+// Alignée sur l'enum réel (revue 26.07) : SUSPENDED/MIGRATED retirent l'accès
+// autant que REVOKED (tous les gates testent === 'ACTIVE') — badges distincts.
 const PRO_STATUS_TONE: Record<string, string> = {
   ACTIVE: "bg-emerald-100 text-emerald-800",
-  INACTIVE: "bg-neutral-200 text-neutral-700",
+  SUSPENDED: "bg-amber-100 text-amber-800",
   REVOKED: "bg-rose-100 text-rose-800",
+  MIGRATED: "bg-sky-100 text-sky-800",
 };
 
 export default async function AdminPage() {
@@ -92,7 +97,9 @@ export default async function AdminPage() {
           {praticiennes.length} praticienne{praticiennes.length > 1 ? "s" : ""} au total ·
           {" "}
           {praticiennes.filter((p) => p.pro_status === "ACTIVE").length} ACTIVE,{" "}
-          {praticiennes.filter((p) => p.pro_status === "REVOKED").length} REVOKED.{" "}
+          {praticiennes.filter((p) => p.pro_status === "SUSPENDED").length} SUSPENDED,{" "}
+          {praticiennes.filter((p) => p.pro_status === "REVOKED").length} REVOKED,{" "}
+          {praticiennes.filter((p) => p.pro_status === "MIGRATED").length} MIGRATED.{" "}
           Chaque changement est tracé dans <Link href="/compliance/audit-log" className="underline">audit_log</Link>.
         </p>
         {!isOwner && (
@@ -211,6 +218,9 @@ function PraticienneRow({ p, isOwner }: { p: Praticienne; isOwner: boolean }) {
               </label>
               <select
                 name="new_stx"
+                // key : un select non contrôlé garde sa valeur d'AVANT le
+                // revalidatePath — re-monter sur changement serveur (revue 26.07).
+                key={`stx-${p.stx ?? "aucun"}`}
                 defaultValue={p.stx ?? ""}
                 className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-xs"
               >
@@ -241,6 +251,7 @@ function PraticienneRow({ p, isOwner }: { p: Praticienne; isOwner: boolean }) {
               </label>
               <select
                 name="new_pro_status"
+                key={`ps-${p.pro_status ?? "aucun"}`}
                 defaultValue={p.pro_status ?? "ACTIVE"}
                 className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-xs"
               >
