@@ -101,7 +101,9 @@ export async function setPraticienneProStatus(formData: FormData) {
   const newStatus = String(formData.get("new_pro_status") ?? "").trim();
 
   if (!svlbhId) throw new Error("svlbh_id requis");
-  if (!["ACTIVE", "INACTIVE", "REVOKED"].includes(newStatus)) {
+  // Aligné sur l'enum Postgres pro_status — « INACTIVE » n'existe pas
+  // (l'écriture plantait et la page admin mourait, 26.07).
+  if (!["ACTIVE", "SUSPENDED", "REVOKED", "MIGRATED"].includes(newStatus)) {
     throw new Error(`pro_status invalide : ${newStatus}`);
   }
 

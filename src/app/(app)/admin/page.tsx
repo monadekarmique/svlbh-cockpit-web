@@ -244,9 +244,13 @@ function PraticienneRow({ p, isOwner }: { p: Praticienne; isOwner: boolean }) {
                 defaultValue={p.pro_status ?? "ACTIVE"}
                 className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-xs"
               >
+                {/* Valeurs RÉELLES de l'enum pro_status — « INACTIVE » n'existait
+                    pas et faisait planter la server action (ERROR 3320491698,
+                    constaté par Patrick sur Naïma/Flavia le 26.07). */}
                 <option value="ACTIVE">ACTIVE</option>
-                <option value="INACTIVE">INACTIVE</option>
+                <option value="SUSPENDED">SUSPENDED · inactive</option>
                 <option value="REVOKED">REVOKED</option>
+                <option value="MIGRATED">MIGRATED</option>
               </select>
               <button
                 type="submit"
