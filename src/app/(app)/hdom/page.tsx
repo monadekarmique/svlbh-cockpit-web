@@ -22,6 +22,7 @@ import Script from "next/script";
 import { requireSt5Plus } from "@/lib/owner-gate";
 import { ALL_DIMENSIONS } from "@/lib/cercle/chakras-detail";
 import { PIERRES } from "@/lib/cercle/pierres";
+import { GU_TYPES } from "@/lib/cercle/audit-entites";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,8 @@ export default async function HdomPage() {
       })),
     })),
     pierres: PIERRES,
+    // 17 Gui — la liste d'audit-entites est le sur-ensemble des 15 du panneau.
+    gui: GU_TYPES,
   };
 
   return (

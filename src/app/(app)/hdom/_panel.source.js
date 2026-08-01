@@ -43,7 +43,13 @@ const co=v=>v?v.split('|')[0]:'';
 const PHL=['Survie','Pouvoir','Expression','Déconnexion'];
 const PHF=['Survie · Attachement','Pouvoir · Contrôle','Expression bloquée','Déconnexion totale'];
 const PHC=['#185FA5','#BA7517','#D4537E','#5F5E5A'];
-const GUL=['Core Wound','In Limbo','Energetic Rope','Abuse Energy','Sabotage Energy','Archon/Reptilian','Spell','Black Magick','Stain','Bitch Energy','Incubus/Succubus','Entity on Heart','Biblical Dark Entity','Anchors/Chains','Impersonation Energy'];
+/* Gui — FUSION : la liste canonique est GU_TYPES de @/lib/cercle/audit-entites
+   (17 entrées, sur-ensemble des 15 du panneau ; « Anchors/Chains » y est
+   « Anchors/Chains/Hooks »). Injectée par la page ; copie locale en secours. */
+const GUL_LOCAL=['Core Wound','In Limbo','Energetic Rope','Abuse Energy','Sabotage Energy','Archon/Reptilian','Spell','Black Magick','Stain','Bitch Energy','Incubus/Succubus','Entity on Heart','Biblical Dark Entity','Anchors/Chains','Impersonation Energy'];
+const GUL = (typeof window !== "undefined" && window.HDOM_REF && window.HDOM_REF.gui)
+  ? window.HDOM_REF.gui : GUL_LOCAL;
+
 const MERS=['SP','KI','LR','HT','PC','LU','GB','ST','LI','GV','CV','TE','BL'];
 const MC={SP:'#BA7517',KI:'#185FA5',LR:'#3B6D11',HT:'#E24B4A',PC:'#D4537E',LU:'#888780',GB:'#7F77DD',ST:'#639922',LI:'#1D9E75',GV:'#BA7517',CV:'#185FA5',TE:'#D4537E',BL:'#3B6D11'};
 const OM=['SP','KI','LR','HT','PC','LU','GB'];
@@ -492,13 +498,22 @@ function hdomRestore(){
 }
 
 /* Les 5 champs de l'en-tête : saisis, pas déduits. */
+/* Clé partagée avec /scores (KEY_PREFIX = 'vlbh.cockpit.scores.') : le SLA
+   d'une séance est UNE mesure, pas deux. Écrire ici met à jour /scores. */
+var HDOM_SCORES_PREFIX = 'vlbh.cockpit.scores.';
+function hdomScoreGet(id){ try { return localStorage.getItem(HDOM_SCORES_PREFIX + id) || ''; } catch(e) { return ''; } }
+function hdomScoreSet(id, v){ try { localStorage.setItem(HDOM_SCORES_PREFIX + id, v); } catch(e) {} }
+
 function hdomBindCas(){
+  // Le SLA vient de la mesure partagée si elle existe et que le cas est vide.
+  if (!HDOM_CAS.sla) { var partage = hdomScoreGet('sla'); if (partage) HDOM_CAS.sla = partage; }
   ['titre','sla','gen','fork','mer'].forEach(function(k){
     var el = document.getElementById('cas-' + k);
     if (!el) return;
     el.value = HDOM_CAS[k] || '';
     el.addEventListener('input', function(){
       HDOM_CAS[k] = el.value;
+      if (k === 'sla') hdomScoreSet('sla', el.value);
       hdomPaintCas();
       hdomSave();
     });

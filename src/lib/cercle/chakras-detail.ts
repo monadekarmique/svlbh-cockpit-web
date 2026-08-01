@@ -219,6 +219,10 @@ export function countTotal(): number {
   return ALL_DIMENSIONS.reduce((s, d) => s + d.chakras.length, 0);
 }
 
+// Jumeau figé : patrick-bays-gate/gated-site/hdom/panel.js (DIMS). Vérifié
+// identique le 2026-08-01, 21 relevés de part et d'autre — le site du gate est
+// statique et ne peut pas importer d'ici. Toute correction se fait des DEUX côtés.
+//
 // Relevés du cas « Consultant.e Diabète Type II » qui étaient jusqu'ici
 // écrits DANS le référentiel partagé — donc affichés à toute praticienne
 // ouvrant /chakras comme s'ils étaient doctrinaux. Sortis ici (DEC Patrick
