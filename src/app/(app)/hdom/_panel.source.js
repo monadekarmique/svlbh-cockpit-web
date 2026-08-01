@@ -83,7 +83,12 @@ function drwCrb(){const W=660,H=290,P={l:70,r:18,t:28,b:48};const cW=W-P.l-P.r,c
 /* CHAKRAS */
 function cCls(s){return s>=87?'c89':s>=74?'c76':'c62';}
 function cCol(s){return s>=87?'#1D9E75':s>=74?'#BA7517':'#E24B4A';}
-const DIMS=[
+/* Référentiel des dimensions/chakras — FUSIONNÉ (DEC Patrick 2026-08-01).
+   Source canonique : @/lib/cercle/chakras-detail (46 chakras, 11 dimensions,
+   port de DimensionsData.swift), injectée par la page dans window.HDOM_REF.
+   La copie locale ci-dessous (9 dim / 33 chakras) ne sert plus que de secours
+   hors cockpit. */
+const DIMS_LOCAL=[
 {id:'d9',n:9,l:'D9 — Source créatrice · Temps',d:'Corps Kéthérique',cl:'d9',ck:[{n:33,i:'◈',nm:'Intention, Symptômes et signes',is:[{l:'Diabète T2 — symptôme fork',s:89}]},{n:32,i:'⇄',nm:'Symptômes et signes relatifs',is:[{l:'Polyurie, polydipsie, fatigue',s:89}],cim:true},{n:31,i:'▶',nm:'Classification CIM-10/11',is:[{l:'5A11.0 T2DM',s:89}]},{n:30,i:'♥',nm:'Oversoul',is:[]}]},
 {id:'d8',n:8,l:'D8 — Lumière du Tout-Connaissant',d:'Corps Céleste',cl:'d8',ck:[{n:29,i:'◉',nm:'Sacred Soul',is:[]},{n:28,i:'♥',nm:'Electronic Higherself',is:[]}]},
 {id:'d7',n:7,l:'D7 — Résonance vibratoire',d:'Corps Émotionnel Supérieur',cl:'d7',ck:[{n:27,i:'◎',nm:'Higher Purpose',is:[{l:'Impersonation Energy',s:63}]}]},
@@ -94,6 +99,9 @@ const DIMS=[
 {id:'d2',n:2,l:'D2 — Espace tellurique',d:'Entre centre Terre et surface',cl:'d2',ck:[{n:null,i:'◌',nm:'Royaume tellurique',is:[]}]},
 {id:'d1',n:1,l:'D1 — Cristal de fer · Centre Terre',d:'7.8 Hz Schumann',cl:'d1',ck:[{n:1,i:'◈',nm:'Earth Chakra',is:[{l:'Ancrage défaillant — KI1 Nuummite',s:83}]}]},
 ];
+const DIMS = (typeof window !== "undefined" && window.HDOM_REF && window.HDOM_REF.dims)
+  ? window.HDOM_REF.dims : DIMS_LOCAL;
+
 const CKS={};DIMS.forEach(d=>d.ck.forEach(c=>{CKS[d.id+'_'+(c.n||'x')]=false;}));
 function bldChk(){
   const body=document.getElementById('ckbody');body.innerHTML='';
@@ -126,7 +134,10 @@ function updCkS(){const keys=Object.keys(CKS);const done=keys.filter(k=>CKS[k]).
 function markAll(){DIMS.forEach(d=>d.ck.forEach(c=>{CKS[d.id+'_'+(c.n||'x')]=true;}));bldChk();}
 function resetAll(){Object.keys(CKS).forEach(k=>{CKS[k]=false;});bldChk();}
 /* PIERRES */
-const PRR=[
+/* Pierres — mêmes ids que @/lib/cercle/pierres. Le panneau porte le registre
+   DE SÉANCE (rôle, placement, purification) ; la page injecte le registre
+   D'ENSEIGNEMENT (signature, contexte, usage) sous la clé .ens. */
+const PRR_LOCAL=[
 {id:'tourm',nm:'Tourmaline noire',la:'Schorl',tg:['ent','abus','cord'],ro:'Bouclier n°1 · Gui 鬼 et Abuse Energy · 15 générations.',pl:'Périmètre cabinet + sous la table',pu:'Eau salée 12 h · Soleil 4 h',ic:'◼'},
 {id:'obsid',nm:'Obsidienne noire',la:'SiO₂',tg:['cord','abus','anc'],ro:'Cordages Abuseur→Consultant.e · Black Magick G-4.',pl:'Mains du consultant.e ou CV1',pu:'Eau froide 1 h · Pleine lune',ic:'◉'},
 {id:'nuum',nm:'Nuummite (3.5 Ga)',la:'Amphibolite',tg:['anc','jing','cord'],ro:'Fork guerres galactiques C12 · Jing pré-biologique · Ouvre D4 pour Dodécaèdre.',pl:'GV4 Mingmen ou KI1',pu:"Pleine lune uniquement. Pas d'eau.",ic:'◈'},
@@ -136,6 +147,13 @@ const PRR=[
 {id:'labra',nm:'Labradorite',la:'(Ca,Na)(Si,Al)₄O₈',tg:['prat','ent'],ro:'Aura praticien · Stern-Tetraeder · Pemphigus 15 G.',pl:'Portée praticien (cou ou poche)',pu:'Pleine lune mensuelle · Eau froide brève',ic:'◐'},
 {id:'kyani',nm:'Kyanite noire',la:'Al₂SiO₅',tg:['cord','jing'],ro:'Tuyau masculin Adam→Consultant.e · Zéro rétention.',pl:'Tuyau Jing GV4↔KI3',pu:'Aucune purification nécessaire.',ic:'◁'},
 ];
+const PRR = (function(){
+  var base = PRR_LOCAL;
+  if (typeof window === "undefined" || !window.HDOM_REF || !window.HDOM_REF.pierres) return base;
+  var ens = {}; window.HDOM_REF.pierres.forEach(function(p){ ens[p.id] = p; });
+  return base.map(function(p){ return ens[p.id] ? Object.assign({}, p, {ens: ens[p.id]}) : p; });
+})();
+
 const TLB={ent:'Entités',abus:'Abuse Energy',cord:'Cordages',anc:'Ancestral',prat:'Praticien',jing:'Tuyau Jing'};
 const SEL={};PRR.forEach(p=>{SEL[p.id]={sel:false,val:false,vv:1,vu:'kg',dm:30,dj:7};});
 function vDisp(id){const s=SEL[id];return s.vv+' '+s.vu;}

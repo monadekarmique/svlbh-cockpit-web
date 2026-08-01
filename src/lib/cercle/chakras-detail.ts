@@ -43,16 +43,16 @@ export const ALL_DIMENSIONS: DimensionDetail[] = [
     defaultCollapsed: false,
     chakras: [
       { num: 33, icon: "◈", nom: "Intention, Symptômes et signes",
-        issues: [{ label: "Diabète T2 — symptôme fork", sla: 89 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 32, icon: "⇄", nom: "Symptômes et signes relatifs",
-        issues: [{ label: "Polyurie, polydipsie, fatigue", sla: 89 }], hasCIM: true,
+        issues: [], hasCIM: true,
         cimCodes: [
           { code: "R35.89", label: "Polyurie" },
           { code: "R63.1", label: "Polydipsie" },
           { code: "R53.83", label: "Fatigue — autre" },
         ] },
       { num: 31, icon: "▶", nom: "Classification CIM-10/11",
-        issues: [{ label: "5A11.0 T2DM", sla: 89 }], hasCIM: true,
+        issues: [], hasCIM: true,
         cimCodes: [
           { code: "E11.9", label: "T2DM sans complications" },
           { code: "E11.65", label: "T2DM avec hyperglycémie" },
@@ -80,7 +80,7 @@ export const ALL_DIMENSIONS: DimensionDetail[] = [
     defaultCollapsed: false,
     chakras: [
       { num: 27, icon: "◎", nom: "Higher Purpose",
-        issues: [{ label: "Impersonation Energy", sla: 63 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
     ],
   },
   {
@@ -91,9 +91,9 @@ export const ALL_DIMENSIONS: DimensionDetail[] = [
     defaultCollapsed: false,
     chakras: [
       { num: 26, icon: "✚", nom: "Geometric Universal Tree",
-        issues: [{ label: "Stain G-5", sla: 77 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 25, icon: "◎", nom: "Vibrat. Geometric Forms",
-        issues: [{ label: "Motif géométrique diabète", sla: 76 }], hasCIM: true,
+        issues: [], hasCIM: true,
         cimCodes: [
           { code: "E11.51", label: "T2DM — angiopathie périphérique" },
           { code: "E11.8", label: "T2DM — complications non spécifiées" },
@@ -109,15 +109,15 @@ export const ALL_DIMENSIONS: DimensionDetail[] = [
     defaultCollapsed: false,
     chakras: [
       { num: 23, icon: "♥", nom: "Love — Immunodéficience",
-        issues: [{ label: "Abuse Energy", sla: 70 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 22, icon: "▽", nom: "Sensuality — Trouble sommeil",
-        issues: [{ label: "Incubus/Succubus G-1", sla: 67 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 21, icon: "✦", nom: "Light from the Pleiades", issues: [], hasCIM: false, cimCodes: [] },
       { num: 20, icon: "合", nom: "Channel for love 3D", issues: [], hasCIM: false, cimCodes: [] },
       { num: 19, icon: "◉", nom: "Universal Higher Bridge", issues: [], hasCIM: false, cimCodes: [] },
       { num: 18, icon: "✤", nom: "Nirodhah Star", issues: [], hasCIM: false, cimCodes: [] },
       { num: 17, icon: "◎", nom: "Life Tree — Génito-Urinaire",
-        issues: [{ label: "Tuyau Jing 3.5 Ga", sla: 83 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
     ],
   },
   {
@@ -128,19 +128,19 @@ export const ALL_DIMENSIONS: DimensionDetail[] = [
     defaultCollapsed: false,
     chakras: [
       { num: 16, icon: "☉", nom: "Universal Father — Égrégores",
-        issues: [{ label: "Archétype Père abuseur 15 G", sla: 74 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 15, icon: "▽", nom: "Universal Mother — Mythes",
-        issues: [{ label: "Mythe \"femme = proie\" — Ph.1", sla: 89 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 14, icon: "◈", nom: "Universal Core — Implants",
-        issues: [{ label: "Implant Archon/Reptilian G-10", sla: 66 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 13, icon: "⬛", nom: "Earth Star — Maladie rénale",
-        issues: [{ label: "KI×4 — risque néphropathie", sla: 83 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 12, icon: "◉", nom: "Galactic — Lésion vaisseaux",
-        issues: [{ label: "Fork galactiques 3.5 Ga — Ph.2", sla: 89 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 11, icon: "☀", nom: "Solar Star", issues: [], hasCIM: false, cimCodes: [] },
       { num: 10, icon: "⊛", nom: "Atomic Doorway", issues: [], hasCIM: false, cimCodes: [] },
       { num: 9, icon: "♻", nom: "Higher Heart — Cœur Supérieur",
-        issues: [{ label: "Phase 3 séance", sla: 89 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
     ],
   },
   {
@@ -153,15 +153,15 @@ export const ALL_DIMENSIONS: DimensionDetail[] = [
       { num: 8, icon: "♛", nom: "Crown / Sahasrāra", issues: [], hasCIM: false, cimCodes: [] },
       { num: 7, icon: "—", nom: "Brow / Ājñā", issues: [], hasCIM: false, cimCodes: [] },
       { num: 6, icon: "⊞", nom: "Throat / Viśuddha",
-        issues: [{ label: "LU×1 — expression bloquée G-7", sla: 83 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 5, icon: "♥", nom: "Heart / Anāhata — CV17",
-        issues: [{ label: "Phase 4 — Porte du Cœur", sla: 89 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 4, icon: "◉", nom: "Naval / Manipūra — Plexus",
-        issues: [{ label: "SP×6 — Yi saturé", sla: 80 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 3, icon: "⊗", nom: "Sacral / Svādhisthāna",
-        issues: [{ label: "Honte ancestrale 15 G", sla: 85 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
       { num: 2, icon: "◑", nom: "Base / Mūlādhāra",
-        issues: [{ label: "KI racine — Jing pollué", sla: 85 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
     ],
   },
   {
@@ -182,7 +182,7 @@ export const ALL_DIMENSIONS: DimensionDetail[] = [
     defaultCollapsed: false,
     chakras: [
       { num: 1, icon: "◈", nom: "Earth Chakra",
-        issues: [{ label: "Ancrage défaillant — KI1 Nuummite", sla: 83 }], hasCIM: false, cimCodes: [] },
+        issues: [], hasCIM: false, cimCodes: [] },
     ],
   },
   {
@@ -218,3 +218,135 @@ export function chakraKey(dimId: string, chakra: ChakraInfo): string {
 export function countTotal(): number {
   return ALL_DIMENSIONS.reduce((s, d) => s + d.chakras.length, 0);
 }
+
+// Relevés du cas « Consultant.e Diabète Type II » qui étaient jusqu'ici
+// écrits DANS le référentiel partagé — donc affichés à toute praticienne
+// ouvrant /chakras comme s'ils étaient doctrinaux. Sortis ici (DEC Patrick
+// 2026-08-01 « on fusionne ») : le référentiel décrit la structure, un cas
+// se saisit au pendule. Rien n'est perdu — le spécimen les réinjecte.
+export const SPECIMEN_DIABETE_T2: Record<string, ChakraIssue[]> =
+  {
+    "33": [
+      {
+        label: "Diabète T2 — symptôme fork",
+        sla: 89
+      }
+    ],
+    "32": [
+      {
+        label: "Polyurie, polydipsie, fatigue",
+        sla: 89
+      }
+    ],
+    "31": [
+      {
+        label: "5A11.0 T2DM",
+        sla: 89
+      }
+    ],
+    "27": [
+      {
+        label: "Impersonation Energy",
+        sla: 63
+      }
+    ],
+    "26": [
+      {
+        label: "Stain G-5",
+        sla: 77
+      }
+    ],
+    "25": [
+      {
+        label: "Motif géométrique diabète",
+        sla: 76
+      }
+    ],
+    "23": [
+      {
+        label: "Abuse Energy",
+        sla: 70
+      }
+    ],
+    "22": [
+      {
+        label: "Incubus/Succubus G-1",
+        sla: 67
+      }
+    ],
+    "17": [
+      {
+        label: "Tuyau Jing 3.5 Ga",
+        sla: 83
+      }
+    ],
+    "16": [
+      {
+        label: "Archétype Père abuseur 15 G",
+        sla: 74
+      }
+    ],
+    "15": [
+    { label: "Mythe \"femme = proie\" — Ph.1", sla: 89 }
+  ],
+  "14": [
+      {
+        label: "Implant Archon/Reptilian G-10",
+        sla: 66
+      }
+    ],
+    "13": [
+      {
+        label: "KI×4 — risque néphropathie",
+        sla: 83
+      }
+    ],
+    "12": [
+      {
+        label: "Fork galactiques 3.5 Ga — Ph.2",
+        sla: 89
+      }
+    ],
+    "9": [
+      {
+        label: "Phase 3 séance",
+        sla: 89
+      }
+    ],
+    "6": [
+      {
+        label: "LU×1 — expression bloquée G-7",
+        sla: 83
+      }
+    ],
+    "5": [
+      {
+        label: "Phase 4 — Porte du Cœur",
+        sla: 89
+      }
+    ],
+    "4": [
+      {
+        label: "SP×6 — Yi saturé",
+        sla: 80
+      }
+    ],
+    "3": [
+      {
+        label: "Honte ancestrale 15 G",
+        sla: 85
+      }
+    ],
+    "2": [
+      {
+        label: "KI racine — Jing pollué",
+        sla: 85
+      }
+    ],
+    "1": [
+      {
+        label: "Ancrage défaillant — KI1 Nuummite",
+        sla: 83
+      }
+    ]
+  };

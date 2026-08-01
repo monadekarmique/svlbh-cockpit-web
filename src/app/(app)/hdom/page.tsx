@@ -20,6 +20,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import Script from "next/script";
 import { requireSt5Plus } from "@/lib/owner-gate";
+import { ALL_DIMENSIONS } from "@/lib/cercle/chakras-detail";
+import { PIERRES } from "@/lib/cercle/pierres";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +40,29 @@ export default async function HdomPage() {
     lire("_panel.css.txt"),
     lire("_panel.body.txt"),
   ]);
+
+  // FUSION (DEC Patrick 2026-08-01) : le panneau ne porte plus ses propres
+  // copies. Les dimensions/chakras viennent du référentiel du cockpit (46
+  // chakras / 11 dimensions, le même que /chakras), et les pierres y ajoutent
+  // leur volet d'enseignement — mêmes 8 identifiants des deux côtés.
+  // `issues` reste vide : c'est la praticienne qui mesure.
+  const ref = {
+    dims: ALL_DIMENSIONS.map((d) => ({
+      id: d.id,
+      n: d.num,
+      l: d.label,
+      d: d.description,
+      cl: d.id,
+      ck: d.chakras.map((c) => ({
+        n: c.num,
+        i: c.icon,
+        nm: c.nom,
+        is: [] as { l: string; s: number }[],
+        cim: c.hasCIM,
+      })),
+    })),
+    pierres: PIERRES,
+  };
 
   return (
     <div className="hdom-root">
@@ -67,6 +92,14 @@ export default async function HdomPage() {
 
       <div dangerouslySetInnerHTML={{ __html: body }} />
 
+      {/* Référentiels canoniques, lus par panel.js avant ses copies locales. */}
+      <Script
+        id="hdom-ref"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `window.HDOM_REF=${JSON.stringify(ref)};`,
+        }}
+      />
       <Script src="/hdom/panel.js" strategy="afterInteractive" />
     </div>
   );
