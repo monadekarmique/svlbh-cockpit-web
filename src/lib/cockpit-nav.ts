@@ -103,6 +103,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
 
   // ── Bloc Chakras (MTC) ──
   {
+    href: "/hdom",
+    label: "Décodage hDOM",
+    navLabel: "hDOM",
+    icon: "🜃",
+    desc: "Séance complète au pendule — 15 générations, Gui, 33 chakras, pierres. ST5+",
+    color: "#BE185D",
+    group: "chakras",
+  },
+  {
     href: "/chakras",
     label: "Chakras / Dimensions",
     navLabel: "Chakras",

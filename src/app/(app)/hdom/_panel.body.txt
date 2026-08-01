@@ -1,0 +1,121 @@
+
+<div class="app">
+<div class="hdr">
+  <h1>VLBH · hDOM Décodage</h1>
+  <span>Digital Shaman Lab · Avenches · pb@vlbh.energy</span>
+  <button id="btn-export" data-fn="export" style="margin-left:auto;font-size:11px;padding:4px 12px;border-radius:5px;border:0.5px solid var(--bd2);background:var(--bg2);color:var(--t1);cursor:pointer;font-family:'Source Sans 3',sans-serif">📋 Exporter</button>
+</div>
+<div class="tabs">
+  <button class="tab on" data-action="st-intro">SVLBH</button>
+  <button class="tab" data-action="st-pierres">Pierres</button>
+  <button class="tab" data-action="st-decode">Décodage G.</button>
+  <button class="tab" data-action="st-chakras">33 Chakras</button>
+</div>
+
+<!-- INTRO -->
+<div class="pane on" id="pane-intro">
+<div class="ihero">
+  <div class="itítle-wrap">
+    <div class="ititle" id="cas-out-titre">— cas non nommé —</div>
+    <div class="isub">Vibrational Light Body Healing · Digital Shaman Lab · Avenches</div>
+  </div>
+  <div class="hdom-form">
+    <label>Cas <input id="cas-titre" type="text" placeholder="Consultant.e · pathologie" autocomplete="off" /></label>
+    <label>SLA <input id="cas-sla" type="text" placeholder="89 %" autocomplete="off" /></label>
+    <label>Générations <input id="cas-gen" type="text" placeholder="15" autocomplete="off" /></label>
+    <label>Fork galactique <input id="cas-fork" type="text" placeholder="3.5 Ga" autocomplete="off" /></label>
+    <label>Méridien dominant <input id="cas-mer" type="text" placeholder="SP×6" autocomplete="off" /></label>
+  </div>
+  <div class="ikpis">
+    <div class="ikpi"><div class="ikpiv gold" id="cas-out-sla">—</div><div class="ikpil">SLA</div></div>
+    <div class="idiv"></div>
+    <div class="ikpi"><div class="ikpiv" id="cas-out-gen">—</div><div class="ikpil">Générations</div></div>
+    <div class="idiv"></div>
+    <div class="ikpi"><div class="ikpiv" id="cas-out-fork">—</div><div class="ikpil">Fork galactique</div></div>
+    <div class="idiv"></div>
+    <div class="ikpi"><div class="ikpiv gold" id="cas-out-mer">—</div><div class="ikpil">Méridien dominant</div></div>
+  </div>
+</div>
+<div class="isec"><div class="isec-t">Progression non-linéaire sur 15 générations</div>
+<div class="phstrip">
+  <span class="phb" style="background:#E6F1FB;color:#042C53">Survie — G15-13, G9</span>
+  <span class="phb" style="background:#FAEEDA;color:#412402">Pouvoir — G12-8</span>
+  <span class="phb" style="background:#FBEAF0;color:#4B1528">Expression — G7-6, G3</span>
+  <span class="phb" style="background:#F1EFE8;color:#2C2C2A">Déconnexion — G5, G4, G2, G1</span>
+</div></div>
+<div class="isec"><div class="isec-t">Gui 鬼 — chaîne générationnelle</div>
+<div class="icall cgu"><strong>Core Wound</strong> G15 · <strong>Abuse Energy</strong> G12/G7 · <strong>Archon/Reptilian</strong> G10 · <strong>Black Magick</strong> G4 · <strong>Incubus/Succubus</strong> G1 · <strong>In Limbo×3</strong> G14/G9/G3. CUBE non-hermétiques · ICOSAÈDRE lots 20 victimes · DODÉCAÈDRE Monade S8.</div>
+</div>
+<div class="isec"><div class="isec-t">Séquence de séance</div>
+<div class="igrid">
+  <div class="icard"><div class="ict">Avant tout</div><div class="icb"><strong>Ph -1</strong> SLM Monade · Nuummite GV4 (3.5 Ga)<br><strong>Ph 0</strong> Secondary Gain</div></div>
+  <div class="icard"><div class="ict">Dimensionnel</div><div class="icb"><strong>Ph 1</strong> C15 Mère Universelle<br><strong>Ph 2</strong> C12 Galactique<br><strong>Ph 3</strong> C9 Cœur Supérieur<br><strong>Ph 4</strong> C5 CV17</div></div>
+  <div class="icard"><div class="ict">Solides + Scellement</div><div class="icb"><strong>Ph 5a</strong> CUBE abuseurs<br><strong>Ph 5b</strong> ICOSAÈDRE victimes<br><strong>Ph 5d</strong> DODÉCAÈDRE<br><strong>Scellt</strong> SP3+SP6+KI3+GV4</div></div>
+</div></div>
+<div class="icall cgr">Outil co-construit praticien VLBH ↔ IA. Taux de confiance calibrés sur SLA 89% mesuré radiesthésiquement. Annotations "à valider" → pendule requis.</div>
+<div style="margin-top:12px">
+  <button class="nbtn" data-action="st-pierres">Pierres →</button>
+  <button class="nbtn" data-action="st-decode">Décodage G. →</button>
+  <button class="nbtn" data-action="st-chakras">33 Chakras →</button>
+</div>
+</div>
+
+<!-- PIERRES -->
+<div class="pane" id="pane-pierres">
+<div class="palrt r" id="palrt">Charge non évaluée — validez d'abord les générations dans Décodage G.</div>
+<div class="pgrid" id="pgrid"></div>
+<div class="presume"><div class="prl" style="display:flex;align-items:center;gap:8px">
+  <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:9px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.05em">
+    <input type="checkbox" id="ck-proto" data-fn="tProto" style="width:14px;height:14px;accent-color:#1D9E75;cursor:pointer">
+    Protocole validé
+  </label>
+</div>
+<div id="pres"><span style="font-size:11px;color:var(--t2)">Sélectionner les pierres ci-dessus</span></div>
+<div class="pnte" id="pnte">Purification avant déploiement.</div>
+</div>
+</div>
+
+<!-- DÉCODAGE -->
+<div class="pane" id="pane-decode">
+<div class="mets">
+  <div class="met"><div class="mv" id="mv">0/15</div><div class="ml">validées</div></div>
+  <div class="met"><div class="mv" id="msp" style="color:#BA7517">0×</div><div class="ml">SP Rate</div></div>
+  <div class="met"><div class="mv" id="mki" style="color:#185FA5">0×</div><div class="ml">KI Rein</div></div>
+  <div class="met"><div class="mv" id="mlr" style="color:#3B6D11">0×</div><div class="ml">LR Foie</div></div>
+</div>
+<div class="sleg"><span class="sbdg sbdg-O">Origine</span><span class="sbdg sbdg-A">Accumulation</span><span class="sbdg sbdg-R">Réduction</span><span class="sbdg sbdg-T">Transmission</span></div>
+<div class="tw"><table>
+<thead><tr>
+  <th style="width:28px">Gén.</th><th style="min-width:108px">Besoin abuseur</th><th style="min-width:108px">Besoin victime</th>
+  <th style="min-width:84px">Phase(s)</th><th style="min-width:122px">Gu 鬼</th><th style="min-width:112px">Méridiens</th>
+  <th style="min-width:98px">Statut(s)</th><th style="width:22px;text-align:center">✓</th>
+</tr></thead>
+<tbody id="tb"></tbody>
+</table></div>
+<div class="bsec"><div class="bsl">Accumulation méridiens</div><div id="bars"></div></div>
+<div class="nt" id="diag">Configurer · ✓ = validé radiesthésiquement</div>
+</div>
+
+<!-- 33 CHAKRAS -->
+<div class="pane" id="pane-chakras">
+<div class="ck33h">
+  <div><div class="ck33s" id="ck33s">0/33 nettoyés</div><div style="font-size:10px;color:var(--t2);margin-top:2px" id="ck33n"></div></div>
+  <div style="display:flex;align-items:center;gap:8px;flex:1;max-width:180px"><div class="ck33pb"><div class="ck33pf" id="ck33b" style="width:0%"></div></div></div>
+  <button class="brst" data-action="markAll">Tout cocher</button>
+  <button class="brst" data-action="resetAll">Réinitialiser</button>
+</div>
+<div class="slabanner">
+  <div><div style="font-size:10px;font-weight:600;margin-bottom:2px">SLA · Consultant.e Diabète Type II</div><div style="font-size:9px;opacity:.8">89% = Gu actif · 100% = libéré</div></div>
+  <div style="margin-left:auto;text-align:right"><div class="slav">89%</div></div>
+</div>
+<div class="confl">
+  <span style="font-size:10px;color:var(--t2);display:flex;align-items:center;gap:3px"><span class="cktg c89" style="font-size:9px;padding:1px 6px">89%</span>hDOM direct</span>
+  <span style="font-size:10px;color:var(--t2);display:flex;align-items:center;gap:3px"><span class="cktg c76" style="font-size:9px;padding:1px 6px">76–80%</span>Fondé TCM</span>
+  <span style="font-size:10px;color:var(--t2);display:flex;align-items:center;gap:3px"><span class="cktg c62" style="font-size:9px;padding:1px 6px">58–68%</span>Pendule requis</span>
+</div>
+<div id="ckbody"></div>
+</div>
+
+
+<footer>VLBH · hDOM · v0.8.9.2 · Digital Shaman Lab · Patrick Bays &amp; Cornelia Althaus · Avenches, Suisse · pb@vlbh.energy</footer>
+</div>

@@ -101,3 +101,44 @@ export async function requireSt4Plus(): Promise<St4PlusGate> {
     stx: stx as "ST4" | "ST5" | "ST6",
   };
 }
+
+// Gate /hdom — outil de décodage hDOM paramétrable (DEC Patrick 2026-08-01 :
+// « la version paramétrable pour les ST5+ »). Plus strict que le cockpit
+// (ST3+) : le panneau expose le vocabulaire gaté et se remplit au pendule.
+export type St5PlusGate = {
+  isOwner: boolean;
+  svlbhId: string | null;
+  stx: "ST5" | "ST6";
+};
+
+export async function requireSt5Plus(): Promise<St5PlusGate> {
+  const reqHeaders = await headers();
+  if (reqHeaders.get("x-svlbh-bearer-reader")) {
+    return { isOwner: true, svlbhId: null, stx: "ST6" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const profile = await resolveProfile<{
+    svlbh_id: string | null; stx: string | null; pro_status: string | null;
+  }>(supabase, user.id, "svlbh_id, stx, pro_status");
+
+  if (!profile || profile.pro_status !== "ACTIVE") {
+    redirect("/dashboard");
+  }
+
+  const stx = profile.stx as string;
+  if (stx !== "ST5" && stx !== "ST6") {
+    redirect("/dashboard");
+  }
+
+  return {
+    isOwner: stx === "ST6",
+    svlbhId: profile.svlbh_id as string,
+    stx: stx as "ST5" | "ST6",
+  };
+}
