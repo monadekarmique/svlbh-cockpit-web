@@ -24,6 +24,16 @@ export default function LoginPage() {
     }
   }
 
+  // Passkey (bêta Supabase, DEC Patrick 06.08) — la clé enrôlée sur
+  // priv.svlbh.com (Réglages) fonctionne ici : même RP ID svlbh.com.
+  async function signInWithPasskey() {
+    setLoading("passkey");
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPasskey();
+    setLoading(null);
+    if (!error) window.location.assign("/dashboard");
+  }
+
   return (
     <main className="flex min-h-dvh items-center justify-center bg-neutral-50 p-6">
       <div className="w-full max-w-sm space-y-6 rounded-2xl bg-white p-8 shadow-sm">
@@ -33,6 +43,14 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-3">
+          <button
+            type="button"
+            onClick={signInWithPasskey}
+            disabled={loading !== null}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-700 text-sm font-medium text-white transition hover:bg-violet-600 disabled:opacity-50"
+          >
+            {loading === "passkey" ? "…" : "🔑 Se connecter avec une clé d'accès"}
+          </button>
           <button
             type="button"
             onClick={() => signIn("apple")}

@@ -10,8 +10,13 @@ export function createClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    COOKIE_DOMAIN
-      ? { cookieOptions: { domain: COOKIE_DOMAIN, path: "/", sameSite: "lax" } }
-      : undefined,
+    {
+      // Passkeys (bêta Supabase 05.2026, DEC Patrick 06.08) — RP ID svlbh.com :
+      // une clé enrôlée sur priv.svlbh.com vaut aussi ici.
+      auth: { experimental: { passkey: true } },
+      ...(COOKIE_DOMAIN
+        ? { cookieOptions: { domain: COOKIE_DOMAIN, path: "/", sameSite: "lax" as const } }
+        : {}),
+    },
   );
 }
