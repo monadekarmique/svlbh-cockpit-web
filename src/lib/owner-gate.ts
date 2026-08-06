@@ -102,6 +102,29 @@ export async function requireSt4Plus(): Promise<St4PlusGate> {
   };
 }
 
+// Gate /soins-cabinet — Préparation Soins au Cabinet (DEC Patrick 2026-08-06 :
+// « préparation Soins au Cabinet pour ST5+ gated ST6 »). Gate contenu strict
+// sur stx (pattern requireSt5Plus) : ST6 seul, Cercle SR ne suffit pas —
+// les préparations portent des ponts doctrinaux non encore mesurés.
+export async function requireSt6(): Promise<void> {
+  const reqHeaders = await headers();
+  if (reqHeaders.get("x-svlbh-bearer-reader")) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const profile = await resolveProfile<{
+    stx: string | null; pro_status: string | null;
+  }>(supabase, user.id, "stx, pro_status");
+
+  if (!profile || profile.pro_status !== "ACTIVE" || profile.stx !== "ST6") {
+    redirect("/dashboard");
+  }
+}
+
 // Gate /hdom — outil de décodage hDOM paramétrable (DEC Patrick 2026-08-01 :
 // « la version paramétrable pour les ST5+ »). Plus strict que le cockpit
 // (ST3+) : le panneau expose le vocabulaire gaté et se remplit au pendule.

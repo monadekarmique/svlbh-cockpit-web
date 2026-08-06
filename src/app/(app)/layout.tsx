@@ -90,6 +90,9 @@ export default async function CockpitLayout({
         supabase, user.id, "svlbh_id, stx, cercle_lumiere_sr, email")
     : null;
   const isOwner = navProfile?.stx === "ST6" || navProfile?.cercle_lumiere_sr === true;
+  // Préparation Soins au Cabinet : ST6 STRICT (DEC Patrick 2026-08-06),
+  // Cercle SR ne suffit pas — aligné sur le gate de page requireSt6.
+  const isSt6Strict = navProfile?.stx === "ST6";
   // ST5+ reçoit le toast notifier Realtime quand une praticienne démarre une session.
   const showSupportNotifier = navProfile?.stx === "ST5" || navProfile?.stx === "ST6";
   // Privilégie l'email DB praticienne_profile (vrai email) sur user.email
@@ -132,7 +135,7 @@ export default async function CockpitLayout({
               color="#F2BF1A"
               title="Ouvrir priv.svlbh.com (PWA Priv-1)"
             />
-            <CockpitNav groups={groupedNav({ includeOwner: isOwner })} />
+            <CockpitNav groups={groupedNav({ includeOwner: isOwner, includeCabinet: isSt6Strict })} />
             {isOwner && <IdInspectorToggle />}
             <span className="text-neutral-400">·</span>
             <span

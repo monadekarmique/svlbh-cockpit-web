@@ -9,6 +9,7 @@ export type CockpitNavGroup =
   | "routines"
   | "chakras"
   | "akakarm"
+  | "cabinet"
   | "support"
   | "owner";
 
@@ -211,6 +212,20 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "support",
   },
 
+  // ── Préparation Soins au Cabinet (ST6 strict — DEC Patrick 2026-08-06 :
+  //    « préparation Soins au Cabinet pour ST5+ gated ST6 ». Les soins sont
+  //    délivrés au cabinet pour des ST5+ ; la préparation est gatée ST6
+  //    via requireSt6, nav visible ST6 seulement — includeCabinet). ──
+  {
+    href: "/soins-cabinet",
+    label: "Préparation Soins au Cabinet",
+    navLabel: "Prépa Soins Cabinet",
+    icon: "🕯️",
+    desc: "Préparations des soins délivrés au cabinet pour ST5+ — sources, verbatims, lecture VLBH, points à mesurer",
+    color: "#7A0F26",
+    group: "cabinet",
+  },
+
   // ── Bloc Dettes AkaKarm ──
   {
     href: "/dettes-akakarm-articles",
@@ -237,6 +252,7 @@ export const GROUP_LABELS: Record<CockpitNavGroup, string> = {
   routines: "Routines",
   chakras: "Chakras MTC",
   akakarm: "Dettes AkaKarm",
+  cabinet: "Préparation Soins au Cabinet",
   support: "Support",
   owner: "Owner",
 };
@@ -249,13 +265,17 @@ export type CockpitNavGroupRendered = {
 
 /** Items regroupés par group, dans l'ordre du COCKPIT_NAV.
  * Si includeOwner=false, exclut le groupe "owner" (modules ST6).
- * DEC Patrick 2026-05-12 — apparaît auto dans la nav pour ST6 + Cercle SR. */
-export function groupedNav(options?: { includeOwner?: boolean }): CockpitNavGroupRendered[] {
+ * DEC Patrick 2026-05-12 — apparaît auto dans la nav pour ST6 + Cercle SR.
+ * Si includeCabinet=false, exclut le groupe "cabinet" (Préparation Soins au
+ * Cabinet, ST6 STRICT — DEC Patrick 2026-08-06, Cercle SR ne suffit pas). */
+export function groupedNav(options?: { includeOwner?: boolean; includeCabinet?: boolean }): CockpitNavGroupRendered[] {
   const includeOwner = options?.includeOwner ?? false;
+  const includeCabinet = options?.includeCabinet ?? false;
   // Owner (ST6) fusionné EN TÊTE du groupe Support — gate conservé via includeOwner
   // (les non-ST6 ne voient pas les items Owner ; les pages restent gatées par requireOwner).
-  const order: CockpitNavGroup[] = ["shamanes", "routines", "chakras", "akakarm", "support"];
+  const order: CockpitNavGroup[] = ["shamanes", "routines", "chakras", "akakarm", "cabinet", "support"];
   return order
+    .filter((id) => id !== "cabinet" || includeCabinet)
     .map((id) => {
       let items = COCKPIT_NAV.filter((i) => i.group === id);
       if (id === "support") {
