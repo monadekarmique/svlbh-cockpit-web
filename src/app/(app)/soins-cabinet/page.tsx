@@ -31,6 +31,23 @@ export default async function SoinsCabinetPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Link
+          href="/soins-cabinet/audit-entites-familiales"
+          className="group rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-5 shadow-sm transition hover:shadow-md active:scale-[0.99]"
+        >
+          <div className="text-3xl">𐡀</div>
+          <h2 className="mt-3 text-lg font-semibold" style={{ color: "#4F46E5" }}>
+            Audit des entités familiales — sigils araméens
+          </h2>
+          <p className="mt-1 text-sm text-neutral-700">
+            Relecture des 19 sigils (corpus VIFA, core v0.21.0) + les 3 lettres qui
+            attendent ta dictée (Gimel · Zayin · Qoph).
+          </p>
+          <p className="mt-2 text-xs text-neutral-500">
+            RELECTURE — explications générées le 24.04, jamais relues ; en service dans
+            toutes les apps.
+          </p>
+        </Link>
+        <Link
           href="/soins-cabinet/vifa-entites-familiales"
           className="group rounded-2xl border-2 border-rose-200 bg-gradient-to-br from-rose-50 to-amber-50 p-5 shadow-sm transition hover:shadow-md active:scale-[0.99]"
         >
