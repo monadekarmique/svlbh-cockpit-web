@@ -48,9 +48,9 @@ const SIGILS: Sigil[] = [
 ];
 
 const A_DICTER: Sigil[] = [
-  { glyph: "𐡂", nom: "Gimel", gematria: 3, explication: "" },
-  { glyph: "𐡆", nom: "Zayin", gematria: 7, explication: "" },
-  { glyph: "𐡒", nom: "Qoph", gematria: 100, explication: "" },
+  { glyph: "𐡂", nom: "Gimel", gematria: 3, explication: "Chameau de la traversée — la lignée portée d'une rive à l'autre, triade Père-Mère-Enfant en marche." },
+  { glyph: "𐡆", nom: "Zayin", gematria: 7, explication: "Épée de lumière — le discernement qui tranche, coupe nette du lien karmique." },
+  { glyph: "𐡒", nom: "Qoph", gematria: 100, explication: "Nuque-axe — passage de l'ombre, alignement vertical de la Sushumna." },
 ];
 
 export default async function AuditEntitesFamilialesPage() {
@@ -102,12 +102,12 @@ export default async function AuditEntitesFamilialesPage() {
 
       <section className="rounded-2xl border-2 border-amber-300 bg-amber-50/70 p-5 shadow-sm">
         <h2 className="text-lg font-bold text-amber-900">
-          Les 3 lettres qui attendent ta dictée
+          Les 3 lettres dictées le 08.08 — en service (core v0.28.4)
         </h2>
         <p className="mt-1 text-sm text-amber-800">
-          Absentes du corpus VIFA — <strong>aucune explication n&rsquo;a été inventée</strong> :
-          une phrase de doctrine fabriquée serait indistinguable des 19 vraies. Dicte-les
-          (ici, en séance, ou sur WhatsApp) et elles descendront dans core.
+          Validées par Patrick (« pousse les 3 lignes de sens araméennes ») — le garde-fou
+          « vide » a tenu jusqu&rsquo;à sa décision, le test verrouille désormais ces valeurs
+          mot pour mot.
         </p>
         <ul className="mt-3 divide-y divide-amber-200/60">
           {A_DICTER.map((s) => (
@@ -117,8 +117,8 @@ export default async function AuditEntitesFamilialesPage() {
               <span className="w-10 shrink-0 text-right font-mono text-sm font-bold text-amber-900">
                 {s.gematria}
               </span>
-              <span className="min-w-0 flex-1 text-sm italic text-amber-700">
-                — explication à dicter —
+              <span className="min-w-0 flex-1 text-sm text-amber-900">
+                {s.explication}
               </span>
             </li>
           ))}
