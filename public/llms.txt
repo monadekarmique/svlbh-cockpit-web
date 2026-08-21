@@ -1,0 +1,14 @@
+# SVLBH Cockpit
+
+> Tableau de bord opérationnel interne SVLBH (Symbolic Vibrational Light Body Healing), Suisse — usage réservé à l'équipe fondatrice. Aucun contenu public : gouvernance, traces d'audit, recherches et outils internes exigent une session authentifiée.
+
+SVLBH est une méthode d'accompagnement vibrationnel transgénérationnel fondée par Patrick Bays (CHE-463.639.374, Le Chandon 4, 1580 Avenches, Suisse).
+
+## Public
+
+- [/](https://cockpit.svlbh.com/): redirige vers la connexion — aucun contenu public.
+- [/login](https://cockpit.svlbh.com/login): connexion.
+
+## Gated
+
+Tout le reste (`/(app)/**`, `/traces`) exige une session authentifiée. Ce n'est pas une surface destinée au grand public ni à un agent non authentifié — rien à récupérer ici hors de la page de connexion.
