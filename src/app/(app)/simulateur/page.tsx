@@ -21,10 +21,18 @@ export const dynamic = "force-dynamic";
 // INDÉTERMINÉ, pas réparties : inventer leur destin fausserait la courbe dans
 // le sens optimiste.
 //
-// ⚠️ CE QUE PATRICK N'A PAS DONNÉ : la rétention au-delà du premier mois. Le
-// simulateur la traite en PARAMÈTRE visible (?retention=), défaut 100 %, et le
-// dit à l'écran. Une hypothèse de rétention cachée est ce qui rend tout plan
-// financier faux.
+// LA RÉTENTION, donnée par Patrick le 09.09.2026 : « 25 % lâchent pendant les
+// 3 premiers mois et encore 25 % après 3 mois de plus ; parmi les accélérations,
+// elles restent au minimum 6 mois ».
+//
+// Modélisée par COHORTE, pas par taux global : chaque semaine d'entrée vieillit
+// selon sa propre courbe. Un taux mensuel unique aurait lissé la falaise du
+// 3e mois, qui est justement ce qu'il faut voir.
+//
+// ⚠️ AU-DELÀ DE 6 MOIS, PATRICK N'A RIEN DIT. On suppose la population stable
+// (56 % pour z2, 100 % pour l'accélération) et l'écran le signale. C'est
+// l'hypothèse la plus optimiste possible : à partir du 7e mois la courbe ne
+// perd plus personne, ce qui est certainement faux.
 
 type P = {
   visiteuses: number; decouvertes: number; immediat: number; etalement: number;
@@ -36,6 +44,17 @@ type P = {
 const CHF = new Intl.NumberFormat("fr-CH", {
   style: "currency", currency: "CHF", minimumFractionDigits: 0, maximumFractionDigits: 0,
 });
+
+// Survie d'une cohorte z2, en semaines depuis son entrée payante.
+function survieZ2(semaines: number): number {
+  const m = semaines / 4.33;
+  if (m <= 3) return 1 - 0.25 * (m / 3);
+  if (m <= 6) return 0.75 * (1 - 0.25 * ((m - 3) / 3));
+  return 0.5625; // ⚠️ au-delà : Patrick n'a rien dit, on fige
+}
+function survieAccel(semaines: number): number {
+  return semaines / 4.33 <= 6 ? 1 : 1; // « au minimum 6 mois », rien après
+}
 
 function simuler(p: P) {
   const S = p.semaines;
@@ -106,7 +125,7 @@ export default async function SimulateurPage({
     prixZ2: num("pz2", 59),
     prixAccel: num("paccel", 179),
     gratuitJours: num("gratuit", 14),
-    retention: num("retention", 100) / 100,
+    retention: 1,
     semaines: num("semaines", 26),
     chargesFixes: num("charges", 688),
   };
@@ -149,12 +168,11 @@ export default async function SimulateurPage({
           <strong>Deux hypothèses que Patrick n’a pas données, et que je ne devine pas :</strong>
         </p>
         <p>
-          • <strong>La rétention</strong> est à {Math.round(p.retention * 100)} % par mois
-          ({p.retention === 1 ? "aucune ne part — hypothèse volontairement irréaliste, à corriger" : "paramétrée"}).
-          C’est le chiffre qui décide de tout : à 80 %, le récurrent plafonne au lieu de croître.
-          Essaie <a className="underline" href="?retention=80">80 %</a> ·{" "}
-          <a className="underline" href="?retention=70">70 %</a> ·{" "}
-          <a className="underline" href="?retention=90">90 %</a>.
+          • <strong>Au-delà de six mois, la courbe ne perd plus personne.</strong> Tu as
+          donné 25 % de pertes sur trois mois, puis 25 % des restantes sur trois de plus
+          — il reste 56 % à six mois. Après, rien n’est dit, et le simulateur fige la
+          population. C’est l’hypothèse la plus optimiste possible : plus la projection
+          est longue, plus elle surestime.
         </p>
         {indetermine !== 0 && (
           <p>
