@@ -202,6 +202,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "monde15",
   },
   {
+    href: "/versions",
+    label: "Versions du modèle",
+    navLabel: "Versions",
+    icon: "🗂️",
+    desc: "v0.8.1 → v0.8.3 : ce qui change, et ce qui reste ouvert",
+    color: "#475569",
+    group: "monde15",
+  },
+  {
     href: "/simulateur",
     label: "Simulateur d’acquisition",
     navLabel: "Simulateur",
