@@ -71,19 +71,27 @@ export default async function ChargesPage({
     return `/charges?${q.toString()}`;
   };
   const ETIQUETTE: Record<string, string> = {
-    charge: "Charges", hors_activite: "Hors activité", interne: "Mouvements internes",
+    charge: "Charges (TVA récup.)", charge_sans_tva: "Charges (TVA non récup.)",
+    hors_activite: "Hors activité", interne: "Mouvements internes",
     frais_bancaires: "Frais bancaires",
     prestation: "Prestations", don: "Dons", abonnement: "Abonnements",
     a_qualifier: "À qualifier",
   };
   const cachees = toutes.length - lignes.length;
   const total = lignes.reduce((s, l) => s + Number(l.montant), 0);
-  const retenues = lignes.filter((l) => (l.nature ?? l.suggestion) === "charge");
-  const baseCharges = retenues.reduce((s, l) => s + Number(l.montant), 0);
+  const nat = (l: Ligne) => l.nature ?? l.suggestion;
+  const recuperables = lignes.filter((l) => nat(l) === "charge");
+  const toutesCharges = lignes.filter(
+    (l) => nat(l) === "charge" || nat(l) === "charge_sans_tva");
+  const baseCharges = toutesCharges.reduce((s, l) => s + Number(l.montant), 0);
+  // ⚠️ Le préalable ne vient QUE des charges à TVA récupérable. Une charge
+  // professionnelle sans TVA suisse facturée reste une dépense, mais ne donne
+  // rien à déduire — les confondre gonflerait la déclaration.
+  const baseRecup = recuperables.reduce((s, l) => s + Number(l.montant), 0);
   // TVA suisse incluse à 8.1 % : depuis 2026 les prestations étrangères
   // consommées portent un numéro de TVA suisse (DEC Patrick 09.09), donc
   // l'impôt est PRÉALABLE et récupérable, pas de l'impôt sur les acquisitions.
-  const prealable = Math.abs(baseCharges) - Math.abs(baseCharges) / 1.081;
+  const prealable = Math.abs(baseRecup) - Math.abs(baseRecup) / 1.081;
   const aValider = lignes.filter((l) => l.nature === null).length;
 
   const TRIMESTRES = ["Q1 2026", "Q2 2026", "Q3 2026", "Q4 2026"];
@@ -139,7 +147,7 @@ export default async function ChargesPage({
           <div className="mt-1 text-xl font-semibold tabular-nums">{CHF.format(Math.abs(total))}</div>
         </div>
         <div className="rounded-xl border border-neutral-200 p-4">
-          <div className="text-xs uppercase tracking-wide text-neutral-500">Retenu en charge</div>
+          <div className="text-xs uppercase tracking-wide text-neutral-500">Charges (les deux)</div>
           <div className="mt-1 text-xl font-semibold tabular-nums">{CHF.format(Math.abs(baseCharges))}</div>
         </div>
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
@@ -156,8 +164,10 @@ export default async function ChargesPage({
         Les lignes en <span className="italic text-neutral-500">gris italique</span> sont
         des <strong>suggestions</strong> de la règle, pas des décisions : elles comptent
         déjà dans le total, mais rien n’est écrit tant que tu n’as pas choisi. Une fois
-        validées elles passent en vert. L’impôt préalable suppose 8.1 % de TVA suisse
-        incluse dans le montant.
+        validées elles passent en vert. L’impôt préalable ne compte QUE les charges
+        à <strong>TVA récupérable</strong>, à 8.1 % incluse : un fournisseur étranger
+        sans numéro de TVA suisse donne une charge bien réelle mais rien à déduire —
+        ça se lit sur sa facture, pas sur un relevé de carte.
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200">
