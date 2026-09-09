@@ -44,6 +44,10 @@ export default async function ModelePage() {
   await requireSt4Plus();
   const supabase = await createClient();
   const { data, error } = await supabase.from("v_modele_economique").select("*").single();
+  // ⚠️ Le barème vient de la BASE (v_bareme), plus d'un tableau écrit dans la
+  // page. Patrick l'a fixé le 09.09 en six messages successifs ; un barème en
+  // dur aurait menti dès le premier changement.
+  const { data: bar } = await supabase.from("v_bareme").select("*").order("canal");
 
   if (error || !data) {
     return (
@@ -155,30 +159,43 @@ export default async function ModelePage() {
               <tr>
                 <th className="px-3 py-2">Canal</th>
                 <th className="px-3 py-2">Mode</th>
-                <th className="px-3 py-2">Ce qui ouvre</th>
-                <th className="px-3 py-2 text-right">Montant</th>
+                <th className="px-3 py-2 text-right">Base</th>
+                <th className="px-3 py-2 text-right">Accélération</th>
+                <th className="px-3 py-2 text-right">Lancement</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              <tr><td className="px-3 py-2">z1</td><td className="px-3 py-2">à l’unité</td>
-                  <td className="px-3 py-2 text-neutral-600">Programme découverte, 5 jours en ligne</td>
-                  <td className="px-3 py-2 text-right tabular-nums">29 CHF / participante</td></tr>
-              <tr><td className="px-3 py-2">z2 — externe</td><td className="px-3 py-2">forfait</td>
-                  <td className="px-3 py-2 text-neutral-600">Priv 1 à 5</td>
-                  <td className="px-3 py-2 text-right tabular-nums">59 CHF / mois</td></tr>
-              <tr><td className="px-3 py-2">z3 — interne</td><td className="px-3 py-2">% du CA</td>
-                  <td className="px-3 py-2 text-neutral-600">Suite Chroma 1 à 5</td>
-                  <td className="px-3 py-2 text-right text-amber-700">à fixer</td></tr>
-              <tr><td className="px-3 py-2">z4 — interne</td><td className="px-3 py-2">% du CA</td>
-                  <td className="px-3 py-2 text-neutral-600">Cercle de Lumière, cockpit</td>
-                  <td className="px-3 py-2 text-right text-amber-700">à fixer</td></tr>
+              <tr>
+                <td className="px-3 py-2">z1</td>
+                <td className="px-3 py-2 text-neutral-600">à l’unité</td>
+                <td className="px-3 py-2 text-right tabular-nums">29 CHF</td>
+                <td className="px-3 py-2 text-right text-neutral-400">—</td>
+                <td className="px-3 py-2 text-right text-neutral-400">—</td>
+              </tr>
+              {(bar ?? []).map((b: Record<string, string>) => (
+                <tr key={b.canal}>
+                  <td className="px-3 py-2">{b.canal}</td>
+                  <td className="px-3 py-2 text-neutral-600">
+                    {b.mode === "forfait" ? "forfait mensuel" : "% du chiffre d’affaires"}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">{b.base}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{b.acceleration}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{b.lancement}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
         <p className="text-sm text-neutral-600">
-          ⚠️ Les deux taux internes ne sont pas fixés. Tant qu’ils manquent, toute
-          demande d’abonnement est <strong>refusée</strong> plutôt que chiffrée au
-          hasard — c’est voulu.
+          Le <strong>forfait facture ce qu’on donne</strong>, le{" "}
+          <strong>pourcentage suit ce qu’elle gagne</strong> — d’où l’inversion
+          apparente : en z3 le lancement coûte plus cher que l’accélération, en z4
+          il coûte moins. Une femme qui lance sa pratique gagne peu.
+          <br />
+          <strong>Il n’y a pas de tarif « praticienne établie »</strong>, et il ne
+          faut pas en créer un : celle qui arrive avec un cabinet passe quand même
+          par z2 puis z3 — l’accélération n’achète que de la vitesse, jamais un
+          palier. Giulia : z1 → z3 en 61 jours, sans en sauter aucun.
         </p>
       </section>
     </main>
