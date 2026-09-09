@@ -25,10 +25,15 @@ function fmtDate(iso: string): string {
 
 export default async function ChargesPage({
   searchParams,
-}: { searchParams: Promise<{ t?: string }> }) {
+}: { searchParams: Promise<{ t?: string; masque?: string }> }) {
   await requireSt4Plus();
-  const { t } = await searchParams;
+  const { t, masque } = await searchParams;
   const trimestre = t ?? "Q3 2026";
+  // DEC Patrick 09.09.2026 : « ça me permettrait de masquer ou pas moi-même ces
+  // catégories ». C'est LUI qui décide de ce qu'il regarde — on ne cache rien
+  // par défaut. Chaque catégorie se replie d'un clic, et le libellé dit toujours
+  // combien de lignes et combien de francs sont hors du champ de vision.
+  const masquees = new Set((masque ?? "").split(",").filter(Boolean));
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -47,7 +52,30 @@ export default async function ChargesPage({
     );
   }
 
-  const lignes = (data ?? []) as Ligne[];
+  const toutes = (data ?? []) as Ligne[];
+  const natureDe = (l: Ligne) => l.nature ?? l.suggestion;
+  const lignes = toutes.filter((l) => !masquees.has(natureDe(l)));
+
+  const parNature = new Map<string, { n: number; chf: number }>();
+  for (const l of toutes) {
+    const k = natureDe(l);
+    const e = parNature.get(k) ?? { n: 0, chf: 0 };
+    e.n += 1; e.chf += Math.abs(Number(l.montant));
+    parNature.set(k, e);
+  }
+  const lienMasque = (k: string) => {
+    const s = new Set(masquees);
+    if (s.has(k)) s.delete(k); else s.add(k);
+    const q = new URLSearchParams({ t: trimestre });
+    if (s.size) q.set("masque", [...s].join(","));
+    return `/charges?${q.toString()}`;
+  };
+  const ETIQUETTE: Record<string, string> = {
+    charge: "Charges", hors_activite: "Hors activité", interne: "Mouvements internes",
+    prestation: "Prestations", don: "Dons", abonnement: "Abonnements",
+    a_qualifier: "À qualifier",
+  };
+  const cachees = toutes.length - lignes.length;
   const total = lignes.reduce((s, l) => s + Number(l.montant), 0);
   const retenues = lignes.filter((l) => (l.nature ?? l.suggestion) === "charge");
   const baseCharges = retenues.reduce((s, l) => s + Number(l.montant), 0);
@@ -74,6 +102,34 @@ export default async function ChargesPage({
             </a>
           ))}
         </nav>
+
+        <div className="flex flex-wrap gap-2">
+          {[...parNature.entries()]
+            .sort((a, b) => b[1].chf - a[1].chf)
+            .map(([k, v]) => {
+              const off = masquees.has(k);
+              return (
+                <a key={k} href={lienMasque(k)}
+                   className={"rounded-lg border px-3 py-1.5 text-sm transition " +
+                     (off
+                       ? "border-neutral-200 bg-neutral-100 text-neutral-400 line-through"
+                       : "border-neutral-300 bg-white text-neutral-800 hover:border-neutral-400")}>
+                  {ETIQUETTE[k] ?? k}{" "}
+                  <span className="tabular-nums text-neutral-500">
+                    {v.n} · {CHF.format(v.chf)}
+                  </span>
+                </a>
+              );
+            })}
+        </div>
+        {cachees > 0 && (
+          <p className="text-sm text-neutral-500">
+            {cachees} ligne{cachees > 1 ? "s" : ""} hors du champ de vision ·{" "}
+            <a className="underline" href={`/charges?t=${encodeURIComponent(trimestre)}`}>
+              tout remontrer
+            </a>
+          </p>
+        )}
       </header>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
