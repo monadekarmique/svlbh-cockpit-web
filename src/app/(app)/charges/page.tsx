@@ -18,6 +18,12 @@ type Ligne = {
 const CHF = new Intl.NumberFormat("fr-CH", {
   style: "currency", currency: "CHF", minimumFractionDigits: 2,
 });
+function moisLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString("fr-CH", { month: "long", year: "numeric" });
+}
+function moisCle(iso: string): string {
+  return iso.slice(0, 7);
+}
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-CH",
     { day: "2-digit", month: "short", year: "2-digit" });
@@ -78,6 +84,21 @@ export default async function ChargesPage({
     a_qualifier: "À qualifier",
   };
   const cachees = toutes.length - lignes.length;
+
+  // Sous-total par mois, comme sur /tva. Le préalable est recalculé mois par
+  // mois sur les seules charges récupérables — il ne se déduit pas du total.
+  const parMois = new Map<string, Ligne[]>();
+  for (const l of lignes) {
+    const k = moisCle(l.date_valeur);
+    if (!parMois.has(k)) parMois.set(k, []);
+    parMois.get(k)!.push(l);
+  }
+  const totalMois = (ls: Ligne[]) => {
+    const tout = ls.reduce((s, x) => s + Math.abs(Number(x.montant)), 0);
+    const rec = ls.filter((x) => nat(x) === "charge")
+                  .reduce((s, x) => s + Math.abs(Number(x.montant)), 0);
+    return { tout, rec, prealable: rec - rec / 1.081 };
+  };
   const total = lignes.reduce((s, l) => s + Number(l.montant), 0);
   const nat = (l: Ligne) => l.nature ?? l.suggestion;
   const recuperables = lignes.filter((l) => nat(l) === "charge");
@@ -170,37 +191,56 @@ export default async function ChargesPage({
         ça se lit sur sa facture, pas sur un relevé de carte.
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200">
-        <table className="w-full min-w-[46rem] text-sm">
-          <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
-            <tr>
-              <th className="px-3 py-2">Date</th>
-              <th className="px-3 py-2">Compte</th>
-              <th className="px-3 py-2">Libellé du relevé</th>
-              <th className="px-3 py-2 text-right">Montant</th>
-              <th className="px-3 py-2 w-56">Nature</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
-            {lignes.map((l) => (
-              <tr key={l.ligne_id} className="align-top">
-                <td className="px-3 py-2 whitespace-nowrap tabular-nums">{fmtDate(l.date_valeur)}</td>
-                <td className="px-3 py-2 text-xs text-neutral-500">{l.compte}</td>
-                <td className="px-3 py-2 text-neutral-700">{l.texte}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{CHF.format(Math.abs(Number(l.montant)))}</td>
-                <td className="px-3 py-2">
-                  <NatureSelect ligneId={l.ligne_id} valeur={l.nature} suggestion={l.suggestion} />
-                </td>
-              </tr>
-            ))}
-            {lignes.length === 0 && (
-              <tr><td colSpan={5} className="px-3 py-6 text-center text-neutral-500">
-                Aucune sortie sur ce trimestre.
-              </td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {[...parMois.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([mois, ls]) => {
+        const t = totalMois(ls);
+        return (
+          <section key={mois} className="space-y-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-lg font-medium capitalize">{moisLabel(ls[0].date_valeur)}</h2>
+              <div className="text-sm tabular-nums text-neutral-600">
+                {CHF.format(t.tout)} · dont récupérable {CHF.format(t.rec)} ·{" "}
+                <span className="font-medium text-emerald-800">
+                  préalable {CHF.format(t.prealable)}
+                </span>
+              </div>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-neutral-200">
+              <table className="w-full min-w-[46rem] text-sm">
+                <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
+                  <tr>
+                    <th className="px-3 py-2">Date</th>
+                    <th className="px-3 py-2">Compte</th>
+                    <th className="px-3 py-2">Libellé du relevé</th>
+                    <th className="px-3 py-2 text-right">Montant</th>
+                    <th className="px-3 py-2 w-56">Nature</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {ls.map((l) => (
+                    <tr key={l.ligne_id} className="align-top">
+                      <td className="px-3 py-2 whitespace-nowrap tabular-nums">{fmtDate(l.date_valeur)}</td>
+                      <td className="px-3 py-2 text-xs text-neutral-500">{l.compte}</td>
+                      <td className="px-3 py-2 text-neutral-700">{l.texte}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {CHF.format(Math.abs(Number(l.montant)))}
+                      </td>
+                      <td className="px-3 py-2">
+                        <NatureSelect ligneId={l.ligne_id} valeur={l.nature} suggestion={l.suggestion} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        );
+      })}
+
+      {lignes.length === 0 && (
+        <p className="rounded-lg border border-neutral-200 px-3 py-6 text-center text-neutral-500">
+          Aucune sortie visible sur ce trimestre.
+        </p>
+      )}
     </main>
   );
 }
