@@ -192,6 +192,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "owner",
   },
   {
+    href: "/charges",
+    label: "Charges & impôt préalable",
+    navLabel: "Charges",
+    icon: "🧮",
+    desc: "Qualifier chaque dépense des relevés — TVA récupérable",
+    color: "#B45309",
+    group: "owner",
+  },
+  {
     href: "/statutspostfinance",
     label: "Statut PostFinance",
     navLabel: "PostFinance",
