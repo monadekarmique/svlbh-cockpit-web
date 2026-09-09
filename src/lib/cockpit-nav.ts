@@ -192,6 +192,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "owner",
   },
   {
+    href: "/mois",
+    label: "Ce qui reste par mois",
+    navLabel: "Ce qui reste",
+    icon: "📉",
+    desc: "Encaissé moins TVA, charges et reversements — mois par mois",
+    color: "#0F766E",
+    group: "owner",
+  },
+  {
     href: "/charges",
     label: "Charges & impôt préalable",
     navLabel: "Charges",
