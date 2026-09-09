@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSt4Plus } from "@/lib/owner-gate";
+import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
 
 // Qualifier une ligne de relevé. ⚠️ N'écrit JAMAIS dans releve_ligne :
 // l'original est immuable. Seule l'annotation (rapprochement) bouge.
 export async function qualifier(formData: FormData) {
-  await requireSt4Plus();
+  await requireSt6();
   const ligneId = String(formData.get("ligne_id") ?? "");
   const nature = String(formData.get("nature") ?? "");
   if (!ligneId || !nature) throw new Error("ligne et nature obligatoires");

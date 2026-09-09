@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireSt4Plus } from "@/lib/owner-gate";
+import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Versions du modèle" };
@@ -19,15 +19,11 @@ type Version = {
   ouvert: string | null; note: string | null;
 };
 
-const CHF = new Intl.NumberFormat("fr-CH", {
-  style: "currency", currency: "CHF", minimumFractionDigits: 0, maximumFractionDigits: 0,
-});
 
 export default async function VersionsPage() {
-  await requireSt4Plus();
+  await requireSt6();
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("modele_version").select("*").order("version", { ascending: false });
+  const { data, error } = await supabase.from("modele_version").select("*");
 
   if (error) {
     return (
@@ -37,9 +33,36 @@ export default async function VersionsPage() {
       </main>
     );
   }
-  const versions = (data ?? []) as Version[];
-  const acq = (v: Version) => (v.parametres?.acquisition ?? {}) as Record<string, unknown>;
-  const val = (v: Version, k: string, d = "—") => String(acq(v)[k] ?? d);
+  // ⚠️ Revue du 09.09 soir : `order by version` triait un TEXT — v0.8.10 tombait
+  // sous v0.8.2 et v0.10 passait dernière. Tri sémantique ici.
+  const semver = (v: string) => v.replace(/^v/, "").split(".").map((x) => Number(x) || 0);
+  const versions = ((data ?? []) as Version[]).sort((a, b) => {
+    const [x, y] = [semver(a.version), semver(b.version)];
+    for (let i = 0; i < Math.max(x.length, y.length); i++) {
+      const d = (y[i] ?? 0) - (x[i] ?? 0); if (d) return d;
+    }
+    return 0;
+  });
+  // Diff générique clé/valeur entre versions consécutives — la table comparative
+  // imprimait des littéraux (« 72 % », 5 023, « 15 ») au lieu des paramètres figés :
+  // deux transitions sur trois n'affichaient AUCUN changement.
+  const aplatir = (o: unknown, prefix = ""): Record<string, string> => {
+    const out: Record<string, string> = {};
+    if (o && typeof o === "object" && !Array.isArray(o)) {
+      for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+        Object.assign(out, aplatir(v, prefix ? `${prefix}.${k}` : k));
+      }
+    } else out[prefix] = typeof o === "string" ? o : JSON.stringify(o);
+    return out;
+  };
+  const diffs = versions.map((v, i) => {
+    const prev = versions[i + 1];
+    if (!prev) return { version: v.version, changes: [] as [string, string | undefined, string][] };
+    const a = aplatir(prev.parametres), b = aplatir(v.parametres);
+    const changes: [string, string | undefined, string][] = [];
+    for (const k of Object.keys(b)) if (a[k] !== b[k]) changes.push([k, a[k], b[k]]);
+    return { version: v.version, changes };
+  });
 
   return (
     <main className="mx-auto max-w-5xl space-y-8 px-4 py-6">
@@ -52,52 +75,34 @@ export default async function VersionsPage() {
 
       <section className="space-y-2">
         <h2 className="text-lg font-medium">Ce qui change d’une version à l’autre</h2>
-        <div className="overflow-x-auto rounded-lg border border-neutral-200">
-          <table className="w-full min-w-[42rem] text-sm">
-            <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="px-3 py-2">Version</th>
-                <th className="px-3 py-2 text-right">App démo</th>
-                <th className="px-3 py-2 text-right">Découverte</th>
-                <th className="px-3 py-2 text-right">déc. → z2</th>
-                <th className="px-3 py-2 text-right">Entrées z2 / sem</th>
-                <th className="px-3 py-2 text-right">Entrée / mois</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {versions.map((v) => (
-                <tr key={v.version} className={v.version === versions[0]?.version ? "bg-emerald-50" : ""}>
-                  <td className="px-3 py-2 font-medium">{v.version}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {acq(v).app_demo_st1 ? CHF.format(Number(acq(v).app_demo_st1)) : "—"}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {CHF.format(Number(acq(v).prix_decouverte ?? 29))}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {acq(v).taux_decouverte_vers_z2 ? "72 %" : "37,5 %"}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {val(v, "entrees_z2_semaine", "15")}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {acq(v).encaissement_entree_mois
-                      ? CHF.format(Number(acq(v).encaissement_entree_mois))
-                      : CHF.format(5023)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
         <p className="text-sm text-neutral-600">
-          ⚠️ <strong>Ce n’est ni la démo ni la hausse de prix qui fait basculer v0.8.3, c’est
-          la qualification.</strong> Payer 9 francs transforme un clic TikTok en engagement
-          minimal. Sans cet effet sur le passage en z2, la version échangerait du
-          récurrent contre du comptant : +24 % tout de suite, mais dix entrées par
-          semaine au lieu de quinze — donc moins de z3 à quinze mois et moins de z4 à
-          quatre ans.
+          Calculé depuis les paramètres figés — chaque clé qui diffère de la version précédente.
         </p>
+        {diffs.map((d) => (
+          <div key={d.version} className="rounded-lg border border-neutral-200">
+            <div className="border-b border-neutral-100 bg-neutral-50 px-3 py-2 text-sm font-medium">
+              {d.version}{" "}
+              <span className="font-normal text-neutral-500">
+                — {d.changes.length === 0 ? "première version, ou aucun paramètre changé" : `${d.changes.length} paramètre(s)`}
+              </span>
+            </div>
+            {d.changes.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[40rem] text-xs">
+                  <tbody className="divide-y divide-neutral-100">
+                    {d.changes.map(([k, av, ap]) => (
+                      <tr key={k}>
+                        <td className="px-3 py-1.5 font-mono text-neutral-600">{k}</td>
+                        <td className="px-3 py-1.5 text-neutral-400 line-through">{av ?? "—"}</td>
+                        <td className="px-3 py-1.5 font-medium">{ap}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ))}
       </section>
 
       {versions.map((v) => (

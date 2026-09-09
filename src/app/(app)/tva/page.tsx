@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireSt4Plus } from "@/lib/owner-gate";
+import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Décompte TVA" };
@@ -50,7 +50,7 @@ function moisLabel(period: number): string {
 export default async function TvaPage({
   searchParams,
 }: { searchParams: Promise<{ t?: string }> }) {
-  await requireSt4Plus();
+  await requireSt6();
   const { t } = await searchParams;
   const trimestre = t ?? "Q3 2026";
   const PERIODES: Record<string, [number, number]> = {

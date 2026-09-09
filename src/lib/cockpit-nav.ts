@@ -206,7 +206,7 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     label: "Versions du modèle",
     navLabel: "Versions",
     icon: "🗂️",
-    desc: "v0.8.1 → v0.8.3 : ce qui change, et ce qui reste ouvert",
+    desc: "Chaque version figée : ce qui change, et ce qui restait ouvert",
     color: "#475569",
     group: "monde15",
   },

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireSt4Plus } from "@/lib/owner-gate";
+import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Modèle économique" };
@@ -25,35 +25,43 @@ const CHF2 = new Intl.NumberFormat("fr-CH", {
   style: "currency", currency: "CHF", minimumFractionDigits: 2,
 });
 
-// Les tarifs viennent du product_catalog de Patrick. Le forfait z2 à 59 est
-// établi (« elle aurait dû verser 59 » pour l'accès aux apps, 09.09.2026) ;
-// les taux z3/z4 ne sont PAS encore fixés — la page le dit au lieu d'inventer.
-// ⚠️ Distinguer le RÉCURRENT de l'UNIQUE : le programme découverte est 29 par
-// participante pour 5 jours (DEC Patrick 09.09.2026), donc un versement unique.
-// Le mettre dans une colonne « il en faut » mensuelle laisserait croire que 24
-// découvertes couvrent le mois — elles le couvrent UNE FOIS.
-const TARIFS = [
-  { label: "Programme découverte — 5 jours en ligne", prix: 29, recurrent: false },
-  { label: "Forfait z2 — accès aux applications", prix: 59, recurrent: true },
-  { label: "Monitoring ST2", prix: 79, recurrent: true },
-  { label: "Soin 3 Âmes et + (avec don de soutien)", prix: 100, recurrent: true },
-  { label: "Accélérateur MyShamanFamily, 1 mois", prix: 179, recurrent: true },
-];
+// ⚠️ Revue du 09.09 soir : « rien n'est écrit en dur » était faux — les tarifs du
+// point de bascule étaient recopiés (29/59/79/100/179) et le commentaire disait que
+// z3/z4 n'étaient pas fixés alors qu'ils l'étaient. Ils viennent maintenant de
+// v_bareme (canaux) et de product_catalog (produits), lus dans la même page.
+type Tarif = { label: string; prix: number; recurrent: boolean };
+type Bareme = { canal: string; mode: string; base: string; acceleration: string; lancement: string; complet: boolean };
 
 export default async function ModelePage() {
-  await requireSt4Plus();
+  await requireSt6();
   const supabase = await createClient();
-  const { data, error } = await supabase.from("v_modele_economique").select("*").single();
-  // ⚠️ Le barème vient de la BASE (v_bareme), plus d'un tableau écrit dans la
-  // page. Patrick l'a fixé le 09.09 en six messages successifs ; un barème en
-  // dur aurait menti dès le premier changement.
-  const { data: bar } = await supabase.from("v_bareme").select("*").order("canal");
+  const [{ data, error }, { data: bar, error: errBar }, { data: prods }] = await Promise.all([
+    supabase.from("v_modele_economique").select("*").maybeSingle(),
+    supabase.from("v_bareme").select("*").order("canal"),
+    supabase.from("product_catalog").select("code, label, price_ttc, kind")
+      .in("code", ["MONITORING_ST2", "SOIN_CHLOE_PATTERN", "ABO_ACCELERATION_4S"]),
+  ]);
+  const bareme = (bar ?? []) as Bareme[];
+  const chf = (s: string | null | undefined) => Number(String(s ?? "").replace(/[^\d.]/g, "")) || 0;
+  const z1 = 29; // programme découverte, 5 jours, une fois (DEC Patrick 09.09)
+  const z2 = bareme.find((b) => b.canal === "z2"), z3 = bareme.find((b) => b.canal === "z3");
+  const prix = (code: string) => Number(prods?.find((p) => p.code === code)?.price_ttc ?? 0);
+  const TARIFS: Tarif[] = [
+    { label: "Programme découverte — 5 jours en ligne", prix: z1, recurrent: false },
+    { label: "Forfait z2 — accès aux applications", prix: chf(z2?.base), recurrent: true },
+    { label: "Forfait z3", prix: chf(z3?.base), recurrent: true },
+    { label: "Monitoring ST2", prix: prix("MONITORING_ST2"), recurrent: true },
+    { label: "Soin 3 Âmes et + (avec don de soutien)", prix: prix("SOIN_CHLOE_PATTERN"), recurrent: true },
+    { label: "Accélération, 1 mois", prix: chf(z2?.acceleration) || prix("ABO_ACCELERATION_4S"), recurrent: true },
+  ].filter((t) => t.prix > 0);
 
-  if (error || !data) {
+  if (error || errBar || !data) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-6">
         <h1 className="text-2xl font-semibold">Modèle économique</h1>
-        <p className="mt-4 rounded-lg bg-rose-50 p-4 text-rose-900">{error?.message}</p>
+        <p className="mt-4 rounded-lg bg-rose-50 p-4 text-rose-900">
+          {error?.message ?? errBar?.message ?? "Aucune donnée visible pour ce compte — le modèle est réservé au propriétaire."}
+        </p>
       </main>
     );
   }
@@ -126,29 +134,24 @@ export default async function ModelePage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Où le volume cesse de porter</h2>
-        <div className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900">
+        <div className="rounded-xl border border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-800">
           <p>
             <strong>Un soin porté seul est presque toute marge</strong> — les charges
             étant fixes, chaque versement supplémentaire tombe entier.
           </p>
           <p className="mt-2">
-            <strong>Un soin co-réalisé, non.</strong> Mesuré les 1<sup>er</sup> et 2 septembre :
-            Giulia verse <span className="tabular-nums">199 CHF</span> pour une séance à
-            quatre mains, Cornelia reçoit <span className="tabular-nums">179 CHF</span>.
-            Il reste <strong className="tabular-nums">20 CHF</strong>, avant le temps de
-            Patrick. Le volume multiplie alors un travail à somme presque nulle.
-          </p>
-          <p className="mt-2">
-            Reversé aux praticiennes en 2026 :{" "}
+            <strong>Un soin co-réalisé ne l’est pas, et ce n’est pas un défaut.</strong>{" "}
+            Ce qui est reversé à la praticienne qui co-réalise n’est pas une marge perdue :
+            l’argent entre chez Patrick, l’infrastructure est mise à disposition, le reste
+            est reversé — c’est le modèle (DEC 09.09.2026). Reversé en 2026 :{" "}
             <span className="tabular-nums font-medium">{CHF2.format(n(m.remuneration_annee))}</span>.
           </p>
+          <p className="mt-2 text-neutral-600">
+            Le levier sur ces soins est donc <strong>le prix</strong>, pas la clé de partage.
+            État daté du 09.09.2026 — les décisions vivent dans le Kanban et dans{" "}
+            <a className="underline" href="/versions">les versions du modèle</a>, pas ici.
+          </p>
         </div>
-        <p className="text-sm text-neutral-600">
-          Le levier n’est donc pas le nombre mais <strong>le prix du soin à quatre mains,
-          ou la clé de partage</strong>. Trois lectures sont ouvertes et aucune n’est
-          tranchée : le prix est trop bas, la part est trop haute, ou ce n’est pas un
-          soin commercial mais une transmission — et alors c’est une charge de formation.
-        </p>
       </section>
 
       <section className="space-y-3">
@@ -168,17 +171,19 @@ export default async function ModelePage() {
               <tr>
                 <td className="px-3 py-2">z1</td>
                 <td className="px-3 py-2 text-neutral-600">à l’unité</td>
-                <td className="px-3 py-2 text-right tabular-nums">29 CHF</td>
+                <td className="px-3 py-2 text-right tabular-nums">{z1} CHF</td>
                 <td className="px-3 py-2 text-right text-neutral-400">—</td>
                 <td className="px-3 py-2 text-right text-neutral-400">—</td>
               </tr>
-              {(bar ?? []).map((b: Record<string, string>) => (
+              {bareme.map((b) => (
                 <tr key={b.canal}>
                   <td className="px-3 py-2">{b.canal}</td>
                   <td className="px-3 py-2 text-neutral-600">
                     {b.mode === "forfait" ? "forfait mensuel" : "% du chiffre d’affaires"}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">{b.base}</td>
+                  <td className={"px-3 py-2 text-right tabular-nums " + (b.complet ? "" : "text-amber-700")}>
+                    {b.complet ? b.base : "à fixer"}
+                  </td>
                   <td className="px-3 py-2 text-right tabular-nums">{b.acceleration}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{b.lancement}</td>
                 </tr>

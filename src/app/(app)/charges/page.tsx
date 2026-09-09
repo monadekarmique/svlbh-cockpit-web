@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireSt4Plus } from "@/lib/owner-gate";
+import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
 import { NatureSelect } from "./nature-select";
 
@@ -32,7 +32,7 @@ function fmtDate(iso: string): string {
 export default async function ChargesPage({
   searchParams,
 }: { searchParams: Promise<{ t?: string; masque?: string }> }) {
-  await requireSt4Plus();
+  await requireSt6();
   const { t, masque } = await searchParams;
   const trimestre = t ?? "Q3 2026";
   // DEC Patrick 09.09.2026 : « ça me permettrait de masquer ou pas moi-même ces

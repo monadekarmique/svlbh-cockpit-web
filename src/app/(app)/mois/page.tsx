@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireSt4Plus } from "@/lib/owner-gate";
+import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Ce qui reste" };
@@ -29,7 +29,7 @@ function nom(mois: string): string {
 }
 
 export default async function MoisPage() {
-  await requireSt4Plus();
+  await requireSt6();
   const supabase = await createClient();
   const { data, error } = await supabase.from("v_mois").select("*").order("mois", { ascending: false });
 
