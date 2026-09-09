@@ -6,6 +6,7 @@ import { qualifier } from "./actions";
 const NATURES = [
   { value: "charge", label: "Charge — TVA récupérable" },
   { value: "hors_activite", label: "Hors activité (privé)" },
+  { value: "frais_bancaires", label: "Frais bancaires — hors champ TVA" },
   { value: "interne", label: "Mouvement interne" },
   { value: "prestation", label: "Prestation encaissée" },
   { value: "don", label: "Don" },

@@ -72,6 +72,7 @@ export default async function ChargesPage({
   };
   const ETIQUETTE: Record<string, string> = {
     charge: "Charges", hors_activite: "Hors activité", interne: "Mouvements internes",
+    frais_bancaires: "Frais bancaires",
     prestation: "Prestations", don: "Dons", abonnement: "Abonnements",
     a_qualifier: "À qualifier",
   };
