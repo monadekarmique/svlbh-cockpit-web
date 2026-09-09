@@ -11,6 +11,7 @@ export type CockpitNavGroup =
   | "akakarm"
   | "cabinet"
   | "support"
+  | "monde15"
   | "owner";
 
 export type CockpitNavItem = {
@@ -189,7 +190,16 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     icon: "🧾",
     desc: "Détail ligne à ligne du semestre — chaque encaissement, retrouvable en banque",
     color: "#15803D",
-    group: "owner",
+    group: "monde15",
+  },
+  {
+    href: "/modele",
+    label: "Modèle économique",
+    navLabel: "Modèle",
+    icon: "🌍",
+    desc: "Charges fixes, point de bascule, marge par prestation",
+    color: "#1D4ED8",
+    group: "monde15",
   },
   {
     href: "/mois",
@@ -198,7 +208,7 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     icon: "📉",
     desc: "Encaissé moins TVA, charges et reversements — mois par mois",
     color: "#0F766E",
-    group: "owner",
+    group: "monde15",
   },
   {
     href: "/charges",
@@ -207,7 +217,7 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     icon: "🧮",
     desc: "Qualifier chaque dépense des relevés — TVA récupérable",
     color: "#B45309",
-    group: "owner",
+    group: "monde15",
   },
   {
     href: "/statutspostfinance",
@@ -281,6 +291,7 @@ export const GROUP_LABELS: Record<CockpitNavGroup, string> = {
   akakarm: "Dettes AkaKarm",
   cabinet: "Préparation Soins au Cabinet",
   support: "Support",
+  monde15: "15ème Monde",
   owner: "Owner",
 };
 
@@ -300,9 +311,12 @@ export function groupedNav(options?: { includeOwner?: boolean; includeCabinet?: 
   const includeCabinet = options?.includeCabinet ?? false;
   // Owner (ST6) fusionné EN TÊTE du groupe Support — gate conservé via includeOwner
   // (les non-ST6 ne voient pas les items Owner ; les pages restent gatées par requireOwner).
-  const order: CockpitNavGroup[] = ["shamanes", "routines", "chakras", "akakarm", "cabinet", "support"];
+  // « 15ème Monde » — le monde économique : modèle, encaissements, charges,
+  // ce qui reste. Gaté comme Owner (DEC Patrick 09.09.2026).
+  const order: CockpitNavGroup[] = ["shamanes", "routines", "chakras", "akakarm", "cabinet", "monde15", "support"];
   return order
     .filter((id) => id !== "cabinet" || includeCabinet)
+    .filter((id) => id !== "monde15" || includeOwner)
     .map((id) => {
       let items = COCKPIT_NAV.filter((i) => i.group === id);
       if (id === "support") {
