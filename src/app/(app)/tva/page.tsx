@@ -150,11 +150,20 @@ export default async function TvaPage({
       )}
 
       <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-        <strong>Contre-prestations reçues.</strong> Exigible 60 jours après la
-        clôture du trimestre (art. 86 al. 1 LTVA). Le régime est bien
-        <em>contre-prestations reçues</em> : le Q1 déposé (3 062.49) égale les
-        encaissements bancaires du trimestre à CHF 13 près. Une réserve subsiste —
-        l’export PostFinance ne rendait que 50 lignes pour quatre ans demandés.
+        {/* ⚠️ Ce bandeau a porté deux affirmations périmées jusqu'au 09.09.2026 :
+            une réserve sur l'export PostFinance que Patrick avait levée, et un
+            « à CHF 13 près » qui venait d'un filtre approximatif de ma part. Un
+            écran qui garde une réserve morte est exactement le défaut qu'on
+            traque : relire ce texte à chaque fois qu'un fait change. */}
+        <strong>Contre-prestations reçues.</strong> Ce qui compte est la date
+        d’encaissement, pas la période du service. Exigible 60 jours après la
+        clôture du trimestre (art. 86 al. 1 LTVA), intérêt moratoire sans
+        sommation ensuite (art. 87 al. 1).
+        <br />
+        Les lignes viennent des relevés bancaires importés tels quels, plus les
+        espèces dictées par Patrick. <strong>Une écriture non confirmée par un
+        encaissement n’apparaît pas ici</strong> — un dû n’est pas une
+        contre-prestation reçue.
       </div>
 
       {[...parMois.entries()].sort((a, b) => a[0] - b[0]).map(([period, ls]) => {
