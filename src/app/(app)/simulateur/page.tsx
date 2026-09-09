@@ -4,106 +4,45 @@ import { requireSt4Plus } from "@/lib/owner-gate";
 export const metadata: Metadata = { title: "Simulateur" };
 export const dynamic = "force-dynamic";
 
-// DEC Patrick 09.09.2026 — l'entonnoir tel qu'il l'a décrit :
-//   60 visiteuses/semaine depuis TikTok et Snap sur les landings
-//   → 40 essaient le programme découverte à 29 (TWINT) : 15 tout de suite,
-//     25 reviennent dans les 3 semaines qui suivent
-//   → sur ces 40 : 15 deviennent z2 à 59/mois (14 premiers jours gratuits),
-//     8 prennent l'accélération, 15 arrêtent après le programme.
+// L'ENTONNOIR ET LE CYCLE DE VIE, tels que Patrick les a donnés le 09.09.2026 :
 //
-// ⚠️ PATRICK A DÉCRIT L'ENTONNOIR EN STx, PAS EN zx (09.09.2026) : « j'ai
-// utilisé STx et pas zx donc ils vont tous rentrer sur z2 ». Le programme
-// découverte est z1, celles qui poursuivent entrent en z2 — et l'accélérateur
-// à 179 EST l'accélération z2 du barème. Le STx ne donne plus aucun droit ; il
-// mesure la capacité de soin du jour.
+//   60 visiteuses/semaine (TikTok, Snap) → 40 découvertes payées à 29
+//   (15 tout de suite, 25 dans les 3 semaines) → 15 entrent en z2 à 59
+//   (14 premiers jours offerts), 8 prennent l'accélération à 179, 15 arrêtent.
+//   ⚠️ 15+8+15 = 38, pas 40 : 2 restent INDÉTERMINÉES, non réparties.
 //
-// ⚠️ 15 + 8 + 15 = 38, pas 40. Les deux restantes sont laissées EN
-// INDÉTERMINÉ, pas réparties : inventer leur destin fausserait la courbe dans
-// le sens optimiste.
+//   Rétention z2 : 25 % lâchent sur 3 mois, puis 25 % des restantes sur 3 de
+//   plus → 56 % survivent à 6 mois.
+//   Passage en z3 : 20 % à 6 mois, 80 % à 15 mois — toutes finissent en z3.
+//   Passage en z4 : 50 % tentent l'aventure après 4 ans.
+//   Accélération : « au minimum 6 mois ».
 //
-// LA RÉTENTION, donnée par Patrick le 09.09.2026 : « 25 % lâchent pendant les
-// 3 premiers mois et encore 25 % après 3 mois de plus ; parmi les accélérations,
-// elles restent au minimum 6 mois ».
-//
-// Modélisée par COHORTE, pas par taux global : chaque semaine d'entrée vieillit
-// selon sa propre courbe. Un taux mensuel unique aurait lissé la falaise du
-// 3e mois, qui est justement ce qu'il faut voir.
-//
-// ⚠️ AU-DELÀ DE 6 MOIS, PATRICK N'A RIEN DIT. On suppose la population stable
-// (56 % pour z2, 100 % pour l'accélération) et l'écran le signale. C'est
-// l'hypothèse la plus optimiste possible : à partir du 7e mois la courbe ne
-// perd plus personne, ce qui est certainement faux.
-
-type P = {
-  visiteuses: number; decouvertes: number; immediat: number; etalement: number;
-  versZ2: number; versAccel: number; arret: number;
-  prixDecouverte: number; prixZ2: number; prixAccel: number;
-  gratuitJours: number; retention: number; semaines: number; chargesFixes: number;
-};
+// ⚠️⚠️ CE QUE LE MODÈLE SUPPOSE ET QUE PATRICK N'A PAS DIT — ce sont ces trois
+// hypothèses qui font l'essentiel du résultat, pas ses chiffres :
+//   1. AUCUN départ après 6 mois en z2, ni jamais en z3 ni en z4.
+//   2. L'accélération s'arrête à exactement 6 mois (il a dit « au minimum »).
+//   3. Le chiffre d'affaires d'une z4, sur lequel s'applique le 3 % : inconnu,
+//      posé en paramètre visible (?caz4=), défaut 2 000.
+// Plus l'horizon est long, plus ces trois-là dominent. À 5 ans le résultat est
+// une CONSÉQUENCE DE MES HYPOTHÈSES, pas une projection de son entonnoir.
 
 const CHF = new Intl.NumberFormat("fr-CH", {
   style: "currency", currency: "CHF", minimumFractionDigits: 0, maximumFractionDigits: 0,
 });
 
-// Survie d'une cohorte z2, en semaines depuis son entrée payante.
-function survieZ2(semaines: number): number {
-  const m = semaines / 4.33;
+function survieZ2(m: number): number {
   if (m <= 3) return 1 - 0.25 * (m / 3);
   if (m <= 6) return 0.75 * (1 - 0.25 * ((m - 3) / 3));
-  return 0.5625; // ⚠️ au-delà : Patrick n'a rien dit, on fige
+  return 0.5625;
 }
-function survieAccel(semaines: number): number {
-  return semaines / 4.33 <= 6 ? 1 : 1; // « au minimum 6 mois », rien après
-}
-
-function simuler(p: P) {
-  const S = p.semaines;
-  const decouvertesPayees = new Array(S).fill(0);
-  const nouvellesZ2 = new Array(S).fill(0);
-  const nouvellesAccel = new Array(S).fill(0);
-
-  for (let s = 0; s < S; s++) {
-    // Cohorte de la semaine s : 15 paient tout de suite, 25 s'étalent sur 3 semaines.
-    decouvertesPayees[s] += p.immediat;
-    const differe = p.decouvertes - p.immediat;
-    for (let k = 1; k <= p.etalement; k++) {
-      if (s + k < S) decouvertesPayees[s + k] += differe / p.etalement;
-    }
-  }
-  // Les conversions suivent la découverte PAYÉE, pas la visite.
-  for (let s = 0; s < S; s++) {
-    const base = decouvertesPayees[s] / p.decouvertes;
-    nouvellesZ2[s] = base * p.versZ2;
-    nouvellesAccel[s] = base * p.versAccel;
-  }
-
-  const semainesGratuites = Math.round(p.gratuitJours / 7);
-  const lignes = [];
-  let z2Actives = 0, accelActives = 0, cumul = 0;
-
-  for (let s = 0; s < S; s++) {
-    // Une ST2 devient payante après les 14 jours offerts, et reste selon la rétention.
-    const arriveePayante = s - semainesGratuites;
-    if (arriveePayante >= 0) {
-      z2Actives = z2Actives * Math.pow(p.retention, 1 / 4.33) + nouvellesZ2[arriveePayante];
-      accelActives = accelActives * Math.pow(p.retention, 1 / 4.33) + nouvellesAccel[arriveePayante];
-    }
-    const recDecouverte = decouvertesPayees[s] * p.prixDecouverte;
-    // Les forfaits sont mensuels : on encaisse 1/4.33 par semaine.
-    const recZ2 = (z2Actives * p.prixZ2) / 4.33;
-    const recAccel = (accelActives * p.prixAccel) / 4.33;
-    const total = recDecouverte + recZ2 + recAccel;
-    cumul += total;
-    lignes.push({
-      semaine: s + 1,
-      decouvertes: decouvertesPayees[s],
-      z2Actives, accelActives,
-      recDecouverte, recZ2, recAccel, total,
-      mensuelEquivalent: total * 4.33,
-      cumul,
-    });
-  }
-  return lignes;
+/** Où en est une cohorte, `a` mois après son entrée payante en z2. */
+function etat(a: number): { z2: number; z3: number; z4: number } {
+  if (a < 0) return { z2: 0, z3: 0, z4: 0 };
+  const s = survieZ2(a);
+  if (a < 6) return { z2: s, z3: 0, z4: 0 };
+  if (a >= 48) return { z2: 0, z3: s * 0.5, z4: s * 0.5 };
+  if (a >= 15) return { z2: 0, z3: s, z4: 0 };
+  return { z2: s * 0.8, z3: s * 0.2, z4: 0 };
 }
 
 export default async function SimulateurPage({
@@ -113,26 +52,35 @@ export default async function SimulateurPage({
   const q = await searchParams;
   const num = (k: string, d: number) => (q[k] !== undefined ? Number(q[k]) : d);
 
-  const p: P = {
-    visiteuses: num("visiteuses", 60),
-    decouvertes: num("decouvertes", 40),
-    immediat: num("immediat", 15),
-    etalement: num("etalement", 3),
-    versZ2: num("z2", 15),
-    versAccel: num("accel", 8),
-    arret: num("arret", 15),
-    prixDecouverte: num("pdec", 29),
-    prixZ2: num("pz2", 59),
-    prixAccel: num("paccel", 179),
-    gratuitJours: num("gratuit", 14),
-    retention: 1,
-    semaines: num("semaines", 26),
-    chargesFixes: num("charges", 688),
-  };
+  const parSemaine = num("z2", 15);
+  const decSemaine = num("dec", 40);
+  const accSemaine = num("accel", 8);
+  const pDec = num("pdec", 29), pZ2 = num("pz2", 59), pZ3 = num("pz3", 79), pAcc = num("paccel", 179);
+  const caZ4 = num("caz4", 2000), tauxZ4 = num("tauxz4", 3) / 100;
+  const dureeAcc = num("dureeaccel", 6);
+  const mois = num("mois", 60);
+  const charges = num("charges", 688);
 
-  const lignes = simuler(p);
-  const indetermine = p.decouvertes - p.versZ2 - p.versAccel - p.arret;
-  const bascule = lignes.find((l) => l.mensuelEquivalent >= p.chargesFixes);
+  const S = 4.33;
+  const entreesM = parSemaine * S, decM = decSemaine * S, accM = accSemaine * S;
+
+  const lignes = [];
+  for (let m = 1; m <= mois; m++) {
+    let z2 = 0, z3 = 0, z4 = 0;
+    for (let c = 0; c <= m; c++) {
+      const e = etat(m - c);
+      z2 += entreesM * e.z2; z3 += entreesM * e.z3; z4 += entreesM * e.z4;
+    }
+    let acc = 0;
+    for (let c = 0; c <= m; c++) if (m - c <= dureeAcc) acc += accM;
+    const rDec = decM * pDec, rZ2 = z2 * pZ2, rZ3 = z3 * pZ3;
+    const rZ4 = z4 * caZ4 * tauxZ4, rAcc = acc * pAcc;
+    lignes.push({
+      m, z2, z3, z4, acc, femmes: z2 + z3 + z4,
+      rDec, rZ2, rZ3, rZ4, rAcc, total: rDec + rZ2 + rZ3 + rZ4 + rAcc,
+    });
+  }
+  const jalons = [1, 3, 6, 12, 15, 18, 24, 36, 48, 60].filter((j) => j <= mois);
   const fin = lignes[lignes.length - 1];
 
   return (
@@ -140,20 +88,33 @@ export default async function SimulateurPage({
       <header>
         <h1 className="text-2xl font-semibold">Simulateur d’acquisition</h1>
         <p className="mt-1 text-sm text-neutral-600">
-          {p.visiteuses} visiteuses par semaine depuis TikTok et Snap →{" "}
-          {p.decouvertes} découvertes à {p.prixDecouverte} CHF →{" "}
-          {p.versZ2} entrées en z2 à {p.prixZ2} CHF et {p.versAccel} accélératrices à{" "}
-          {p.prixAccel} CHF.
+          {decSemaine} découvertes payées par semaine → {parSemaine} entrées en z2 →
+          z3 à 6 ou 15 mois → z4 pour la moitié après 4 ans.
         </p>
       </header>
 
+      <div className="space-y-2 rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900">
+        <p><strong>À lire avant les chiffres.</strong> Trois hypothèses ne viennent pas
+        de toi, et ce sont elles qui font l’essentiel du résultat :</p>
+        <p>1. <strong>Personne ne part après six mois</strong> — ni en z2, ni en z3, ni
+        en z4. Tu as donné les pertes des six premiers mois, rien après.</p>
+        <p>2. <strong>L’accélération s’arrête à {dureeAcc} mois pile</strong>. Tu as dit
+        « au minimum six mois », ce qui est un plancher, pas une durée.</p>
+        <p>3. <strong>Le chiffre d’affaires d’une z4 est posé à {CHF.format(caZ4)}</strong>,
+        sur lequel s’applique le {Math.round(tauxZ4 * 100)} %. Tu ne l’as pas donné.
+        Essaie <a className="underline" href="?caz4=1000">1 000</a> ·{" "}
+        <a className="underline" href="?caz4=4000">4 000</a>.</p>
+        <p className="pt-1">Plus l’horizon est long, plus ces trois-là dominent. À cinq
+        ans, le total est une conséquence de mes hypothèses, pas une projection de
+        ton entonnoir.</p>
+      </div>
+
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          ["Bascule", bascule ? `semaine ${bascule.semaine}` : "hors horizon",
-           `couvre ${CHF.format(p.chargesFixes)} de charges`],
-          ["Récurrent en fin", CHF.format(fin.mensuelEquivalent), `semaine ${fin.semaine}`],
-          ["z2 actives", Math.round(fin.z2Actives).toString(), "en fin d’horizon"],
-          ["Encaissé cumulé", CHF.format(fin.cumul), `${p.semaines} semaines`],
+          ["Femmes à porter", Math.round(fin.femmes).toLocaleString("fr-CH"), `au mois ${fin.m}`],
+          ["Récurrent / mois", CHF.format(fin.total), `dont ${CHF.format(fin.rDec)} de découvertes`],
+          ["z4 actives", Math.round(fin.z4).toString(), "supervision possible"],
+          ["Charges fixes", CHF.format(charges), "couvertes dès le 1er mois"],
         ].map(([t, v, s]) => (
           <div key={t} className="rounded-xl border border-neutral-200 p-4">
             <div className="text-xs uppercase tracking-wide text-neutral-500">{t}</div>
@@ -163,65 +124,46 @@ export default async function SimulateurPage({
         ))}
       </section>
 
-      <div className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-        <p>
-          <strong>Deux hypothèses que Patrick n’a pas données, et que je ne devine pas :</strong>
-        </p>
-        <p>
-          • <strong>Au-delà de six mois, la courbe ne perd plus personne.</strong> Tu as
-          donné 25 % de pertes sur trois mois, puis 25 % des restantes sur trois de plus
-          — il reste 56 % à six mois. Après, rien n’est dit, et le simulateur fige la
-          population. C’est l’hypothèse la plus optimiste possible : plus la projection
-          est longue, plus elle surestime.
-        </p>
-        {indetermine !== 0 && (
-          <p>
-            • <strong>{indetermine} femmes sur {p.decouvertes} sont indéterminées</strong> :
-            {p.versZ2} + {p.versAccel} + {p.arret} = {p.versZ2 + p.versAccel + p.arret}.
-            Elles ne rapportent rien dans ce calcul — leur destin n’est pas inventé.
-          </p>
-        )}
-      </div>
-
       <div className="overflow-x-auto rounded-lg border border-neutral-200">
-        <table className="w-full min-w-[46rem] text-sm">
+        <table className="w-full min-w-[52rem] text-sm">
           <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
             <tr>
-              <th className="px-3 py-2">Sem.</th>
-              <th className="px-3 py-2 text-right">Découvertes</th>
+              <th className="px-3 py-2">Mois</th>
               <th className="px-3 py-2 text-right">z2</th>
+              <th className="px-3 py-2 text-right">z3</th>
+              <th className="px-3 py-2 text-right">z4</th>
               <th className="px-3 py-2 text-right">Accél.</th>
-              <th className="px-3 py-2 text-right">Encaissé</th>
-              <th className="px-3 py-2 text-right">Équiv. mensuel</th>
-              <th className="px-3 py-2 text-right">Cumulé</th>
+              <th className="px-3 py-2 text-right">Femmes</th>
+              <th className="px-3 py-2 text-right">Encaissé / mois</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {lignes.map((l) => (
-              <tr key={l.semaine} className={l.semaine === bascule?.semaine ? "bg-emerald-50" : ""}>
-                <td className="px-3 py-2 tabular-nums">{l.semaine}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{l.decouvertes.toFixed(1)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{l.z2Actives.toFixed(1)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{l.accelActives.toFixed(1)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{CHF.format(l.total)}</td>
-                <td className={"px-3 py-2 text-right tabular-nums " +
-                      (l.mensuelEquivalent >= p.chargesFixes ? "font-medium text-emerald-800" : "text-neutral-500")}>
-                  {CHF.format(l.mensuelEquivalent)}
+            {lignes.filter((l) => jalons.includes(l.m)).map((l) => (
+              <tr key={l.m}>
+                <td className="px-3 py-2 tabular-nums">{l.m}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{Math.round(l.z2)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{Math.round(l.z3)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{Math.round(l.z4)}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{Math.round(l.acc)}</td>
+                <td className="px-3 py-2 text-right font-medium tabular-nums">
+                  {Math.round(l.femmes).toLocaleString("fr-CH")}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{CHF.format(l.cumul)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{CHF.format(l.total)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
-        <strong>Ce que la table ne dit pas.</strong> Elle compte de l’argent, pas des
-        heures. {p.versZ2} nouvelles z2 par semaine font{" "}
-        {Math.round(p.versZ2 * 4.33)} femmes de plus par mois à accompagner — la
-        contrainte qui mordra en premier est probablement là, pas dans les charges.
-        Les <strong>14 premiers jours offerts</strong> décalent l’encaissement de deux
-        semaines, sans changer le rythme.
+      <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+        <strong>La contrainte n’est pas l’argent.</strong> Les charges fixes sont
+        couvertes dès le premier mois — les découvertes à {pDec} CHF y suffisent. Ce que
+        la table met sous les yeux, c’est <strong>le nombre de femmes à porter</strong> :
+        {" "}{Math.round(fin.femmes).toLocaleString("fr-CH")} au mois {fin.m}, contre dix
+        aujourd’hui. Et la supervision demande d’être z4 au minimum : il y en a{" "}
+        {Math.round(fin.z4)} dans ce modèle, aucune avant le 48<sup>e</sup> mois.
+        <br />
+        <strong>Le goulot est donc la première z4</strong>, pas la trésorerie.
       </div>
     </main>
   );
