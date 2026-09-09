@@ -44,15 +44,35 @@ function moisLabel(period: number): string {
   return new Date(y, m - 1, 1).toLocaleDateString("fr-CH", { month: "long", year: "numeric" });
 }
 
-export default async function TvaPage() {
+// Le décompte est TRIMESTRIEL (Q1..Q4) — établi le 09.09.2026 par le décompte
+// Q1/2026 déposé le 31.03. Même navigation que /charges : Patrick passe d'un
+// trimestre à l'autre sans changer d'écran.
+export default async function TvaPage({
+  searchParams,
+}: { searchParams: Promise<{ t?: string }> }) {
   await requireSt4Plus();
+  const { t } = await searchParams;
+  const trimestre = t ?? "Q3 2026";
+  const PERIODES: Record<string, [number, number]> = {
+    "Q1 2026": [202601, 202603], "Q2 2026": [202604, 202606],
+    "Q3 2026": [202607, 202609], "Q4 2026": [202610, 202612],
+  };
+  const [debut, fin] = PERIODES[trimestre] ?? PERIODES["Q3 2026"];
+  // Ce qui a été DÉPOSÉ, pour pouvoir comparer le calcul à la déclaration.
+  // ⚠️ Q1 vient du PDF de l'AFC (ch. 200/299 = 3 062.49, ch. 303 = 229.47,
+  // ch. 400 = 69.12) — c'est la seule période dont on connaisse la réponse,
+  // donc la seule qui puisse valider l'instrument.
+  const DEPOSE: Record<string, { ca: number; tva: number; prealable: number }> = {
+    "Q1 2026": { ca: 3062.49, tva: 229.47, prealable: 69.12 },
+  };
+  const depose = DEPOSE[trimestre];
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from("v_tva_semestre")
+    .from("v_tva_detail")
     .select("*")
-    .gte("period", 202607)
-    .lte("period", 202609)
+    .gte("period", debut)
+    .lte("period", fin)
     .order("paid_at", { ascending: true, nullsFirst: false });
 
   if (error) {
@@ -80,10 +100,21 @@ export default async function TvaPage() {
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
       <header>
-        <h1 className="text-2xl font-semibold">Décompte TVA — Q3 2026</h1>
+        <h1 className="text-2xl font-semibold">Décompte TVA — {trimestre}</h1>
         <p className="mt-1 text-sm text-neutral-600">
-          01.07 – 30.09.2026 · méthode effective · 8.1 % · Patrick Bays (CHE-463.639.374)
+          méthode effective · 8.1 % · Patrick Bays (CHE-463.639.374) · AFC-ID 052.0343.3077
         </p>
+        <nav className="mt-3 flex flex-wrap gap-2">
+          {Object.keys(PERIODES).map((q) => (
+            <a key={q} href={`/tva?t=${encodeURIComponent(q)}`}
+               className={"rounded-full px-3 py-1 text-sm " +
+                 (q === trimestre
+                   ? "bg-neutral-900 text-white"
+                   : "border border-neutral-300 text-neutral-700 hover:bg-neutral-50")}>
+              {q}
+            </a>
+          ))}
+        </nav>
       </header>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -101,9 +132,26 @@ export default async function TvaPage() {
         </div>
       </section>
 
+      {depose && (
+        <div className="rounded-xl border border-neutral-300 bg-neutral-50 p-4 text-sm">
+          <strong>Déposé à l’AFC</strong> — chiffre d’affaires{" "}
+          <span className="tabular-nums">{fmtCHF(depose.ca)}</span> · impôt dû{" "}
+          <span className="tabular-nums">{fmtCHF(depose.tva)}</span> · impôt préalable{" "}
+          <span className="tabular-nums">{fmtCHF(depose.prealable)}</span> · à payer{" "}
+          <span className="tabular-nums">{fmtCHF(depose.tva - depose.prealable)}</span>.
+          <br />
+          Écart avec le calcul ci-dessus :{" "}
+          <span className="tabular-nums font-medium">
+            {fmtCHF(totalTTC - depose.ca)}
+          </span>{" "}
+          de chiffre d’affaires. C’est le seul trimestre dont on connaisse la réponse —
+          donc le seul qui puisse valider l’instrument.
+        </div>
+      )}
+
       <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-        <strong>Période en cours.</strong> Le trimestre se clôt le 30 septembre,
-        exigible dans les 60 jours (art. 86 al. 1 LTVA). Le régime est bien
+        <strong>Contre-prestations reçues.</strong> Exigible 60 jours après la
+        clôture du trimestre (art. 86 al. 1 LTVA). Le régime est bien
         <em>contre-prestations reçues</em> : le Q1 déposé (3 062.49) égale les
         encaissements bancaires du trimestre à CHF 13 près. Une réserve subsiste —
         l’export PostFinance ne rendait que 50 lignes pour quatre ans demandés.
