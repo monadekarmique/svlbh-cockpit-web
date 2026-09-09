@@ -42,8 +42,28 @@ async function validateBearerReader(
   }
 }
 
+// En-têtes INTERNES : posés par ce proxy après validation d'un Bearer, et crus
+// par les server components (owner-gate, layout, support, statuts…). Venus du
+// client, ils seraient crus aussi. Mesuré le 09.09.2026 : un compte ST1 connecté
+// + `x-svlbh-bearer-reader: <svlbh_id de Patrick>` lisait /tva (200) alors que
+// sans l'en-tête il était renvoyé sur /access-denied. On les retire de TOUTE
+// requête entrante ; seule la branche Bearer ci-dessous les pose, après RPC.
+const EN_TETES_INTERNES = ["x-svlbh-bearer-reader", "x-svlbh-bearer-token"] as const;
+
+function sansEnTetesInternes(request: NextRequest): Headers {
+  const h = new Headers(request.headers);
+  const retires = EN_TETES_INTERNES.filter((n) => h.has(n));
+  for (const n of retires) h.delete(n);
+  if (retires.length > 0) {
+    console.warn(
+      `[proxy] en-tête interne venu du client retiré sur ${request.nextUrl.pathname}: ${retires.join(", ")}`,
+    );
+  }
+  return h;
+}
+
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  let response = NextResponse.next({ request: { headers: sansEnTetesInternes(request) } });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -57,7 +77,7 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
-          response = NextResponse.next({ request });
+          response = NextResponse.next({ request: { headers: sansEnTetesInternes(request) } });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, {
               ...options,
@@ -110,7 +130,7 @@ export async function updateSession(request: NextRequest) {
     // Bearer reader bypass — multi-instances IA (DEC Patrick 2026-05-20)
     const readerSvlbhId = await validateBearerReader(request, pathname);
     if (readerSvlbhId) {
-      const fwd = new Headers(request.headers);
+      const fwd = sansEnTetesInternes(request);
       fwd.set("x-svlbh-bearer-reader", readerSvlbhId);
       // Propage aussi le token brut dans un header interne pour que les
       // server components puissent appeler des RPC SECURITY DEFINER
