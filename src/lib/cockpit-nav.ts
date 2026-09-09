@@ -202,6 +202,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "monde15",
   },
   {
+    href: "/simulateur",
+    label: "Simulateur d’acquisition",
+    navLabel: "Simulateur",
+    icon: "📈",
+    desc: "TikTok et Snap → découverte → ST2 : quand la bascule arrive",
+    color: "#7C3AED",
+    group: "monde15",
+  },
+  {
     href: "/mois",
     label: "Ce qui reste par mois",
     navLabel: "Ce qui reste",
