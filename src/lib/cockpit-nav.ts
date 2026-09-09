@@ -183,6 +183,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "owner",
   },
   {
+    href: "/tva",
+    label: "Décompte TVA",
+    navLabel: "TVA",
+    icon: "🧾",
+    desc: "Détail ligne à ligne du semestre — chaque encaissement, retrouvable en banque",
+    color: "#15803D",
+    group: "owner",
+  },
+  {
     href: "/statutspostfinance",
     label: "Statut PostFinance",
     navLabel: "PostFinance",

@@ -38,7 +38,12 @@ export default function LoginPage() {
     <main className="flex min-h-dvh items-center justify-center bg-neutral-50 p-6">
       <div className="w-full max-w-sm space-y-6 rounded-2xl bg-white p-8 shadow-sm">
         <div className="space-y-1 text-center">
-          <h1 className="text-xl font-semibold tracking-tight">SVLBH Pro 1</h1>
+          {/* Cet écran s'intitulait « SVLBH Pro 1 » — le nom d'une AUTRE app.
+              Patrick, 09.09.2026 : « je veux accéder à cockpit et je retombe sur
+              SVLBH-pro-1 ». Il n'était pas redirigé : la porte d'entrée portait
+              le mauvais nom, ce qui se lit exactement comme une erreur de
+              routage. Le titre d'un écran de connexion dit OÙ l'on est. */}
+          <h1 className="text-xl font-semibold tracking-tight">SVLBH Cockpit</h1>
           <p className="text-sm text-neutral-500">Connexion praticienne</p>
         </div>
 
