@@ -91,10 +91,17 @@ export default async function EtatFlottePage() {
   const plafond = c.plafond ?? 3;
   const perimee = data.age_minutes > SEUIL_FRAICHEUR_MIN;
 
-  // Les socles Android : combien de versions différentes tournent en même temps.
+  // Les versions du SOCLE COMMUN Android qui tournent en même temps.
+  // ⚠️ ÉGALITÉ EXACTE, jamais `.includes("android")` : il existe DEUX socles
+  // Android — `svlbh-core-android` (le commun) et `svlbh-pro-core-android`
+  // (la famille Pro). Mesuré le 20.09 : mon premier compteur les mélangeait et
+  // annonçait « 3 socles simultanés » là où le commun en avait 2, en comptant
+  // le pin pro-core de Chroma 5 comme une troisième version du commun. Un
+  // compteur qui agrège deux choses différentes affiche un chiffre vrai pour
+  // rien et faux pour la décision qu'il sert.
   const socles = new Map<string, string[]>();
   for (const p of pins) {
-    if (!p.core.includes("android")) continue;
+    if (p.core !== "svlbh-core-android") continue;
     socles.set(p.epingle, [...(socles.get(p.epingle) ?? []), p.app]);
   }
 
@@ -124,7 +131,7 @@ export default async function EtatFlottePage() {
           { l: "En retard (hors grâce)", v: enRetard.length,
             t: enRetard.length ? "text-rose-700" : "text-emerald-700" },
           { l: "En grâce datée", v: gracies.length, t: gracies.length ? "text-amber-700" : "" },
-          { l: "Socles Android simultanés", v: socles.size,
+          { l: "Versions du socle commun Android", v: socles.size,
             t: socles.size > 1 ? "text-rose-700" : "text-emerald-700" },
         ].map((k) => (
           <div key={k.l} className="rounded-xl border border-neutral-200 p-4">
@@ -137,7 +144,7 @@ export default async function EtatFlottePage() {
       {socles.size > 1 && (
         <section className="rounded-xl bg-rose-50 p-4">
           <h2 className="font-medium text-rose-900">
-            {socles.size} socles Android tournent en même temps
+            {socles.size} versions du socle commun Android tournent en même temps
           </h2>
           <p className="mt-1 text-sm text-rose-800">
             Une fonction peut venir du cœur chez l’une et d’une version plus
