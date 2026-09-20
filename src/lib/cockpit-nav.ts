@@ -168,6 +168,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "owner",
   },
   {
+    href: "/etat-flotte",
+    label: "État de la flotte",
+    navLabel: "Flotte",
+    icon: "🛰️",
+    desc: "Pins, socles, tags hors convention — généré par la mesure, jamais saisi",
+    color: "#475569",
+    group: "owner",
+  },
+  {
     href: "/compliance",
     label: "Compliance",
     icon: "📋",
