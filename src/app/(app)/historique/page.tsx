@@ -10,6 +10,9 @@ import {
   SESSION_META as GUI_META,
   GuiEnergiesParasitairesPermanentesSession,
 } from "./sessions/gui-energies-parasitaires-permanentes";
+import { isOwner } from "@/lib/owner-gate";
+import { AccesAppsSection } from "./acces-apps/AccesAppsSection";
+import { chargerPraticiennesARevoir } from "./acces-apps/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +30,11 @@ const SESSIONS = [
   },
 ] as const;
 
-export default function HistoriquePage() {
+export default async function HistoriquePage() {
+  // Section ajoutée AVANT « Sessions documentées » (DEC Patrick 21.09.2026) —
+  // réservée à l'entité, comme la grille de facturation (requireSt6/isOwner).
+  const owner = await isOwner();
+  const praticiennes = owner ? await chargerPraticiennesARevoir() : [];
   return (
     <div className="space-y-5">
       <Link
@@ -46,6 +53,21 @@ export default function HistoriquePage() {
           provocations.
         </p>
       </header>
+
+      {owner && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-blue-900">
+            🔑 Accès aux apps du groupe z2 — revue par praticienne
+          </h2>
+          <p className="text-xs text-neutral-600">
+            Une case cochée = un droit accordé explicitement. Rien n’est automatique :
+            atteindre un canal n’ouvre plus rien tant que cette grille ne le dit pas.
+            Tant que la mise en service n’a pas été donnée, les apps continuent de lire
+            le canal comme avant — cette grille prépare la bascule, elle ne l’active pas.
+          </p>
+          <AccesAppsSection initial={praticiennes} />
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="text-sm font-bold uppercase tracking-wider text-blue-900">
