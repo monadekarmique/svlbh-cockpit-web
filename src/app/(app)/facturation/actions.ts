@@ -2,9 +2,10 @@
 
 // Server actions Facturation.
 // DEC Patrick 2026-05-20 — câblage log_audit_event V1.
-// DEC Patrick 2026-06-04 — ouverture aux thérapeutes ST4+ pour saisir
-// leurs propres paiements reçus manuellement (TWINT, virement, espèces,
-// chèque), en attendant l'intégration PostFinanceCheckout.
+// DEC Patrick 23.09.2026 — l'enregistrement d'un paiement est réservé au
+// propriétaire, lu par la fonction de base is_owner_st6(). C'est exactement la
+// RLS de invoice : seule invoice_st6_owner_all écrit (invoice_own_select ne
+// fait que lire) — une non-propriétaire ne pouvait déjà rien mettre à jour.
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -21,27 +22,12 @@ async function ensureGate() {
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error("Non authentifié");
-  const { data: me } = await sb
-    .from("praticienne_profile")
-    .select("svlbh_id, stx, pro_status")
-    .eq("supabase_user_id", user.id)
-    .maybeSingle();
-  if (!me || me.pro_status !== "ACTIVE") {
-    throw new Error("Accès refusé (compte inactif)");
+  const { data: isOwner, error } = await sb.rpc("is_owner_st6");
+  if (error) throw new Error(`Gate échec : ${error.message}`);
+  if (isOwner !== true) {
+    throw new Error("Accès refusé (réservé au propriétaire)");
   }
-  const stx = me.stx as string;
-  const allowed = stx === "ST4" || stx === "ST5" || stx === "ST6";
-  if (!allowed) {
-    throw new Error("Accès refusé (ST4+ requis)");
-  }
-  // DEC Patrick 2026-06-04 : Owner = ST6 strict pour cette page
-  // (cohérent avec RLS invoice_st6_owner_all / is_owner_st6()).
-  const isOwner = stx === "ST6";
-  return {
-    sb,
-    svlbhId: me.svlbh_id as string,
-    isOwner,
-  };
+  return { sb };
 }
 
 // Saisie manuelle d'un paiement reçu. Form fields :
@@ -51,8 +37,7 @@ async function ensureGate() {
 //   - amount     (decimal, optional — défaut = invoice.total)
 //   - note       (text libre, optional)
 //
-// Ownership : Owner (ST6/Cercle SR) peut tout marquer payé. ST4/ST5 ne
-// peut marquer payée qu'une de SES propres factures (praticienne_svlbh_id).
+// Propriétaire seul (is_owner_st6()), qui peut marquer payée toute facture.
 export async function recordInvoicePayment(formData: FormData) {
   const invoiceId = String(formData.get("invoice_id") ?? "").trim();
   const paidAtRaw = String(formData.get("paid_at") ?? "").trim();
@@ -72,9 +57,9 @@ export async function recordInvoicePayment(formData: FormData) {
   }
   const paidAtIso = `${paidAtRaw}T12:00:00.000Z`;
 
-  const { sb, svlbhId, isOwner } = await ensureGate();
+  const { sb } = await ensureGate();
 
-  // Read before for audit + ownership check
+  // Read before for audit
   const { data: before, error: beforeError } = await sb
     .from("invoice")
     .select(
@@ -84,11 +69,6 @@ export async function recordInvoicePayment(formData: FormData) {
     .maybeSingle();
   if (beforeError) throw new Error(`Read échec : ${beforeError.message}`);
   if (!before) throw new Error("invoice introuvable");
-
-  // Ownership : ST4/ST5 ne peut toucher que ses propres factures
-  if (!isOwner && before.praticienne_svlbh_id !== svlbhId) {
-    throw new Error("Accès refusé (cette facture n'est pas la vôtre)");
-  }
 
   // Montant : défaut = invoice.total. Validation : numérique > 0.
   let amount: number;
@@ -142,9 +122,7 @@ export async function recordInvoicePayment(formData: FormData) {
       total: before.total,
       currency: before.currency,
     },
-    p_via: isOwner
-      ? "cockpit-facturation-owner"
-      : "cockpit-facturation-st4plus",
+    p_via: "cockpit-facturation-owner",
   });
 
   revalidatePath("/facturation");

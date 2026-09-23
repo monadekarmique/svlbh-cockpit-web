@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireSt4Plus } from "@/lib/owner-gate";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { recordInvoicePayment } from "./actions";
 
@@ -64,10 +65,38 @@ function todayISO(): string {
   return `${y}-${m}-${d}`;
 }
 
-export default async function FacturationPage() {
-  const { isOwner, svlbhId, stx } = await requireSt4Plus();
+// DEC Patrick 23.09.2026 — « chaque apprenante garde un accès à ses propres
+// factures ». Plus de seuil de stage ni de canal sur cette page : quiconque a
+// franchi le layout du cockpit la voit. CE QU'ELLE VOIT est borné par la RLS de
+// invoice (invoice_own_select : ses factures ; invoice_st6_owner_all : le
+// propriétaire, toutes). isOwner vient de la fonction de base is_owner_st6().
+async function facturationGate(
+  sb: Awaited<ReturnType<typeof createClient>>,
+): Promise<{ isOwner: boolean; svlbhId: string | null }> {
+  // Bearer reader bypass — multi-instances IA (inchangé, DEC 2026-05-20).
+  const reqHeaders = await headers();
+  if (reqHeaders.get("x-svlbh-bearer-reader")) {
+    return { isOwner: true, svlbhId: null };
+  }
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) redirect("/login");
 
+  const [{ data: ownerOk }, { data: selfId }] = await Promise.all([
+    sb.rpc("is_owner_st6"),
+    sb.rpc("auth_svlbh_id"),
+  ]);
+  return {
+    isOwner: ownerOk === true,
+    svlbhId: (selfId as string | null) ?? null,
+  };
+}
+
+export default async function FacturationPage() {
   const sb = await createClient();
+  const { isOwner, svlbhId } = await facturationGate(sb);
+
   let q = sb
     .from("invoice")
     .select(
@@ -76,8 +105,8 @@ export default async function FacturationPage() {
     .order("issue_date", { ascending: false })
     .limit(50);
 
-  // ST4/ST5 : ne voit QUE ses propres factures.
-  // Owner (ST6 / Cercle SR) : voit toutes les factures.
+  // Non-propriétaire : ses seules factures. Ceinture + bretelles — la RLS
+  // (invoice_own_select) fait foi ; sans svlbh_id résolu, la RLS rend zéro ligne.
   if (!isOwner && svlbhId) {
     q = q.eq("praticienne_svlbh_id", svlbhId);
   }
@@ -103,7 +132,7 @@ export default async function FacturationPage() {
 
       <header>
         <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
-          {isOwner ? `${stx} · Owner — vue globale` : `${stx} · Thérapeute — mes factures`}
+          {isOwner ? "Owner — vue globale" : "Mes factures"}
         </p>
         <h1 className="text-2xl font-bold tracking-tight text-blue-950">
           💰 Facturation
@@ -123,10 +152,8 @@ export default async function FacturationPage() {
             </>
           ) : (
             <>
-              Saisis manuellement les paiements reçus (TWINT, virement,
-              espèces, chèque) en attendant l&apos;intégration
-              PostFinanceCheckout. Chaque enregistrement est tracé dans
-              l&apos;audit_log.
+              Tes factures SVLBH, leur statut et leurs paiements. Les
+              paiements reçus sont enregistrés par SVLBH.
             </>
           )}
         </p>
@@ -143,11 +170,13 @@ export default async function FacturationPage() {
         <h2 className="text-base font-bold text-amber-900">
           ⏳ À encaisser ({unpaid.length})
         </h2>
-        <p className="mt-1 text-xs text-amber-800">
-          Déplie une facture pour saisir le paiement reçu (date, moyen,
-          montant, note). Trace un event{" "}
-          <code>UPDATE invoice</code> dans audit_log avec before/after.
-        </p>
+        {isOwner && (
+          <p className="mt-1 text-xs text-amber-800">
+            Déplie une facture pour saisir le paiement reçu (date, moyen,
+            montant, note). Trace un event{" "}
+            <code>UPDATE invoice</code> dans audit_log avec before/after.
+          </p>
+        )}
         {unpaid.length === 0 ? (
           <p className="mt-3 text-sm italic text-neutral-500">
             Toutes les factures émises sont encaissées.
@@ -182,13 +211,20 @@ export default async function FacturationPage() {
                     <span className="ml-auto font-mono text-sm font-semibold text-neutral-900">
                       {fmtCHF(i.total)}
                     </span>
-                    <span className="text-xs text-amber-800 group-open:hidden">
-                      ▸ Saisir paiement
-                    </span>
-                    <span className="hidden text-xs text-amber-800 group-open:inline">
-                      ▾ Fermer
-                    </span>
+                    {isOwner && (
+                      <>
+                        <span className="text-xs text-amber-800 group-open:hidden">
+                          ▸ Saisir paiement
+                        </span>
+                        <span className="hidden text-xs text-amber-800 group-open:inline">
+                          ▾ Fermer
+                        </span>
+                      </>
+                    )}
                   </summary>
+                  {/* Saisie réservée au propriétaire (ensureGate = is_owner_st6(),
+                      seule la RLS invoice_st6_owner_all écrit). */}
+                  {isOwner && (
                   <form
                     action={recordInvoicePayment}
                     className="grid gap-3 border-t border-amber-100 bg-amber-50/30 p-3 sm:grid-cols-2"
@@ -262,6 +298,7 @@ export default async function FacturationPage() {
                       </button>
                     </div>
                   </form>
+                  )}
                 </details>
               </li>
             ))}
@@ -310,15 +347,17 @@ export default async function FacturationPage() {
         )}
       </section>
 
-      <footer className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-xs leading-relaxed text-amber-900">
-        <strong>V1.1 — Saisie manuelle ST4+ avant PostFinanceCheckout.</strong>{" "}
-        Chaque saisie UPDATE le statut invoice (PAID + paid_at + method) et
-        appelle{" "}
-        <code>log_audit_event(&apos;UPDATE&apos;, &apos;invoice&apos;, …)</code>
-        {" "}avec before/after, montant et note en payload. V2 : rapprochement
-        automatique via API PostFinance Merchant + table{" "}
-        <code>invoice_payment</code> pour acomptes/solde.
-      </footer>
+      {isOwner && (
+        <footer className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-xs leading-relaxed text-amber-900">
+          <strong>V1.2 — Saisie manuelle par le propriétaire avant PostFinanceCheckout.</strong>{" "}
+          Chaque saisie UPDATE le statut invoice (PAID + paid_at + method) et
+          appelle{" "}
+          <code>log_audit_event(&apos;UPDATE&apos;, &apos;invoice&apos;, …)</code>
+          {" "}avec before/after, montant et note en payload. V2 : rapprochement
+          automatique via API PostFinance Merchant + table{" "}
+          <code>invoice_payment</code> pour acomptes/solde.
+        </footer>
+      )}
     </main>
   );
 }

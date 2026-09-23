@@ -14,31 +14,31 @@ import { IdInspectorToggle } from "@/components/id-inspector";
 import { NumberInputSelectAll } from "@/components/number-input-select-all";
 import { version as appVersion } from "../../../package.json";
 
-// DEC Patrick 2026-05-12 — doctrine ST. Cockpit accessible à ST3+ (Certifiée
-// Priv, Thérapeute PRO, Superviseur, Owner). Les modules Admin / Compliance /
-// Facturation sont gated ST6 (Owner) au niveau page individuelle. Cercle SR
-// reste un signal indépendant (utilisé par la nav, pas par le gate).
-const ALLOWED_STX = ["ST3", "ST4", "ST5", "ST6"] as const;
-
+// DEC Patrick 23.09.2026 — l'accès au cockpit suit le CANAL, plus le stage (stx).
+// La source de vérité est la base, lue par fonction nommée :
+//   peut_lire_canal(3)  → ACTIVE, hors review, canal ≥ z3 ;
+//   is_owner_st6()      → le propriétaire (hors voir-comme, hors review).
+// Aucune règle de canal n'est recopiée ici. Les modules Admin / Compliance
+// restent gatés au niveau de leur page. Cercle SR et la liste blanche
+// cockpit_access restent deux entrées indépendantes.
 async function isCockpitAllowed(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
 ): Promise<boolean> {
   const profile = await resolveProfile<{
-    stx: string | null;
-    pro_status: string | null;
     cercle_lumiere_sr: boolean | null;
-  }>(supabase, userId, "stx, pro_status, cercle_lumiere_sr");
+  }>(supabase, userId, "cercle_lumiere_sr");
   // Cercle de Lumière SR : accès gardé (sécurité indépendante)
   if (profile?.cercle_lumiere_sr === true) {
     return true;
   }
-  // Praticienne ACTIVE avec stx ST3+
-  if (
-    profile?.pro_status === "ACTIVE" &&
-    !!profile.stx &&
-    (ALLOWED_STX as readonly string[]).includes(profile.stx)
-  ) {
+  // Canal z3+ (fonction de base) ou propriétaire.
+  const { data: canalOk } = await supabase.rpc("peut_lire_canal", { p_min: 3 });
+  if (canalOk === true) {
+    return true;
+  }
+  const { data: ownerOk } = await supabase.rpc("is_owner_st6");
+  if (ownerOk === true) {
     return true;
   }
   // Whitelist via cockpit_access (cas d'ajout ad-hoc hors stage)

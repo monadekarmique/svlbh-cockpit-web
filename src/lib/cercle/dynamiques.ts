@@ -36,9 +36,10 @@ export const DYNAMIQUE_AXIS_TONE: Record<NonNullable<DynamiqueAxis>, { bg: strin
  * Fetch toutes les attributions dynamique → praticienne, retourné en map
  * indexée par svlbh_id (UUID). Une praticienne peut avoir 0..N dynamiques.
  *
- * RLS : SELECT autorisé si is_st4_plus() OU svlbh_id = auth_svlbh_id()
- * (i.e. ST4+ voient toutes les attributions, sinon on ne voit que les
+ * RLS : SELECT autorisé si is_z4() OU svlbh_id = auth_svlbh_id()
+ * (i.e. le canal z4 voit toutes les attributions, sinon on ne voit que les
  * siennes — ici on est gated cockpit ST6 donc on voit tout).
+ * DEC Patrick 23.09.2026 : la règle suit le canal — is_z4 remplace is_st4_plus.
  */
 export async function fetchDynamiquesByPraticienne(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
