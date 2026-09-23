@@ -1,7 +1,9 @@
 // Thérapeutes SVLBH du Cercle — vue cockpit avec :
 // - compteurs ressentis ST1/ST2 actives (felt_count)
 // - 3 sections : Thérapeutes actives / Thérapeutes cachées / Apprenantes
-// - chaque ST4+ peut toggle son statut quotidien (active ↔ cachée)
+// - chaque membre du Cercle peut toggle son statut quotidien (active ↔ cachée) ;
+//   le DnD de sa propre carte et l'édition des ressentis suivent le canal z4
+//   (DEC Patrick 23.09.2026)
 // - badges Tx · Cx · ST à gauche du nom
 // - Patrick (ST6) peut poser un sticker de couleur + nb d'étapes à libérer
 // - lien WhatsApp Cercle de Lumière (z3) en haut
@@ -109,7 +111,11 @@ export default async function ShamanesPage() {
   const mySvlbhId = me?.svlbh_id as string | undefined;
   const myStx = me?.stx as string | null;
   const isOwner = myStx === "ST6";
-  const canEditFelt = myStx === "ST4" || myStx === "ST5" || myStx === "ST6";
+  // Édition des compteurs ressentis : suit la RLS d'UPDATE de cercle_felt_count
+  // (peut_ecrire_stage(4), même corps que is_z4 : canal z4, ACTIVE, hors review,
+  // hors voir-comme). DEC Patrick 23.09.2026 : le canal, plus le stage.
+  const { data: z4 } = user ? await sb.rpc("is_z4") : { data: null };
+  const canEditFelt = z4 === true;
 
   // 1. Membres du Cercle de Lumière (DEC Patrick 2026-05-28) :
   //    stx ∈ ST2..ST6 ∩ cercle_lumiere_sr=true ∩ cercle_veto=false ∩ ACTIVE.

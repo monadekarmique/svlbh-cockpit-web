@@ -1,7 +1,9 @@
 "use server";
 
-// Server actions du statut quotidien des thérapeutes ST4+ + sticker
+// Server actions du statut quotidien des thérapeutes + sticker
 // d'attention posé par Patrick (ST6). DEC Patrick 2026-05-18.
+// DEC Patrick 23.09.2026 : le déplacement de SA PROPRE carte (DnD) suit le
+// canal (rpc is_z4) ou l'owner (rpc is_owner_st6), plus le stage.
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -46,20 +48,26 @@ export async function setMyDailyStatus(formData: FormData) {
 }
 
 /** Bouger une thérapeute via drag-and-drop entre Actives et Cachées.
- * - Si target = soi : ST4+ autorisée
+ * - Si target = soi : canal z4 (rpc is_z4) ou owner (rpc is_owner_st6)
  * - Si target ≠ soi : ST6 (Owner) uniquement
- * DEC Patrick 2026-05-18. */
+ * DEC Patrick 2026-05-18 ; seuil « soi » passé du stage au canal le 23.09.2026. */
 export async function setTherapeuteDailyStatus(formData: FormData) {
   const targetSvlbhId = String(formData.get("target_svlbh_id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!targetSvlbhId) throw new Error("target_svlbh_id requis");
   if (status !== "active" && status !== "hidden") throw new Error("status invalide");
 
-  const { sb, svlbhId, stx, isOwner } = await getMe();
+  const { sb, svlbhId, isOwner } = await getMe();
   const isSelf = targetSvlbhId === svlbhId;
   if (!isSelf && !isOwner) throw new Error("Réservé à l'Owner pour déplacer une autre thérapeute");
-  if (isSelf && !["ST4", "ST5", "ST6"].includes(stx ?? "")) {
-    throw new Error("Réservé aux thérapeutes ST4+");
+  if (isSelf) {
+    const [{ data: z4 }, { data: ownerSt6 }] = await Promise.all([
+      sb.rpc("is_z4"),
+      sb.rpc("is_owner_st6"),
+    ]);
+    if (z4 !== true && ownerSt6 !== true) {
+      throw new Error("Réservé au canal z4");
+    }
   }
 
   const { error } = await sb

@@ -1,24 +1,26 @@
 "use server";
 
-// Actions serveur de l'inbox z3+z4 — gate ST4+ (alias-aware).
-// Envoi : POST sur le bridge du chat, puis trace 'out' dans z3_message
-// (RLS insert ST4+). L'URL d'envoi et le besoin CF Access viennent du
+// Actions serveur de l'inbox z3+z4.
+// Gate = RLS de z3_message (DEC Patrick 23.09.2026 : la règle suit le canal,
+// plus le stage) : rpc peut_lire_stage(4), la fonction de la policy de lecture.
+// Les policies d'écriture (insert 'out', mark read) passent par
+// peut_ecrire_stage(4) — même seuil canal z4, qui exclut en plus le « voir
+// comme » (le cockpit n'en est pas une surface).
+// Envoi : POST sur le bridge du chat, puis trace 'out' dans z3_message.
+// L'URL d'envoi et le besoin CF Access viennent du
 // REGISTRE public.bridge (source de vérité unique, DEC Patrick 2026-07-12) —
 // seuls les secrets restent en env (Z4_CF_ACCESS_CLIENT_ID / _SECRET).
 
 import { createClient } from "@/lib/supabase/server";
-import { resolveProfile } from "@/lib/resolve-profile";
 
-const ALLOWED = ["ST4", "ST5", "ST6"];
-
-async function requireSt4() {
+async function requireZ4Queue() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Non authentifié");
-  const me = await resolveProfile<{ stx: string | null }>(supabase, user.id, "stx");
-  if (!me?.stx || !ALLOWED.includes(me.stx)) throw new Error("Réservé ST4+");
+  const { data: canRead } = await supabase.rpc("peut_lire_stage", { p_min: 4 });
+  if (canRead !== true) throw new Error("Réservé au canal z4");
   return { supabase, user };
 }
 
@@ -39,7 +41,7 @@ export type Z3Message = {
 };
 
 export async function fetchZ3Messages(sinceIso?: string): Promise<Z3Message[]> {
-  const { supabase } = await requireSt4();
+  const { supabase } = await requireZ4Queue();
   let q = supabase
     .from("z3_message")
     .select(
@@ -58,7 +60,7 @@ export async function sendZ3Message(
   content: string,
   bridge: string = "z3",
 ): Promise<{ ok: boolean; error?: string }> {
-  const { supabase, user } = await requireSt4();
+  const { supabase, user } = await requireZ4Queue();
   const text = content.trim();
   if (!text) return { ok: false, error: "Message vide" };
   if (!/^[0-9]+@(s\.whatsapp\.net|lid|g\.us)$/.test(chatJid)) {
@@ -106,7 +108,7 @@ export async function sendZ3Message(
 }
 
 export async function markChatRead(chatJid: string, bridge: string = "z3"): Promise<void> {
-  const { supabase } = await requireSt4();
+  const { supabase } = await requireZ4Queue();
   await supabase
     .from("z3_message")
     .update({ read_at: new Date().toISOString() })

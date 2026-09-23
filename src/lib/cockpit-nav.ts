@@ -262,7 +262,7 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     label: "Queue z3 — certifiées-pro",
     navLabel: "Queue z3",
     icon: "📥",
-    desc: "Inbox WhatsApp +41 79 930 28 00 (bridge z3) — lecture + réponses, réservé ST4+",
+    desc: "Inbox WhatsApp +41 79 930 28 00 (bridge z3) — lecture + réponses, réservé au canal z4",
     color: "#25D366",
     group: "support",
   },
