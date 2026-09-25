@@ -85,7 +85,8 @@ export default async function ModelePage() {
   const z2 = bareme.find((b) => b.canal === "z2"), z3 = bareme.find((b) => b.canal === "z3");
   const prix = (code: string) => Number(prods?.find((p) => p.code === code)?.price_ttc ?? 0);
   // v0.9.4, DEC Patrick 25.09 : une simulation au lieu de « il en faut » — prix ×
-  // quantité, un total en bas, chiffre d'affaires ANNUEL, scénario « Patrick seul ».
+  // quantité, un total en bas, scénario « Patrick seul ». Forme de référence : sa
+  // capture de 16h16 (mensuelle).
   // (« revient à l'ancienne version elle m'allait beaucoup mieux » : la colonne
   // « paiements » de v0.9.5 est retirée.) Ordre, lignes et quantités de départ :
   // celles du modèle. `prix` nul = « à fixer » — montré, jamais inventé.
@@ -237,10 +238,10 @@ export default async function ModelePage() {
           </table>
         </div>
         <p className="text-sm text-neutral-600">
-          Joue avec les quantités : chaque ligne donne son chiffre d’affaires TTC sur l’année, et
-          le total se compare, en bas, à ce qu’il faut couvrir sur l’année.
+          Joue avec les quantités : chaque ligne donne son chiffre d’affaires TTC, et le total se
+          compare, en bas, à ce qu’il faut couvrir.
         </p>
-        <Simulation lignes={LIGNES} aCouvrirMois={fixe} coutApprenanteAn={parApprenante * 12}
+        <Simulation lignes={LIGNES} aCouvrirMois={fixe} coutApprenanteMois={parApprenante}
           formatriceMois={formatrice} scenario={scenario} cle={cle}
           sauvegarde={sim?.etat ?? null} sauvegardeLe={sim?.maj_le ?? null} />
         <p className="text-xs text-neutral-500">

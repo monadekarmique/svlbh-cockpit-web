@@ -5,11 +5,12 @@
 //   puis : « cette version 0.9.4 c'est si je suis tout seul et le chiffre d'affaire est annuel »
 //   puis : « revient à l'ancienne version elle m'allait beaucoup mieux […] - persistante »
 //
-// ⚠️ LA FORME EST CELLE DE v0.9.4, et elle ne doit pas regrossir : prix × quantité
-// = chiffre d'affaires TTC de la ligne, un total en bas. Une colonne « paiements par
-// personne » ajoutée entre-temps a été retirée à la demande de Patrick — elle
-// répondait à une question qu'il ne posait pas. Le chiffre d'affaires est ANNUEL :
-// il se compare à ce qu'il faut couvrir sur l'année (charges du mois × 12).
+// ⚠️ LA FORME EST CELLE DE v0.9.4, MOT POUR MOT — la référence est la capture de
+// Patrick du 25.09 à 16h16 (« les voilà ») : prix × quantité = CA TTC / mois, un
+// total, comparé à « À couvrir chaque mois », apprenantes à leur coût MENSUEL.
+// Deux écarts ont déjà coûté cher ce jour-là : une colonne « paiements » (retirée),
+// puis une comparaison « sur l'année » qui renversait son résultat (+6,34 M devenait
+// −4,69 M). Ne rien y ajouter sans qu'il le demande.
 //
 // PERSISTANTE : chaque changement s'enregistre seul, 700 ms après la dernière
 // frappe, dans modele_simulation (une ligne par scénario, propriétaire ST6 seul).
@@ -57,10 +58,10 @@ const heure = (iso: string) => {
   return `${p.day}.${p.month} ${p.hour}:${p.minute}`;
 };
 
-export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceMois, scenario, cle, sauvegarde, sauvegardeLe }: {
+export function Simulation({ lignes, aCouvrirMois, coutApprenanteMois, formatriceMois, scenario, cle, sauvegarde, sauvegardeLe }: {
   lignes: LigneSimulation[];
   aCouvrirMois: number;
-  coutApprenanteAn: number;
+  coutApprenanteMois: number;
   formatriceMois: number | null;
   scenario: string | null;
   /** Le scénario sous lequel la simulation s'enregistre. */
@@ -102,12 +103,11 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
 
   const q = (id: string) => quantites[id] ?? 0;
   const ca = lignes.reduce((s, l) => s + (l.prix ?? 0) * q(l.id), 0);
-  const aCouvrirAn = aCouvrirMois * 12;
   const apprenantesAuto = lignes.filter((l) => l.apprenante).reduce((s, l) => s + q(l.id), 0);
   const apprenantes = apprenantesForcees ?? apprenantesAuto;
-  const coutApprenantes = apprenantes * coutApprenanteAn;
-  const coutFormatrices = formatriceMois != null ? formatrices * formatriceMois * 12 : 0;
-  const ecart = ca - aCouvrirAn - coutApprenantes - coutFormatrices;
+  const coutApprenantes = apprenantes * coutApprenanteMois;
+  const coutFormatrices = formatriceMois != null ? formatrices * formatriceMois : 0;
+  const ecart = ca - aCouvrirMois - coutApprenantes - coutFormatrices;
 
   const champ = "w-20 rounded border border-neutral-300 px-2 py-1 text-right tabular-nums";
 
@@ -117,7 +117,6 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
         Scénario : {formatrices === 0
           ? (scenario ?? "Patrick seul")
           : `avec ${formatrices} formatrice${formatrices > 1 ? "s" : ""}`}
-        <span className="font-normal text-neutral-500"> — chiffre d’affaires sur l’année</span>
       </p>
       <p className="flex flex-wrap items-center gap-3 text-xs">
         {statut.etat === "enregistre" && <span className="text-emerald-700">Enregistré le {heure(statut.le)}</span>}
@@ -136,7 +135,7 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
               <th className="px-3 py-2">Rythme</th>
               <th className="px-3 py-2 text-right">Prix</th>
               <th className="px-3 py-2 text-right">Quantité</th>
-              <th className="px-3 py-2 text-right">CA TTC / an</th>
+              <th className="px-3 py-2 text-right">CA TTC / mois</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
@@ -166,7 +165,7 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
                     aria-label={`Quantité — ${l.label}`}
                   />
                   {l.rythme === "hebdo" && (
-                    <span className="block text-xs text-neutral-400">animations</span>
+                    <span className="block text-xs text-neutral-400">animations / mois</span>
                   )}
                 </td>
                 <td className="px-3 py-2 text-right font-medium tabular-nums">
@@ -175,7 +174,7 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
               </tr>
             ))}
             <tr className="bg-neutral-50 font-semibold">
-              <td className="px-3 py-2" colSpan={4}>Chiffre d’affaires TTC / an</td>
+              <td className="px-3 py-2" colSpan={4}>Chiffre d’affaires TTC / mois</td>
               <td className="px-3 py-2 text-right tabular-nums">{CHF.format(ca)}</td>
             </tr>
           </tbody>
@@ -186,20 +185,20 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
         <table className="w-full text-sm">
           <tbody className="divide-y divide-neutral-100">
             <tr>
-              <td className="px-3 py-2">Chiffre d’affaires TTC sur l’année</td>
+              <td className="px-3 py-2">Chiffre d’affaires TTC</td>
               <td className="px-3 py-2" />
               <td className="px-3 py-2 text-right tabular-nums">{CHF2.format(ca)}</td>
             </tr>
             <tr>
-              <td className="px-3 py-2">À couvrir sur l’année</td>
-              <td className="px-3 py-2 text-xs text-neutral-500">{CHF2.format(aCouvrirMois)} × 12</td>
-              <td className="px-3 py-2 text-right tabular-nums">− {CHF2.format(aCouvrirAn)}</td>
+              <td className="px-3 py-2">À couvrir chaque mois</td>
+              <td className="px-3 py-2 text-xs text-neutral-500">tableau ci-dessus</td>
+              <td className="px-3 py-2 text-right tabular-nums">− {CHF2.format(aCouvrirMois)}</td>
             </tr>
             <tr>
               <td className="px-3 py-2">
                 Apprenantes
                 <span className="block text-xs text-neutral-500">
-                  {CHF2.format(coutApprenanteAn)} par an chacune
+                  {CHF2.format(coutApprenanteMois)} par mois chacune
                   {apprenantesForcees == null ? " — les parcours, sans les options ni la découverte" : ""}
                 </span>
               </td>
@@ -224,7 +223,7 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
                 <td className="px-3 py-2">
                   Formatrices
                   <span className="block text-xs text-neutral-500">
-                    {CHF2.format(formatriceMois)} HT par mois chacune × 12, supervision non facturable
+                    {CHF2.format(formatriceMois)} HT par mois chacune, supervision non facturable
                   </span>
                 </td>
                 <td className="px-3 py-2 text-right">
@@ -240,7 +239,7 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
             )}
             <tr className={"font-semibold " + (ecart >= 0 ? "bg-emerald-50 text-emerald-900" : "bg-rose-50 text-rose-900")}>
               <td className="px-3 py-2">{ecart >= 0 ? "Au-dessus du point de bascule" : "Sous le point de bascule"}</td>
-              <td className="px-3 py-2 text-xs font-normal">sur l’année, TTC, avant la TVA due</td>
+              <td className="px-3 py-2 text-xs font-normal">TTC, avant la TVA due</td>
               <td className="px-3 py-2 text-right tabular-nums">{CHF2.format(ecart)}</td>
             </tr>
           </tbody>
