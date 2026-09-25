@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
+import { Simulation, type LigneSimulation } from "./simulation";
 
 export const metadata: Metadata = { title: "Modèle économique" };
 export const dynamic = "force-dynamic";
@@ -60,14 +61,6 @@ const CHF2 = new Intl.NumberFormat("fr-CH", {
 // point de bascule étaient recopiés (29/59/79/100/179) et le commentaire disait que
 // z3/z4 n'étaient pas fixés alors qu'ils l'étaient. Ils viennent maintenant de
 // v_bareme (canaux) et de product_catalog (produits), lus dans la même page.
-// `prix` nul = dit « à fixer » par le modèle (v0.9.1 : la consolidation myShaman
-// Family a une durée, pas de prix) — montré, jamais caché ni inventé.
-type Tarif = {
-  label: string; prix: number | null; rythme: "mensuel" | "hebdo";
-  duree?: string | null; precision?: string | null;
-};
-// Une année a 52 semaines : 52/12 semaines par mois, pas 4.
-const SEMAINES_PAR_MOIS = 52 / 12;
 type Bareme = { canal: string; mode: string; base: string; acceleration: string; lancement: string; complet: boolean };
 
 export default async function ModelePage() {
@@ -77,7 +70,7 @@ export default async function ModelePage() {
     supabase.from("v_modele_economique").select("*").maybeSingle(),
     supabase.from("v_bareme").select("*").order("canal"),
     supabase.from("product_catalog").select("code, label, price_ttc, kind")
-      .in("code", ["MONITORING_ST2", "SOIN_CHLOE_PATTERN", "ABO_ACCELERATION_4S"]),
+      .in("code", ["SOIN_CHLOE_PATTERN"]),
     supabase.from("modele_version").select("version, fige_le, parametres"),
   ]);
   const { derniere, lire, lireTexte } = parVersion((vers ?? []) as Version[]);
@@ -88,26 +81,37 @@ export default async function ModelePage() {
   const reverseDecouverte = lire(["decouverte_z1", "reverse_a_patrick"]);
   const z2 = bareme.find((b) => b.canal === "z2"), z3 = bareme.find((b) => b.canal === "z3");
   const prix = (code: string) => Number(prods?.find((p) => p.code === code)?.price_ttc ?? 0);
-  const TARIFS: Tarif[] = [
-    { label: "Programme découverte z1 — reversé par l’animateur", prix: reverseDecouverte, rythme: "hebdo" as const },
-    // Les parcours (v0.9.1, DEC Patrick 25.09) : supervision active puis consolidation.
-    { label: "myShaman — supervision active du mentor", prix: lire(["myshaman", "supervision_active_mois"]),
-      duree: lireTexte(["myshaman", "supervision_active_duree"]), rythme: "mensuel" as const },
-    { label: "myShaman — consolidation, sans supervision globale", prix: lire(["myshaman", "consolidation_mois"]),
-      duree: lireTexte(["myshaman", "consolidation_duree"]), rythme: "mensuel" as const },
-    { label: "myShaman Family — supervision active du mentor", prix: lire(["myshamanfamily", "supervision_active_mois"]),
-      duree: lireTexte(["myshamanfamily", "supervision_active_duree"]), rythme: "mensuel" as const },
-    { label: "myShaman Family — consolidation", prix: lire(["myshamanfamily", "consolidation_mois"]),
-      duree: lireTexte(["myshamanfamily", "consolidation_duree"]), rythme: "mensuel" as const },
-    { label: lireTexte(["vibration_therapeute", "nom"]) ?? "Programme Vibration de thérapeute",
+  // v0.9.4, DEC Patrick 25.09 : une simulation au lieu de « il en faut ». Ordre,
+  // lignes retirées (Monitoring ST2) et quantités de départ : celles du modèle.
+  // `prix` nul = « à fixer » dans le modèle — montré, jamais inventé.
+  const depart = (id: string) => lire(["point_de_bascule", "quantites_par_defaut", id]) ?? 0;
+  const LIGNES: LigneSimulation[] = ([
+    { id: "soin_3_ames", label: "Soin 3 Âmes et + (avec don de soutien)", prix: prix("SOIN_CHLOE_PATTERN"),
+      rythme: "mensuel", apprenante: true },
+    { id: "decouverte_z1", label: "Programme découverte z1 — reversé par l’animateur", prix: reverseDecouverte,
+      rythme: "hebdo", apprenante: false },
+    { id: "myshaman_supervision_active", label: "myShaman — supervision active du mentor",
+      prix: lire(["myshaman", "supervision_active_mois"]), duree: lireTexte(["myshaman", "supervision_active_duree"]),
+      rythme: "mensuel", apprenante: true },
+    { id: "myshaman_consolidation", label: "myShaman — consolidation, sans supervision globale",
+      prix: lire(["myshaman", "consolidation_mois"]), duree: lireTexte(["myshaman", "consolidation_duree"]),
+      rythme: "mensuel", apprenante: true },
+    { id: "myshamanfamily_supervision_active", label: "myShaman Family — supervision active du mentor",
+      prix: lire(["myshamanfamily", "supervision_active_mois"]), duree: lireTexte(["myshamanfamily", "supervision_active_duree"]),
+      rythme: "mensuel", apprenante: true },
+    { id: "myshamanfamily_consolidation", label: "myShaman Family — consolidation",
+      prix: lire(["myshamanfamily", "consolidation_mois"]), duree: lireTexte(["myshamanfamily", "consolidation_duree"]),
+      rythme: "mensuel", apprenante: true },
+    { id: "vibration_therapeute", label: lireTexte(["vibration_therapeute", "nom"]) ?? "Programme Vibration de thérapeute",
       prix: lire(["vibration_therapeute", "prix_mois"]), duree: lireTexte(["vibration_therapeute", "duree"]),
-      precision: lireTexte(["vibration_therapeute", "option"]), rythme: "mensuel" as const },
-    { label: "Forfait z2 — accès aux applications", prix: chf(z2?.base), rythme: "mensuel" as const },
-    { label: "Forfait z3", prix: chf(z3?.base), rythme: "mensuel" as const },
-    { label: "Monitoring ST2", prix: prix("MONITORING_ST2"), rythme: "mensuel" as const },
-    { label: "Soin 3 Âmes et + (avec don de soutien)", prix: prix("SOIN_CHLOE_PATTERN"), rythme: "mensuel" as const },
-    { label: "Accélération, 1 mois", prix: chf(z2?.acceleration) || prix("ABO_ACCELERATION_4S"), rythme: "mensuel" as const },
-  ].filter((t) => t.prix === null || t.prix > 0);
+      precision: lireTexte(["vibration_therapeute", "option"]), rythme: "mensuel", apprenante: false },
+    { id: "z2", label: "Forfait z2 — accès aux applications", prix: chf(z2?.base), rythme: "mensuel", apprenante: true },
+    { id: "z3", label: "Forfait z3", prix: chf(z3?.base), rythme: "mensuel", apprenante: true },
+    { id: "acceleration_myshamanfamily", label: lireTexte(["acceleration_myshamanfamily", "nom"]) ?? "Accélération myShamanFamily",
+      prix: lire(["acceleration_myshamanfamily", "prix_mois"]), rythme: "mensuel", apprenante: false },
+  ] as Omit<LigneSimulation, "quantite">[])
+    .map((l) => ({ ...l, quantite: depart(l.id) }))
+    .filter((l) => l.prix === null || l.prix > 0);
 
   if (error || errBar || errVers || !data) {
     return (
@@ -137,16 +141,8 @@ export default async function ModelePage() {
   const coutAn = lire(["charges_patrick", "cout_apprenante_an"]);
   const parApprenante = coutAn != null ? coutAn / 12 : femmes > 0 ? n(m.variables_par_mois_3m) / femmes : 0;
   // v0.9.3, DEC Patrick 25.09 : « une formatrice me coûte CHF 452 HT par mois en
-  // supervision non facturable ». Le nombre de formatrices n'est pas dit : ce coût
-  // n'entre pas dans `fixe`, il se lit PAR formatrice, en plus.
+  // supervision non facturable ». Leur nombre se saisit dans la simulation.
   const formatrice = lire(["charges_patrick", "formatrice_supervision_mois_ht"]);
-  const pourCouvrir = (montant: number, t: Tarif): number | null => {
-    if (t.prix == null) return null;
-    if (t.rythme === "hebdo") return Math.ceil(montant / t.prix);
-    const net = t.prix - parApprenante;
-    return net > 0 ? Math.ceil(montant / net) : null;
-  };
-  const ilEnFaut = (t: Tarif) => pourCouvrir(fixe, t);
 
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-4 py-6">
@@ -214,7 +210,7 @@ export default async function ModelePage() {
               {formatrice != null && (
                 <tr>
                   <td className="px-3 py-2">Par formatrice — supervision non facturable</td>
-                  <td className="px-3 py-2 text-xs text-neutral-500">HT, en plus du total, pour chacune</td>
+                  <td className="px-3 py-2 text-xs text-neutral-500">HT, en plus, pour chacune — leur nombre se saisit plus bas</td>
                   <td className="px-3 py-2 text-right tabular-nums">+ {CHF2.format(formatrice)}</td>
                 </tr>
               )}
@@ -222,75 +218,17 @@ export default async function ModelePage() {
           </table>
         </div>
         <p className="text-sm text-neutral-600">
-          Il faut donc, pour couvrir {CHF2.format(fixe)} chaque mois — chaque apprenante coûtant{" "}
-          {CHF2.format(parApprenante)} avant de rapporter :
+          Joue avec les quantités : chaque ligne donne son chiffre d’affaires TTC, et le total
+          se compare, en bas, à ce qu’il faut couvrir.
         </p>
-        <div className="overflow-x-auto rounded-lg border border-neutral-200">
-          <table className="w-full text-sm">
-            <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="px-3 py-2">Ce qu’elle verse</th>
-                <th className="px-3 py-2">Rythme</th>
-                <th className="px-3 py-2 text-right">Prix</th>
-                <th className="px-3 py-2 text-right">Il en faut</th>
-                {formatrice != null && <th className="px-3 py-2 text-right">+ par formatrice</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {TARIFS.map((t) => {
-                const k = ilEnFaut(t);
-                return (
-                  <tr key={t.label}>
-                    <td className="px-3 py-2">
-                      {t.label}
-                      {t.precision && <span className="block text-xs text-neutral-500">{t.precision}</span>}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {t.rythme === "mensuel"
-                        ? <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-900">
-                            mensuel{t.duree ? ` · ${t.duree}` : ""}
-                          </span>
-                        : <span className="rounded bg-sky-100 px-1.5 py-0.5 text-sky-900">par semaine et par animateur</span>}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {t.prix == null ? <span className="text-amber-700">à fixer</span> : CHF.format(t.prix)}
-                    </td>
-                    <td className="px-3 py-2 text-right font-medium tabular-nums">
-                      {t.prix == null
-                        ? <span className="text-neutral-400">—</span>
-                        : k == null
-                        ? <span className="text-rose-700">jamais</span>
-                        : t.rythme === "hebdo"
-                          ? <>{k} animations / mois
-                              <span className="block text-xs font-normal text-neutral-400">
-                                ≈ {Math.ceil(fixe / (t.prix! * SEMAINES_PAR_MOIS))} animateurs chaque semaine
-                              </span>
-                            </>
-                          : k}
-                    </td>
-                    {formatrice != null && (() => {
-                      const f = pourCouvrir(formatrice, t);
-                      return (
-                        <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
-                          {t.prix == null ? <span className="text-neutral-400">—</span>
-                            : f == null ? <span className="text-rose-700">jamais</span>
-                            : t.rythme === "hebdo" ? `+ ${f} animations` : `+ ${f}`}
-                        </td>
-                      );
-                    })()}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <Simulation lignes={LIGNES} aCouvrir={fixe} parApprenante={parApprenante} formatrice={formatrice} />
         <p className="text-xs text-neutral-500">
           Programme découverte z1 : {z1 != null ? CHF.format(z1) : "—"} par participante, 5 × 4 heures
           dans la semaine ; l’animateur encaisse jusqu’à 9 participantes et en reverse{" "}
           {reverseDecouverte != null ? CHF.format(reverseDecouverte) : "—"} — c’est ce versement qui
-          entre ici. Le coût d’une participante sur cinq jours n’est pas mesuré : il n’est
-          pas retiré. Pour les versements mensuels, le coût par apprenante est retiré du prix avant
-          de compter.
+          entre ici, une fois par animation. Le coût d’une participante sur cinq jours n’est pas
+          mesuré : il n’est pas retiré. Les quantités de départ viennent du modèle ; rien n’est
+          enregistré quand tu les changes.
         </p>
       </section>
 
