@@ -16,7 +16,36 @@ type Modele = {
   outils_par_mois: number; exploitation_par_mois: number; charges_fixes: number;
   remuneration_annee: number; encaisse_moyen: number; reste_moyen: number;
   mois: number; femmes_payantes_3m: number;
+  // v0.9.0 (DEC Patrick 25.09) : Supabase + Anthropic, les charges qui suivent le
+  // nombre d'apprenantes — sur la fenêtre 2026 (pour les retirer de la part fixe)
+  // et sur les 3 derniers mois (pour le coût par apprenante, même fenêtre que
+  // femmes_payantes_3m).
+  variables_par_mois: number; variables_par_mois_3m: number;
 };
+
+// Les hypothèses du modèle vivent dans modele_version, FIGÉES (append-only). Une
+// version peut ne porter que ce qui change (v0.9.0 = delta sur v0.8.5) : on lit
+// chaque paramètre dans la version la plus récente qui le porte.
+type Version = { version: string; fige_le: string; parametres: Record<string, unknown> };
+const semver = (v: string) => v.replace(/^v/, "").split(".").map((x) => Number(x) || 0);
+function parVersion(versions: Version[]) {
+  const triees = [...versions].sort((a, b) => {
+    const [x, y] = [semver(a.version), semver(b.version)];
+    for (let i = 0; i < Math.max(x.length, y.length); i++) {
+      if ((x[i] ?? 0) !== (y[i] ?? 0)) return (y[i] ?? 0) - (x[i] ?? 0);
+    }
+    return 0;
+  });
+  const lire = (chemin: string[]): number | null => {
+    for (const v of triees) {
+      let o: unknown = v.parametres;
+      for (const k of chemin) o = o != null && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined;
+      if (typeof o === "number") return o;
+    }
+    return null;
+  };
+  return { derniere: triees[0] ?? null, lire };
+}
 
 const CHF = new Intl.NumberFormat("fr-CH", {
   style: "currency", currency: "CHF", minimumFractionDigits: 0, maximumFractionDigits: 0,
@@ -29,58 +58,84 @@ const CHF2 = new Intl.NumberFormat("fr-CH", {
 // point de bascule étaient recopiés (29/59/79/100/179) et le commentaire disait que
 // z3/z4 n'étaient pas fixés alors qu'ils l'étaient. Ils viennent maintenant de
 // v_bareme (canaux) et de product_catalog (produits), lus dans la même page.
-type Tarif = { label: string; prix: number; recurrent: boolean };
+type Tarif = { label: string; prix: number; rythme: "mensuel" | "hebdo" };
+// Une année a 52 semaines : 52/12 semaines par mois, pas 4.
+const SEMAINES_PAR_MOIS = 52 / 12;
 type Bareme = { canal: string; mode: string; base: string; acceleration: string; lancement: string; complet: boolean };
 
 export default async function ModelePage() {
   await requireSt6();
   const supabase = await createClient();
-  const [{ data, error }, { data: bar, error: errBar }, { data: prods }] = await Promise.all([
+  const [{ data, error }, { data: bar, error: errBar }, { data: prods }, { data: vers, error: errVers }] = await Promise.all([
     supabase.from("v_modele_economique").select("*").maybeSingle(),
     supabase.from("v_bareme").select("*").order("canal"),
     supabase.from("product_catalog").select("code, label, price_ttc, kind")
       .in("code", ["MONITORING_ST2", "SOIN_CHLOE_PATTERN", "ABO_ACCELERATION_4S"]),
+    supabase.from("modele_version").select("version, fige_le, parametres"),
   ]);
+  const { derniere, lire } = parVersion((vers ?? []) as Version[]);
   const bareme = (bar ?? []) as Bareme[];
   const chf = (s: string | null | undefined) => Number(String(s ?? "").replace(/[^\d.]/g, "")) || 0;
-  const z1 = 29; // programme découverte, 5 jours, une fois (DEC Patrick 09.09)
+  // ⚠️ z1 n'est plus écrit en dur (il l'était à 29) : DEC Patrick 25.09, v0.9.0.
+  const z1 = lire(["bareme", "z1"]);
+  const reverseDecouverte = lire(["decouverte_z1", "reverse_a_patrick"]);
   const z2 = bareme.find((b) => b.canal === "z2"), z3 = bareme.find((b) => b.canal === "z3");
   const prix = (code: string) => Number(prods?.find((p) => p.code === code)?.price_ttc ?? 0);
   const TARIFS: Tarif[] = [
-    { label: "Programme découverte — 5 jours en ligne", prix: z1, recurrent: false },
-    { label: "Forfait z2 — accès aux applications", prix: chf(z2?.base), recurrent: true },
-    { label: "Forfait z3", prix: chf(z3?.base), recurrent: true },
-    { label: "Monitoring ST2", prix: prix("MONITORING_ST2"), recurrent: true },
-    { label: "Soin 3 Âmes et + (avec don de soutien)", prix: prix("SOIN_CHLOE_PATTERN"), recurrent: true },
-    { label: "Accélération, 1 mois", prix: chf(z2?.acceleration) || prix("ABO_ACCELERATION_4S"), recurrent: true },
+    { label: "Programme découverte z1 — reversé par l’animateur", prix: reverseDecouverte ?? 0, rythme: "hebdo" as const },
+    { label: "myShaman — supervision active du mentor", prix: lire(["myshaman", "supervision_active_mois"]) ?? 0, rythme: "mensuel" as const },
+    { label: "myShaman — consolidation, sans supervision globale", prix: lire(["myshaman", "consolidation_mois"]) ?? 0, rythme: "mensuel" as const },
+    { label: "Forfait z2 — accès aux applications", prix: chf(z2?.base), rythme: "mensuel" as const },
+    { label: "Forfait z3", prix: chf(z3?.base), rythme: "mensuel" as const },
+    { label: "Monitoring ST2", prix: prix("MONITORING_ST2"), rythme: "mensuel" as const },
+    { label: "Soin 3 Âmes et + (avec don de soutien)", prix: prix("SOIN_CHLOE_PATTERN"), rythme: "mensuel" as const },
+    { label: "Accélération, 1 mois", prix: chf(z2?.acceleration) || prix("ABO_ACCELERATION_4S"), rythme: "mensuel" as const },
   ].filter((t) => t.prix > 0);
 
-  if (error || errBar || !data) {
+  if (error || errBar || errVers || !data) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-6">
         <h1 className="text-2xl font-semibold">Modèle économique</h1>
         <p className="mt-4 rounded-lg bg-rose-50 p-4 text-rose-900">
-          {error?.message ?? errBar?.message ?? "Aucune donnée visible pour ce compte — le modèle est réservé au propriétaire."}
+          {error?.message ?? errBar?.message ?? errVers?.message ?? "Aucune donnée visible pour ce compte — le modèle est réservé au propriétaire."}
         </p>
       </main>
     );
   }
   const m = data as Modele;
   const n = (v: unknown) => Number(v ?? 0);
-  const fixe = n(m.charges_fixes);
+  // Ce qui ne bouge pas avec le nombre : les charges relevées MOINS Supabase et
+  // Anthropic (même fenêtre 2026), plus ce que la banque ne montre pas.
+  const fixesReleves = n(m.charges_fixes) - n(m.variables_par_mois);
+  const caisseMaladie = lire(["charges_patrick", "caisse_maladie_mois"]) ?? 0;
+  const electricite = lire(["charges_patrick", "electricite_mois"]) ?? 0;
+  const chargesSociales = lire(["charges_patrick", "charges_sociales_mois"]) ?? 0;
+  const fixe = fixesReleves + caisseMaladie + electricite + chargesSociales;
+  // Ce qui suit le nombre : Supabase + Anthropic des 3 derniers mois pleins,
+  // rapportés aux femmes qui ont payé sur la même fenêtre.
+  const femmes = n(m.femmes_payantes_3m);
+  const parApprenante = femmes > 0 ? n(m.variables_par_mois_3m) / femmes : 0;
+  const ilEnFaut = (t: Tarif): number | null => {
+    if (t.rythme === "hebdo") return Math.ceil(fixe / t.prix);
+    const net = t.prix - parApprenante;
+    return net > 0 ? Math.ceil(fixe / net) : null;
+  };
 
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-4 py-6">
       <header>
         <h1 className="text-2xl font-semibold">Modèle économique</h1>
         <p className="mt-1 text-sm text-neutral-600">
-          Calculé sur {n(m.mois)} mois de relevés 2026 — aucun chiffre écrit en dur.
+          Calculé sur {n(m.mois)} mois de relevés 2026
+          {derniere && <> et les hypothèses <a className="underline" href="/versions">{derniere.version}</a> du {new Date(derniere.fige_le).toLocaleDateString("fr-CH")}</>}
+          {" "}— aucun chiffre écrit en dur.
         </p>
       </header>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[
-          ["Charges fixes / mois", CHF2.format(fixe), "outils + exploitation"],
+          ["À couvrir / mois", CHF2.format(fixe), "fixes + caisse maladie + électricité"],
+          ["Coût par apprenante", CHF2.format(parApprenante), "Supabase + Anthropic, 3 mois"],
           ["Encaissé / mois", CHF2.format(n(m.encaisse_moyen)), "moyenne 2026"],
           ["Reste / mois", CHF2.format(n(m.reste_moyen)), "après TVA et charges"],
           ["Femmes qui paient", String(n(m.femmes_payantes_3m)), "3 derniers mois"],
@@ -96,10 +151,39 @@ export default async function ModelePage() {
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Le point de bascule</h2>
         <p className="text-sm text-neutral-600">
-          Les charges ne bougent pas avec le nombre : {CHF2.format(n(m.outils_par_mois))} d’outils
-          et {CHF2.format(n(m.exploitation_par_mois))} d’exploitation par mois, que tu accompagnes
-          neuf femmes ou trente. Il faut donc, pour couvrir {CHF2.format(fixe)} chaque mois —
-          et un versement unique ne le couvre qu’une fois :
+          Une partie des charges <strong>suit le nombre d’apprenantes</strong> : Supabase et
+          Anthropic ({CHF2.format(n(m.variables_par_mois_3m))} par mois sur les trois derniers
+          mois, pour {femmes} femmes qui paient), soit{" "}
+          <strong className="tabular-nums">{CHF2.format(parApprenante)}</strong> par apprenante et
+          par mois. Le reste ne bouge pas avec le nombre — et il ne tient pas tout entier dans la
+          banque :
+        </p>
+        <div className="overflow-x-auto rounded-lg border border-neutral-200">
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-neutral-100">
+              {([
+                ["Outils et exploitation, hors Supabase et Anthropic", fixesReleves, "relevés 2026, moyenne mensuelle"],
+                ["Caisse maladie", caisseMaladie, "hors banque — pas payée aujourd’hui"],
+                ["Électricité", electricite, "hors banque"],
+                ["Charges sociales", chargesSociales, "aucune générée aujourd’hui"],
+              ] as [string, number, string][]).map(([t, v, src]) => (
+                <tr key={t}>
+                  <td className="px-3 py-2">{t}</td>
+                  <td className="px-3 py-2 text-xs text-neutral-500">{src}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{CHF2.format(v)}</td>
+                </tr>
+              ))}
+              <tr className="bg-neutral-50 font-medium">
+                <td className="px-3 py-2">À couvrir chaque mois</td>
+                <td className="px-3 py-2" />
+                <td className="px-3 py-2 text-right tabular-nums">{CHF2.format(fixe)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="text-sm text-neutral-600">
+          Il faut donc, pour couvrir {CHF2.format(fixe)} chaque mois — chaque apprenante coûtant{" "}
+          {CHF2.format(parApprenante)} avant de rapporter :
         </p>
         <div className="overflow-x-auto rounded-lg border border-neutral-200">
           <table className="w-full text-sm">
@@ -112,32 +196,52 @@ export default async function ModelePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {TARIFS.map((t) => (
-                <tr key={t.label}>
-                  <td className="px-3 py-2">{t.label}</td>
-                  <td className="px-3 py-2 text-xs">
-                    {t.recurrent
-                      ? <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-900">mensuel</span>
-                      : <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-neutral-600">une fois</span>}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">{CHF.format(t.prix)}</td>
-                  <td className="px-3 py-2 text-right font-medium tabular-nums">
-                    {Math.ceil(fixe / t.prix)}
-                    {!t.recurrent && <span className="ml-1 text-xs font-normal text-neutral-400">une seule fois</span>}
-                  </td>
-                </tr>
-              ))}
+              {TARIFS.map((t) => {
+                const k = ilEnFaut(t);
+                return (
+                  <tr key={t.label}>
+                    <td className="px-3 py-2">{t.label}</td>
+                    <td className="px-3 py-2 text-xs">
+                      {t.rythme === "mensuel"
+                        ? <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-900">mensuel</span>
+                        : <span className="rounded bg-sky-100 px-1.5 py-0.5 text-sky-900">par semaine et par animateur</span>}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{CHF.format(t.prix)}</td>
+                    <td className="px-3 py-2 text-right font-medium tabular-nums">
+                      {k == null
+                        ? <span className="text-rose-700">jamais</span>
+                        : t.rythme === "hebdo"
+                          ? <>{k} animations / mois
+                              <span className="block text-xs font-normal text-neutral-400">
+                                ≈ {Math.ceil(fixe / (t.prix * SEMAINES_PAR_MOIS))} animateurs chaque semaine
+                              </span>
+                            </>
+                          : k}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+        <p className="text-xs text-neutral-500">
+          Programme découverte z1 : {z1 != null ? CHF.format(z1) : "—"} par participante, 5 × 4 heures
+          dans la semaine ; l’animateur encaisse jusqu’à 9 participantes et en reverse{" "}
+          {reverseDecouverte != null ? CHF.format(reverseDecouverte) : "—"} — c’est ce versement qui
+          entre ici. Le coût d’une participante sur cinq jours n’est pas mesuré : il n’est
+          pas retiré. Pour les versements mensuels, le coût par apprenante est retiré du prix avant
+          de compter.
+        </p>
       </section>
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Où le volume cesse de porter</h2>
         <div className="rounded-xl border border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-800">
           <p>
-            <strong>Un soin porté seul est presque toute marge</strong> — les charges
-            étant fixes, chaque versement supplémentaire tombe entier.
+            <strong>Un soin porté seul est presque toute marge</strong> — chaque versement
+            supplémentaire tombe presque entier, moins{" "}
+            <span className="tabular-nums">{CHF2.format(parApprenante)}</span> de Supabase et
+            d’Anthropic par apprenante.
           </p>
           <p className="mt-2">
             <strong>Un soin co-réalisé ne l’est pas, et ce n’est pas un défaut.</strong>{" "}
@@ -171,7 +275,7 @@ export default async function ModelePage() {
               <tr>
                 <td className="px-3 py-2">z1</td>
                 <td className="px-3 py-2 text-neutral-600">à l’unité</td>
-                <td className="px-3 py-2 text-right tabular-nums">{z1} CHF</td>
+                <td className="px-3 py-2 text-right tabular-nums">{z1 != null ? `${z1} CHF` : "à fixer"}</td>
                 <td className="px-3 py-2 text-right text-neutral-400">—</td>
                 <td className="px-3 py-2 text-right text-neutral-400">—</td>
               </tr>
