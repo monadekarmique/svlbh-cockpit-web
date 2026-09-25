@@ -136,12 +136,17 @@ export default async function ModelePage() {
   const femmes = n(m.femmes_payantes_3m);
   const coutAn = lire(["charges_patrick", "cout_apprenante_an"]);
   const parApprenante = coutAn != null ? coutAn / 12 : femmes > 0 ? n(m.variables_par_mois_3m) / femmes : 0;
-  const ilEnFaut = (t: Tarif): number | null => {
+  // v0.9.3, DEC Patrick 25.09 : « une formatrice me coûte CHF 452 HT par mois en
+  // supervision non facturable ». Le nombre de formatrices n'est pas dit : ce coût
+  // n'entre pas dans `fixe`, il se lit PAR formatrice, en plus.
+  const formatrice = lire(["charges_patrick", "formatrice_supervision_mois_ht"]);
+  const pourCouvrir = (montant: number, t: Tarif): number | null => {
     if (t.prix == null) return null;
-    if (t.rythme === "hebdo") return Math.ceil(fixe / t.prix);
+    if (t.rythme === "hebdo") return Math.ceil(montant / t.prix);
     const net = t.prix - parApprenante;
-    return net > 0 ? Math.ceil(fixe / net) : null;
+    return net > 0 ? Math.ceil(montant / net) : null;
   };
+  const ilEnFaut = (t: Tarif) => pourCouvrir(fixe, t);
 
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-4 py-6">
@@ -206,6 +211,13 @@ export default async function ModelePage() {
                 <td className="px-3 py-2" />
                 <td className="px-3 py-2 text-right tabular-nums">{CHF2.format(fixe)}</td>
               </tr>
+              {formatrice != null && (
+                <tr>
+                  <td className="px-3 py-2">Par formatrice — supervision non facturable</td>
+                  <td className="px-3 py-2 text-xs text-neutral-500">HT, en plus du total, pour chacune</td>
+                  <td className="px-3 py-2 text-right tabular-nums">+ {CHF2.format(formatrice)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -221,6 +233,7 @@ export default async function ModelePage() {
                 <th className="px-3 py-2">Rythme</th>
                 <th className="px-3 py-2 text-right">Prix</th>
                 <th className="px-3 py-2 text-right">Il en faut</th>
+                {formatrice != null && <th className="px-3 py-2 text-right">+ par formatrice</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -255,6 +268,16 @@ export default async function ModelePage() {
                             </>
                           : k}
                     </td>
+                    {formatrice != null && (() => {
+                      const f = pourCouvrir(formatrice, t);
+                      return (
+                        <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
+                          {t.prix == null ? <span className="text-neutral-400">—</span>
+                            : f == null ? <span className="text-rose-700">jamais</span>
+                            : t.rythme === "hebdo" ? `+ ${f} animations` : `+ ${f}`}
+                        </td>
+                      );
+                    })()}
                   </tr>
                 );
               })}
