@@ -33,19 +33,29 @@ export type LigneSimulation = {
   apprenante: boolean;
 };
 
-const CHF = new Intl.NumberFormat("fr-CH", {
-  style: "currency", currency: "CHF", minimumFractionDigits: 0, maximumFractionDigits: 0,
-});
-const CHF2 = new Intl.NumberFormat("fr-CH", {
-  style: "currency", currency: "CHF", minimumFractionDigits: 2,
-});
+// ⚠️ PAS D'Intl POUR LE TEXTE DE CE COMPOSANT. Il est rendu deux fois — par Node
+// sur Render, puis par le navigateur — et les deux moteurs n'écrivent pas pareil :
+// mesuré le 25.09, Node « 5'073 CHF » (apostrophe), Chrome « 5 073 CHF » (espace).
+// Deux textes différents = erreur d'hydratation React #418. Ces formats-ci sont
+// faits à la main, donc identiques des deux côtés.
+const groupe = (n: number, decimales: number) => {
+  const [ent, dec] = Math.abs(n).toFixed(decimales).split(".");
+  const g = ent.replace(/\B(?=(\d{3})+(?!\d))/g, "\u202F");
+  return `${n < 0 ? "-" : ""}${g}${dec ? `.${dec}` : ""}`;
+};
+const CHF = { format: (n: number) => `${groupe(n, 0)}\u00A0CHF` };
+const CHF2 = { format: (n: number) => `${groupe(n, 2)}\u00A0CHF` };
 const entier = (v: string) => Math.max(0, Math.floor(Number(v) || 0));
-// ⚠️ Fuseau FIXÉ : sans lui, le serveur (Render, UTC) et le navigateur (Zurich)
-// écrivaient deux heures différentes — erreur d'hydratation React #418, mesurée le 25.09.
-const heure = (iso: string) =>
-  new Date(iso).toLocaleString("fr-CH", {
-    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Zurich",
-  });
+// L'heure : fuseau FIXÉ (serveur en UTC, navigateur à Zurich) et chiffres pris un
+// à un dans formatToParts — jamais la phrase d'Intl, dont la ponctuation varie.
+const heure = (iso: string) => {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Europe/Zurich",
+    }).formatToParts(new Date(iso)).map((x) => [x.type, x.value]),
+  );
+  return `${p.day}.${p.month} ${p.hour}:${p.minute}`;
+};
 
 export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceMois, scenario, cle, sauvegarde, sauvegardeLe }: {
   lignes: LigneSimulation[];
