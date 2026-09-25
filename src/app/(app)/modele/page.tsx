@@ -105,9 +105,10 @@ export default async function ModelePage() {
     { id: "myshamanfamily_supervision_active", label: "myShaman Family — supervision active du mentor",
       prix: lire(["myshamanfamily", "supervision_active_mois"]), duree: lireTexte(["myshamanfamily", "supervision_active_duree"]),
       rythme: "mensuel", apprenante: true },
-    { id: "myshamanfamily_consolidation", label: "myShaman Family — consolidation",
-      prix: lire(["myshamanfamily", "consolidation_mois"]), duree: lireTexte(["myshamanfamily", "consolidation_duree"]),
-      rythme: "mensuel", apprenante: true },
+    // v0.9.10 (Patrick 25.09) : remplace « myShaman Family — consolidation ».
+    { id: "myshamanfamily_constellation",
+      label: lireTexte(["myshamanfamily_constellation", "nom"]) ?? "MyShamanFamily Constellation",
+      prix: lire(["myshamanfamily_constellation", "prix"]), rythme: "unique", apprenante: true },
     { id: "vibration_therapeute", label: lireTexte(["vibration_therapeute", "nom"]) ?? "Programme Vibration de thérapeute",
       prix: lire(["vibration_therapeute", "prix_mois"]), duree: lireTexte(["vibration_therapeute", "duree"]),
       precision: lireTexte(["vibration_therapeute", "option"]), rythme: "mensuel", apprenante: false },
