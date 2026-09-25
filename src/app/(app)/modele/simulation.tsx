@@ -155,7 +155,8 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteMois, formatric
                       : <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-neutral-700">{l.duree ?? "à l’unité"}</span>}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">
-                  {l.prix == null ? <span className="text-amber-700">à fixer</span> : CHF.format(l.prix)}
+                  {l.prix == null ? <span className="text-amber-700">à fixer</span>
+                    : Number.isInteger(l.prix) ? CHF.format(l.prix) : CHF2.format(l.prix)}
                 </td>
                 <td className="px-3 py-2 text-right">
                   <input

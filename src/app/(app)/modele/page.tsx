@@ -115,8 +115,8 @@ export default async function ModelePage() {
     { id: "vibration_femme_relation", label: lireTexte(["vibration_femme_relation", "nom"]) ?? "Programme Vibration de femme en relation",
       prix: lire(["vibration_femme_relation", "prix"]), duree: lireTexte(["vibration_femme_relation", "duree"]),
       rythme: "unique", apprenante: false },
-    { id: "z2", label: "Forfait z2 — accès aux applications", prix: chf(z2?.base), rythme: "mensuel", apprenante: true },
-    { id: "z3", label: "Forfait z3", prix: chf(z3?.base), rythme: "mensuel", apprenante: true },
+    { id: "z2", label: lireTexte(["canaux", "z2_nom"]) ?? "Forfait z2", prix: chf(z2?.base), rythme: "mensuel", apprenante: true },
+    { id: "z3", label: lireTexte(["canaux", "z3_nom"]) ?? "Forfait z3", prix: chf(z3?.base), rythme: "mensuel", apprenante: true },
     { id: "acceleration_myshamanfamily", label: lireTexte(["acceleration_myshamanfamily", "nom"]) ?? "Accélération myShamanFamily",
       prix: lire(["acceleration_myshamanfamily", "prix_mois"]), rythme: "mensuel", apprenante: false },
     { id: "acceleration_myshaman_myshamanfamily",
@@ -128,6 +128,11 @@ export default async function ModelePage() {
       prix: lire(["consulting", "prix_jour"]), rythme: "unique",
       duree: lireTexte(["consulting", "paquet"]) ? `la journée — paquet de ${lireTexte(["consulting", "paquet"])}` : "la journée",
       apprenante: false },
+    // v0.9.12 (Patrick 25.09) : « rajoute livres priv1 et livres chroma », « 9.80 par livre ».
+    { id: "livres_priv1", label: lireTexte(["livres_priv1", "nom"]) ?? "Livres Priv1",
+      prix: lire(["livres_priv1", "prix"]), duree: lireTexte(["livres_priv1", "unite"]), rythme: "unique", apprenante: false },
+    { id: "livres_chroma", label: lireTexte(["livres_chroma", "nom"]) ?? "Livres Chroma",
+      prix: lire(["livres_chroma", "prix"]), duree: lireTexte(["livres_chroma", "unite"]), rythme: "unique", apprenante: false },
   ] as Omit<LigneSimulation, "quantite">[])
     .map((l) => ({ ...l, quantite: depart(l.id) }))
     .filter((l) => l.prix === null || l.prix > 0);
