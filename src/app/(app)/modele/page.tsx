@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
 import { Simulation, type LigneSimulation } from "./simulation";
+import type { EtatSimulation } from "./actions";
 
 export const metadata: Metadata = { title: "Modèle économique" };
 export const dynamic = "force-dynamic";
@@ -73,6 +74,8 @@ export default async function ModelePage() {
       .in("code", ["SOIN_CHLOE_PATTERN"]),
     supabase.from("modele_version").select("version, fige_le, parametres"),
   ]);
+  // La simulation enregistrée (25.09, « mes simulations sont persistantes ? »).
+  const { data: sims } = await supabase.from("modele_simulation").select("scenario, etat, maj_le");
   const { derniere, lire, lireTexte } = parVersion((vers ?? []) as Version[]);
   const bareme = (bar ?? []) as Bareme[];
   const chf = (s: string | null | undefined) => Number(String(s ?? "").replace(/[^\d.]/g, "")) || 0;
@@ -135,6 +138,9 @@ export default async function ModelePage() {
     .map((l) => ({ ...l, quantite: depart(l.id) }))
     .filter((l) => l.prix === null || l.prix > 0);
   const scenario = lireTexte(["point_de_bascule", "scenario"]);
+  const cle = scenario ?? "Patrick seul";
+  const sim = (sims ?? []).find((x) => x.scenario === cle) as
+    { etat: EtatSimulation; maj_le: string } | undefined;
 
   if (error || errBar || errVers || !data) {
     return (
@@ -246,14 +252,15 @@ export default async function ModelePage() {
           l’année.
         </p>
         <Simulation lignes={LIGNES} aCouvrirMois={fixe} coutApprenanteAn={parApprenante * 12}
-          formatriceMois={formatrice} scenario={scenario} />
+          formatriceMois={formatrice} scenario={scenario} cle={cle}
+          sauvegarde={sim?.etat ?? null} sauvegardeLe={sim?.maj_le ?? null} />
         <p className="text-xs text-neutral-500">
           Programme découverte z1 : {z1 != null ? CHF.format(z1) : "—"} par participante, 5 × 4 heures
           dans la semaine ; l’animateur encaisse jusqu’à 9 participantes et en reverse{" "}
           {reverseDecouverte != null ? CHF.format(reverseDecouverte) : "—"} — c’est ce versement qui
           entre ici, une fois par animation. Le coût d’une participante sur cinq jours n’est pas
-          mesuré : il n’est pas retiré. Les quantités de départ viennent du modèle ; rien n’est
-          enregistré quand tu les changes.
+          mesuré : il n’est pas retiré. Les valeurs de départ viennent du modèle ; tes changements
+          s’enregistrent seuls, pour ce scénario, et se retrouvent sur tous tes appareils.
         </p>
       </section>
 

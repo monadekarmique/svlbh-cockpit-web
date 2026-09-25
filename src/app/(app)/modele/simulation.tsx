@@ -10,10 +10,14 @@
 // formatrices (coût mensuel HT × 12 chacune). Prix, durées et quantités de départ
 // viennent de la base : ce composant ne connaît aucun chiffre.
 //
-// ⚠️ Rien n'est enregistré : recharger la page revient aux valeurs du modèle.
+// PERSISTANTE (Patrick, 25.09 : « mes simulations sont persistantes ? ») : chaque
+// changement s'enregistre seul, 700 ms après la dernière frappe, dans
+// modele_simulation (une ligne par scénario, propriétaire ST6 seul). Un échec
+// d'enregistrement se NOMME à l'écran — jamais un « enregistré » qui ment.
 // La sélection du nombre au clic vient de NumberInputSelectAll, monté dans le
 // layout (DEC Patrick 10.06) — pas d'onFocus ici.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { enregistrerSimulation, type EtatSimulation } from "./actions";
 
 export type LigneSimulation = {
   id: string;
@@ -39,22 +43,56 @@ const CHF2 = new Intl.NumberFormat("fr-CH", {
 });
 const entier = (v: string) => Math.max(0, Math.floor(Number(v) || 0));
 
-export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceMois, scenario }: {
+const heure = (iso: string) =>
+  new Date(iso).toLocaleString("fr-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceMois, scenario, cle, sauvegarde, sauvegardeLe }: {
   lignes: LigneSimulation[];
   aCouvrirMois: number;
   coutApprenanteAn: number;
   formatriceMois: number | null;
   scenario: string | null;
+  /** Le scénario sous lequel la simulation s'enregistre. */
+  cle: string;
+  /** Ce qui a été enregistré pour ce scénario, ou nul si jamais. */
+  sauvegarde: EtatSimulation | null;
+  sauvegardeLe: string | null;
 }) {
+  // Les valeurs du modèle, puis ce que Patrick a enregistré par-dessus. Une ligne
+  // apparue depuis (nouveau tarif) garde la valeur du modèle.
+  const modeleQ = () => Object.fromEntries(lignes.map((l) => [l.id, l.quantite]));
+  const modeleP = () => Object.fromEntries(lignes.map((l) => [l.id, l.paiements]));
   const [quantites, setQuantites] = useState<Record<string, number>>(
-    () => Object.fromEntries(lignes.map((l) => [l.id, l.quantite])),
+    () => ({ ...modeleQ(), ...(sauvegarde?.quantites ?? {}) }),
   );
   const [paiements, setPaiements] = useState<Record<string, number>>(
-    () => Object.fromEntries(lignes.map((l) => [l.id, l.paiements])),
+    () => ({ ...modeleP(), ...(sauvegarde?.paiements ?? {}) }),
   );
-  const [formatrices, setFormatrices] = useState(0);
+  const [formatrices, setFormatrices] = useState(sauvegarde?.formatrices ?? 0);
   // Nul = le nombre d'apprenantes suit les lignes « apprenante » ; forçable à la main.
-  const [apprenantesForcees, setApprenantesForcees] = useState<number | null>(null);
+  const [apprenantesForcees, setApprenantesForcees] = useState<number | null>(sauvegarde?.apprenantesForcees ?? null);
+
+  type Statut = { etat: "jamais" } | { etat: "enregistre"; le: string } | { etat: "en_cours" } | { etat: "erreur"; message: string };
+  const [statut, setStatut] = useState<Statut>(sauvegardeLe ? { etat: "enregistre", le: sauvegardeLe } : { etat: "jamais" });
+  const premier = useRef(true);
+  useEffect(() => {
+    // Le premier rendu montre ce qui est déjà en base : rien à réécrire.
+    if (premier.current) { premier.current = false; return; }
+    setStatut({ etat: "en_cours" });
+    const t = setTimeout(() => {
+      enregistrerSimulation(cle, { quantites, paiements, formatrices, apprenantesForcees })
+        .then((le) => setStatut({ etat: "enregistre", le }))
+        .catch((e: unknown) => setStatut({ etat: "erreur", message: e instanceof Error ? e.message : String(e) }));
+    }, 700);
+    return () => clearTimeout(t);
+  }, [cle, quantites, paiements, formatrices, apprenantesForcees]);
+
+  const revenirAuModele = () => {
+    setQuantites(modeleQ());
+    setPaiements(modeleP());
+    setFormatrices(0);
+    setApprenantesForcees(null);
+  };
 
   const q = (id: string) => quantites[id] ?? 0;
   const p = (id: string) => paiements[id] ?? 0;
@@ -76,6 +114,15 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
           ? (scenario ?? "Patrick seul")
           : `avec ${formatrices} formatrice${formatrices > 1 ? "s" : ""}`}
         <span className="font-normal text-neutral-500"> — chiffre d’affaires sur l’année</span>
+      </p>
+      <p className="flex flex-wrap items-center gap-3 text-xs">
+        {statut.etat === "enregistre" && <span className="text-emerald-700">Enregistré le {heure(statut.le)}</span>}
+        {statut.etat === "en_cours" && <span className="text-neutral-500">Enregistrement…</span>}
+        {statut.etat === "jamais" && <span className="text-neutral-500">Valeurs du modèle — rien d’enregistré pour ce scénario</span>}
+        {statut.etat === "erreur" && <span className="text-rose-700">Non enregistré — {statut.message}</span>}
+        <button type="button" className="text-neutral-500 underline" onClick={revenirAuModele}>
+          revenir aux valeurs du modèle
+        </button>
       </p>
       <div className="overflow-x-auto rounded-lg border border-neutral-200">
         <table className="w-full text-sm">
