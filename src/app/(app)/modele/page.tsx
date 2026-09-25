@@ -36,15 +36,17 @@ function parVersion(versions: Version[]) {
     }
     return 0;
   });
-  const lire = (chemin: string[]): number | null => {
+  const valeur = (chemin: string[], garde: (o: unknown) => boolean): unknown => {
     for (const v of triees) {
       let o: unknown = v.parametres;
       for (const k of chemin) o = o != null && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined;
-      if (typeof o === "number") return o;
+      if (garde(o)) return o;
     }
     return null;
   };
-  return { derniere: triees[0] ?? null, lire };
+  const lire = (chemin: string[]) => valeur(chemin, (o) => typeof o === "number") as number | null;
+  const lireTexte = (chemin: string[]) => valeur(chemin, (o) => typeof o === "string") as string | null;
+  return { derniere: triees[0] ?? null, lire, lireTexte };
 }
 
 const CHF = new Intl.NumberFormat("fr-CH", {
@@ -58,7 +60,12 @@ const CHF2 = new Intl.NumberFormat("fr-CH", {
 // point de bascule étaient recopiés (29/59/79/100/179) et le commentaire disait que
 // z3/z4 n'étaient pas fixés alors qu'ils l'étaient. Ils viennent maintenant de
 // v_bareme (canaux) et de product_catalog (produits), lus dans la même page.
-type Tarif = { label: string; prix: number; rythme: "mensuel" | "hebdo" };
+// `prix` nul = dit « à fixer » par le modèle (v0.9.1 : la consolidation myShaman
+// Family a une durée, pas de prix) — montré, jamais caché ni inventé.
+type Tarif = {
+  label: string; prix: number | null; rythme: "mensuel" | "hebdo";
+  duree?: string | null; precision?: string | null;
+};
 // Une année a 52 semaines : 52/12 semaines par mois, pas 4.
 const SEMAINES_PAR_MOIS = 52 / 12;
 type Bareme = { canal: string; mode: string; base: string; acceleration: string; lancement: string; complet: boolean };
@@ -73,7 +80,7 @@ export default async function ModelePage() {
       .in("code", ["MONITORING_ST2", "SOIN_CHLOE_PATTERN", "ABO_ACCELERATION_4S"]),
     supabase.from("modele_version").select("version, fige_le, parametres"),
   ]);
-  const { derniere, lire } = parVersion((vers ?? []) as Version[]);
+  const { derniere, lire, lireTexte } = parVersion((vers ?? []) as Version[]);
   const bareme = (bar ?? []) as Bareme[];
   const chf = (s: string | null | undefined) => Number(String(s ?? "").replace(/[^\d.]/g, "")) || 0;
   // ⚠️ z1 n'est plus écrit en dur (il l'était à 29) : DEC Patrick 25.09, v0.9.0.
@@ -82,15 +89,25 @@ export default async function ModelePage() {
   const z2 = bareme.find((b) => b.canal === "z2"), z3 = bareme.find((b) => b.canal === "z3");
   const prix = (code: string) => Number(prods?.find((p) => p.code === code)?.price_ttc ?? 0);
   const TARIFS: Tarif[] = [
-    { label: "Programme découverte z1 — reversé par l’animateur", prix: reverseDecouverte ?? 0, rythme: "hebdo" as const },
-    { label: "myShaman — supervision active du mentor", prix: lire(["myshaman", "supervision_active_mois"]) ?? 0, rythme: "mensuel" as const },
-    { label: "myShaman — consolidation, sans supervision globale", prix: lire(["myshaman", "consolidation_mois"]) ?? 0, rythme: "mensuel" as const },
+    { label: "Programme découverte z1 — reversé par l’animateur", prix: reverseDecouverte, rythme: "hebdo" as const },
+    // Les parcours (v0.9.1, DEC Patrick 25.09) : supervision active puis consolidation.
+    { label: "myShaman — supervision active du mentor", prix: lire(["myshaman", "supervision_active_mois"]),
+      duree: lireTexte(["myshaman", "supervision_active_duree"]), rythme: "mensuel" as const },
+    { label: "myShaman — consolidation, sans supervision globale", prix: lire(["myshaman", "consolidation_mois"]),
+      duree: lireTexte(["myshaman", "consolidation_duree"]), rythme: "mensuel" as const },
+    { label: "myShaman Family — supervision active du mentor", prix: lire(["myshamanfamily", "supervision_active_mois"]),
+      duree: lireTexte(["myshamanfamily", "supervision_active_duree"]), rythme: "mensuel" as const },
+    { label: "myShaman Family — consolidation", prix: lire(["myshamanfamily", "consolidation_mois"]),
+      duree: lireTexte(["myshamanfamily", "consolidation_duree"]), rythme: "mensuel" as const },
+    { label: lireTexte(["vibration_therapeute", "nom"]) ?? "Programme Vibration de thérapeute",
+      prix: lire(["vibration_therapeute", "prix_mois"]), duree: lireTexte(["vibration_therapeute", "duree"]),
+      precision: lireTexte(["vibration_therapeute", "option"]), rythme: "mensuel" as const },
     { label: "Forfait z2 — accès aux applications", prix: chf(z2?.base), rythme: "mensuel" as const },
     { label: "Forfait z3", prix: chf(z3?.base), rythme: "mensuel" as const },
     { label: "Monitoring ST2", prix: prix("MONITORING_ST2"), rythme: "mensuel" as const },
     { label: "Soin 3 Âmes et + (avec don de soutien)", prix: prix("SOIN_CHLOE_PATTERN"), rythme: "mensuel" as const },
     { label: "Accélération, 1 mois", prix: chf(z2?.acceleration) || prix("ABO_ACCELERATION_4S"), rythme: "mensuel" as const },
-  ].filter((t) => t.prix > 0);
+  ].filter((t) => t.prix === null || t.prix > 0);
 
   if (error || errBar || errVers || !data) {
     return (
@@ -111,11 +128,15 @@ export default async function ModelePage() {
   const electricite = lire(["charges_patrick", "electricite_mois"]) ?? 0;
   const chargesSociales = lire(["charges_patrick", "charges_sociales_mois"]) ?? 0;
   const fixe = fixesReleves + caisseMaladie + electricite + chargesSociales;
-  // Ce qui suit le nombre : Supabase + Anthropic des 3 derniers mois pleins,
-  // rapportés aux femmes qui ont payé sur la même fenêtre.
+  // Ce qui suit le nombre. DEC Patrick 25.09 (v0.9.1) : « une apprenante va me
+  // coûter CHF 129 par an » — c'est ce chiffre qui compte. La mesure bancaire
+  // (Supabase + Anthropic des 3 derniers mois ÷ femmes qui ont payé) ne sert que
+  // si aucune version ne porte de coût.
   const femmes = n(m.femmes_payantes_3m);
-  const parApprenante = femmes > 0 ? n(m.variables_par_mois_3m) / femmes : 0;
+  const coutAn = lire(["charges_patrick", "cout_apprenante_an"]);
+  const parApprenante = coutAn != null ? coutAn / 12 : femmes > 0 ? n(m.variables_par_mois_3m) / femmes : 0;
   const ilEnFaut = (t: Tarif): number | null => {
+    if (t.prix == null) return null;
     if (t.rythme === "hebdo") return Math.ceil(fixe / t.prix);
     const net = t.prix - parApprenante;
     return net > 0 ? Math.ceil(fixe / net) : null;
@@ -135,7 +156,8 @@ export default async function ModelePage() {
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[
           ["À couvrir / mois", CHF2.format(fixe), "fixes + caisse maladie + électricité"],
-          ["Coût par apprenante", CHF2.format(parApprenante), "Supabase + Anthropic, 3 mois"],
+          ["Coût par apprenante / mois", CHF2.format(parApprenante),
+            coutAn != null ? `${CHF.format(coutAn)} par an` : "Supabase + Anthropic, 3 mois"],
           ["Encaissé / mois", CHF2.format(n(m.encaisse_moyen)), "moyenne 2026"],
           ["Reste / mois", CHF2.format(n(m.reste_moyen)), "après TVA et charges"],
           ["Femmes qui paient", String(n(m.femmes_payantes_3m)), "3 derniers mois"],
@@ -151,11 +173,15 @@ export default async function ModelePage() {
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Le point de bascule</h2>
         <p className="text-sm text-neutral-600">
-          Une partie des charges <strong>suit le nombre d’apprenantes</strong> : Supabase et
-          Anthropic ({CHF2.format(n(m.variables_par_mois_3m))} par mois sur les trois derniers
-          mois, pour {femmes} femmes qui paient), soit{" "}
-          <strong className="tabular-nums">{CHF2.format(parApprenante)}</strong> par apprenante et
-          par mois. Le reste ne bouge pas avec le nombre — et il ne tient pas tout entier dans la
+          Une partie des charges <strong>suit le nombre d’apprenantes</strong> — Supabase et
+          Anthropic :{" "}
+          {coutAn != null
+            ? <>une apprenante coûte <strong className="tabular-nums">{CHF.format(coutAn)} par an</strong>,
+                soit <strong className="tabular-nums">{CHF2.format(parApprenante)}</strong> par mois.</>
+            : <>{CHF2.format(n(m.variables_par_mois_3m))} par mois sur les trois derniers mois, pour{" "}
+                {femmes} femmes qui paient, soit{" "}
+                <strong className="tabular-nums">{CHF2.format(parApprenante)}</strong> par apprenante et par mois.</>}
+          {" "}Le reste ne bouge pas avec le nombre — et il ne tient pas tout entier dans la
           banque :
         </p>
         <div className="overflow-x-auto rounded-lg border border-neutral-200">
@@ -200,20 +226,29 @@ export default async function ModelePage() {
                 const k = ilEnFaut(t);
                 return (
                   <tr key={t.label}>
-                    <td className="px-3 py-2">{t.label}</td>
+                    <td className="px-3 py-2">
+                      {t.label}
+                      {t.precision && <span className="block text-xs text-neutral-500">{t.precision}</span>}
+                    </td>
                     <td className="px-3 py-2 text-xs">
                       {t.rythme === "mensuel"
-                        ? <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-900">mensuel</span>
+                        ? <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-900">
+                            mensuel{t.duree ? ` · ${t.duree}` : ""}
+                          </span>
                         : <span className="rounded bg-sky-100 px-1.5 py-0.5 text-sky-900">par semaine et par animateur</span>}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{CHF.format(t.prix)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {t.prix == null ? <span className="text-amber-700">à fixer</span> : CHF.format(t.prix)}
+                    </td>
                     <td className="px-3 py-2 text-right font-medium tabular-nums">
-                      {k == null
+                      {t.prix == null
+                        ? <span className="text-neutral-400">—</span>
+                        : k == null
                         ? <span className="text-rose-700">jamais</span>
                         : t.rythme === "hebdo"
                           ? <>{k} animations / mois
                               <span className="block text-xs font-normal text-neutral-400">
-                                ≈ {Math.ceil(fixe / (t.prix * SEMAINES_PAR_MOIS))} animateurs chaque semaine
+                                ≈ {Math.ceil(fixe / (t.prix! * SEMAINES_PAR_MOIS))} animateurs chaque semaine
                               </span>
                             </>
                           : k}
@@ -240,8 +275,8 @@ export default async function ModelePage() {
           <p>
             <strong>Un soin porté seul est presque toute marge</strong> — chaque versement
             supplémentaire tombe presque entier, moins{" "}
-            <span className="tabular-nums">{CHF2.format(parApprenante)}</span> de Supabase et
-            d’Anthropic par apprenante.
+            <span className="tabular-nums">{CHF2.format(parApprenante)}</span> par mois et par
+            apprenante (Supabase et Anthropic).
           </p>
           <p className="mt-2">
             <strong>Un soin co-réalisé ne l’est pas, et ce n’est pas un défaut.</strong>{" "}
