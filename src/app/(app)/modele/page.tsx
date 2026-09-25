@@ -124,10 +124,11 @@ export default async function ModelePage() {
   // Ce qui ne bouge pas avec le nombre : les charges relevées MOINS Supabase et
   // Anthropic (même fenêtre 2026), plus ce que la banque ne montre pas.
   const fixesReleves = n(m.charges_fixes) - n(m.variables_par_mois);
+  const salaire = lire(["charges_patrick", "salaire_net_mois"]) ?? 0; // v0.9.2, DEC Patrick 25.09
   const caisseMaladie = lire(["charges_patrick", "caisse_maladie_mois"]) ?? 0;
   const electricite = lire(["charges_patrick", "electricite_mois"]) ?? 0;
   const chargesSociales = lire(["charges_patrick", "charges_sociales_mois"]) ?? 0;
-  const fixe = fixesReleves + caisseMaladie + electricite + chargesSociales;
+  const fixe = fixesReleves + salaire + caisseMaladie + electricite + chargesSociales;
   // Ce qui suit le nombre. DEC Patrick 25.09 (v0.9.1) : « une apprenante va me
   // coûter CHF 129 par an » — c'est ce chiffre qui compte. La mesure bancaire
   // (Supabase + Anthropic des 3 derniers mois ÷ femmes qui ont payé) ne sert que
@@ -155,7 +156,7 @@ export default async function ModelePage() {
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[
-          ["À couvrir / mois", CHF2.format(fixe), "fixes + caisse maladie + électricité"],
+          ["À couvrir / mois", CHF2.format(fixe), "fixes + salaire + caisse maladie + électricité"],
           ["Coût par apprenante / mois", CHF2.format(parApprenante),
             coutAn != null ? `${CHF.format(coutAn)} par an` : "Supabase + Anthropic, 3 mois"],
           ["Encaissé / mois", CHF2.format(n(m.encaisse_moyen)), "moyenne 2026"],
@@ -189,6 +190,7 @@ export default async function ModelePage() {
             <tbody className="divide-y divide-neutral-100">
               {([
                 ["Outils et exploitation, hors Supabase et Anthropic", fixesReleves, "relevés 2026, moyenne mensuelle"],
+                ["Salaire net de Patrick", salaire, "hors banque — à compter"],
                 ["Caisse maladie", caisseMaladie, "hors banque — pas payée aujourd’hui"],
                 ["Électricité", electricite, "hors banque"],
                 ["Charges sociales", chargesSociales, "aucune générée aujourd’hui"],
