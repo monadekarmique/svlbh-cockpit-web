@@ -94,7 +94,7 @@ export default async function ModelePage() {
     const m = texte?.match(/\d+/);
     return {
       paiements: m ? Number(m[0]) : 1,
-      paiementsNote: texte == null ? "durée non dite" : /\bà\b/.test(texte) ? `${texte} — borne basse` : texte,
+      paiementsNote: texte == null ? "durée non dite" : /\sà\s/.test(texte) ? `${texte} — borne basse` : texte,
     };
   };
   const LIGNES: LigneSimulation[] = ([

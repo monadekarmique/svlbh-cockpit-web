@@ -43,8 +43,12 @@ const CHF2 = new Intl.NumberFormat("fr-CH", {
 });
 const entier = (v: string) => Math.max(0, Math.floor(Number(v) || 0));
 
+// ⚠️ Fuseau FIXÉ : sans lui, le serveur (Render, UTC) et le navigateur (Zurich)
+// écrivaient deux heures différentes — erreur d'hydratation React #418, mesurée le 25.09.
 const heure = (iso: string) =>
-  new Date(iso).toLocaleString("fr-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  new Date(iso).toLocaleString("fr-CH", {
+    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Zurich",
+  });
 
 export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceMois, scenario, cle, sauvegarde, sauvegardeLe }: {
   lignes: LigneSimulation[];
