@@ -84,55 +84,45 @@ export default async function ModelePage() {
   const reverseDecouverte = lire(["decouverte_z1", "reverse_a_patrick"]);
   const z2 = bareme.find((b) => b.canal === "z2"), z3 = bareme.find((b) => b.canal === "z3");
   const prix = (code: string) => Number(prods?.find((p) => p.code === code)?.price_ttc ?? 0);
-  // v0.9.4 puis v0.9.5, DEC Patrick 25.09 : une simulation au lieu de « il en
-  // faut », annuelle, scénario « Patrick seul ». Ordre, lignes et quantités de
-  // départ : celles du modèle. `prix` nul = « à fixer » — montré, jamais inventé.
+  // v0.9.4, DEC Patrick 25.09 : une simulation au lieu de « il en faut » — prix ×
+  // quantité, un total en bas, chiffre d'affaires ANNUEL, scénario « Patrick seul ».
+  // (« revient à l'ancienne version elle m'allait beaucoup mieux » : la colonne
+  // « paiements » de v0.9.5 est retirée.) Ordre, lignes et quantités de départ :
+  // celles du modèle. `prix` nul = « à fixer » — montré, jamais inventé.
   const depart = (id: string) => lire(["point_de_bascule", "quantites_par_defaut", id]) ?? 0;
-  // Paiements par personne sur l'année = la durée dite par le modèle. Une fourchette
-  // (« 4 à 8 mois ») compte sa borne basse, et la page le dit ; tout reste modifiable.
-  const duree = (texte: string | null) => {
-    const m = texte?.match(/\d+/);
-    return {
-      paiements: m ? Number(m[0]) : 1,
-      paiementsNote: texte == null ? "durée non dite" : /\sà\s/.test(texte) ? `${texte} — borne basse` : texte,
-    };
-  };
   const LIGNES: LigneSimulation[] = ([
     { id: "soin_3_ames", label: "Soin 3 Âmes et + (avec don de soutien)", prix: prix("SOIN_CHLOE_PATTERN"),
-      paiements: 1, paiementsNote: "par soin", apprenante: false },
+      rythme: "mensuel", apprenante: true },
     { id: "decouverte_z1", label: "Programme découverte z1 — reversé par l’animateur", prix: reverseDecouverte,
-      paiements: 1, paiementsNote: "par animation", apprenante: false },
+      rythme: "hebdo", apprenante: false },
     { id: "myshaman_supervision_active", label: "myShaman — supervision active du mentor",
-      prix: lire(["myshaman", "supervision_active_mois"]), ...duree(lireTexte(["myshaman", "supervision_active_duree"])),
-      apprenante: true },
+      prix: lire(["myshaman", "supervision_active_mois"]), duree: lireTexte(["myshaman", "supervision_active_duree"]),
+      rythme: "mensuel", apprenante: true },
     { id: "myshaman_consolidation", label: "myShaman — consolidation, sans supervision globale",
-      prix: lire(["myshaman", "consolidation_mois"]), ...duree(lireTexte(["myshaman", "consolidation_duree"])),
-      apprenante: false },
+      prix: lire(["myshaman", "consolidation_mois"]), duree: lireTexte(["myshaman", "consolidation_duree"]),
+      rythme: "mensuel", apprenante: true },
     { id: "myshamanfamily_supervision_active", label: "myShaman Family — supervision active du mentor",
-      prix: lire(["myshamanfamily", "supervision_active_mois"]), ...duree(lireTexte(["myshamanfamily", "supervision_active_duree"])),
-      apprenante: true },
+      prix: lire(["myshamanfamily", "supervision_active_mois"]), duree: lireTexte(["myshamanfamily", "supervision_active_duree"]),
+      rythme: "mensuel", apprenante: true },
     { id: "myshamanfamily_consolidation", label: "myShaman Family — consolidation",
-      prix: lire(["myshamanfamily", "consolidation_mois"]), ...duree(lireTexte(["myshamanfamily", "consolidation_duree"])),
-      apprenante: false },
+      prix: lire(["myshamanfamily", "consolidation_mois"]), duree: lireTexte(["myshamanfamily", "consolidation_duree"]),
+      rythme: "mensuel", apprenante: true },
     { id: "vibration_therapeute", label: lireTexte(["vibration_therapeute", "nom"]) ?? "Programme Vibration de thérapeute",
-      prix: lire(["vibration_therapeute", "prix_mois"]), ...duree(lireTexte(["vibration_therapeute", "duree"])),
-      precision: lireTexte(["vibration_therapeute", "option"]), apprenante: false },
+      prix: lire(["vibration_therapeute", "prix_mois"]), duree: lireTexte(["vibration_therapeute", "duree"]),
+      precision: lireTexte(["vibration_therapeute", "option"]), rythme: "mensuel", apprenante: false },
     { id: "vibration_femme_relation", label: lireTexte(["vibration_femme_relation", "nom"]) ?? "Programme Vibration de femme en relation",
-      prix: lire(["vibration_femme_relation", "prix"]), ...duree(null), apprenante: false },
-    { id: "z2", label: "Forfait z2 — accès aux applications", prix: chf(z2?.base),
-      paiements: 12, paiementsNote: "forfait mensuel", apprenante: true },
-    { id: "z3", label: "Forfait z3", prix: chf(z3?.base),
-      paiements: 12, paiementsNote: "forfait mensuel", apprenante: true },
+      prix: lire(["vibration_femme_relation", "prix"]), rythme: "unique", apprenante: false },
+    { id: "z2", label: "Forfait z2 — accès aux applications", prix: chf(z2?.base), rythme: "mensuel", apprenante: true },
+    { id: "z3", label: "Forfait z3", prix: chf(z3?.base), rythme: "mensuel", apprenante: true },
     { id: "acceleration_myshamanfamily", label: lireTexte(["acceleration_myshamanfamily", "nom"]) ?? "Accélération myShamanFamily",
-      prix: lire(["acceleration_myshamanfamily", "prix_mois"]), paiements: 1, paiementsNote: "un mois", apprenante: false },
+      prix: lire(["acceleration_myshamanfamily", "prix_mois"]), rythme: "mensuel", apprenante: false },
     { id: "acceleration_myshaman_myshamanfamily",
       label: lireTexte(["acceleration_myshaman_myshamanfamily", "nom"]) ?? "Accélération myShaman - myShamanFamily",
-      prix: lire(["acceleration_myshaman_myshamanfamily", "prix"]), ...duree(null), apprenante: false },
-    // v0.9.6 : 1 997 CHF la journée, par paquet de 5 jours sur 14 jours — la quantité
-    // compte les paquets de l'année.
+      prix: lire(["acceleration_myshaman_myshamanfamily", "prix"]), rythme: "unique", apprenante: false },
+    // v0.9.6 : 1 997 CHF la journée, par paquet de 5 jours sur 14 jours.
     { id: "consulting", label: lireTexte(["consulting", "nom"]) ?? "Journées de consulting",
-      prix: lire(["consulting", "prix_jour"]), paiements: lire(["consulting", "jours_par_paquet"]) ?? 1,
-      paiementsNote: `journées par paquet${lireTexte(["consulting", "paquet"]) ? ` (${lireTexte(["consulting", "paquet"])})` : ""}`,
+      prix: lire(["consulting", "prix_jour"]), rythme: "unique",
+      duree: lireTexte(["consulting", "paquet"]) ? `la journée — paquet de ${lireTexte(["consulting", "paquet"])}` : "la journée",
       apprenante: false },
   ] as Omit<LigneSimulation, "quantite">[])
     .map((l) => ({ ...l, quantite: depart(l.id) }))
@@ -247,9 +237,8 @@ export default async function ModelePage() {
           </table>
         </div>
         <p className="text-sm text-neutral-600">
-          Joue avec les paiements et les quantités de l’année : chaque ligne donne son chiffre
-          d’affaires TTC annuel, et le total se compare, en bas, à ce qu’il faut couvrir sur
-          l’année.
+          Joue avec les quantités : chaque ligne donne son chiffre d’affaires TTC sur l’année, et
+          le total se compare, en bas, à ce qu’il faut couvrir sur l’année.
         </p>
         <Simulation lignes={LIGNES} aCouvrirMois={fixe} coutApprenanteAn={parApprenante * 12}
           formatriceMois={formatrice} scenario={scenario} cle={cle}

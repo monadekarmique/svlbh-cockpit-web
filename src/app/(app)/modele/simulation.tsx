@@ -2,18 +2,18 @@
 
 // La simulation du point de bascule — DEC Patrick 25.09.2026.
 //   v0.9.4 : « au lieu de il faut je veux pouvoir jouer avec pour obtenir un total en bas »
-//   v0.9.5 : « cette version c'est si je suis tout seul et le chiffre d'affaire est annuel »
+//   puis : « cette version 0.9.4 c'est si je suis tout seul et le chiffre d'affaire est annuel »
+//   puis : « revient à l'ancienne version elle m'allait beaucoup mieux […] - persistante »
 //
-// Chaque ligne : prix × paiements par personne × quantité sur l'année = chiffre
-// d'affaires TTC annuel. Le total se compare à ce qu'il faut couvrir sur l'année
-// (charges du mois × 12), moins les apprenantes (coût annuel chacune) et les
-// formatrices (coût mensuel HT × 12 chacune). Prix, durées et quantités de départ
-// viennent de la base : ce composant ne connaît aucun chiffre.
+// ⚠️ LA FORME EST CELLE DE v0.9.4, et elle ne doit pas regrossir : prix × quantité
+// = chiffre d'affaires TTC de la ligne, un total en bas. Une colonne « paiements par
+// personne » ajoutée entre-temps a été retirée à la demande de Patrick — elle
+// répondait à une question qu'il ne posait pas. Le chiffre d'affaires est ANNUEL :
+// il se compare à ce qu'il faut couvrir sur l'année (charges du mois × 12).
 //
-// PERSISTANTE (Patrick, 25.09 : « mes simulations sont persistantes ? ») : chaque
-// changement s'enregistre seul, 700 ms après la dernière frappe, dans
-// modele_simulation (une ligne par scénario, propriétaire ST6 seul). Un échec
-// d'enregistrement se NOMME à l'écran — jamais un « enregistré » qui ment.
+// PERSISTANTE : chaque changement s'enregistre seul, 700 ms après la dernière
+// frappe, dans modele_simulation (une ligne par scénario, propriétaire ST6 seul).
+// Un échec d'enregistrement se NOMME à l'écran — jamais un « enregistré » qui ment.
 // La sélection du nombre au clic vient de NumberInputSelectAll, monté dans le
 // layout (DEC Patrick 10.06) — pas d'onFocus ici.
 import { useEffect, useRef, useState } from "react";
@@ -24,14 +24,12 @@ export type LigneSimulation = {
   label: string;
   /** Nul = « à fixer » dans le modèle : montré, jamais inventé. */
   prix: number | null;
-  /** Paiements par personne sur l'année (mois d'un parcours, 1 pour un paiement unique). */
-  paiements: number;
-  /** Ce que dit le modèle de la durée (« 5 mois », « 4 à 8 mois — borne basse »…). */
-  paiementsNote: string;
+  rythme: "mensuel" | "hebdo" | "unique";
+  duree?: string | null;
   precision?: string | null;
-  /** Quantité sur l'année, lue dans le modèle (0 si le modèle n'en dit rien). */
+  /** Quantité de départ, lue dans le modèle (0 si le modèle n'en dit rien). */
   quantite: number;
-  /** Compte dans les apprenantes par défaut (les entrées de parcours, pas les options). */
+  /** Compte dans les apprenantes par défaut (les options et la découverte non). */
   apprenante: boolean;
 };
 
@@ -42,7 +40,6 @@ const CHF2 = new Intl.NumberFormat("fr-CH", {
   style: "currency", currency: "CHF", minimumFractionDigits: 2,
 });
 const entier = (v: string) => Math.max(0, Math.floor(Number(v) || 0));
-
 // ⚠️ Fuseau FIXÉ : sans lui, le serveur (Render, UTC) et le navigateur (Zurich)
 // écrivaient deux heures différentes — erreur d'hydratation React #418, mesurée le 25.09.
 const heure = (iso: string) =>
@@ -65,12 +62,8 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
   // Les valeurs du modèle, puis ce que Patrick a enregistré par-dessus. Une ligne
   // apparue depuis (nouveau tarif) garde la valeur du modèle.
   const modeleQ = () => Object.fromEntries(lignes.map((l) => [l.id, l.quantite]));
-  const modeleP = () => Object.fromEntries(lignes.map((l) => [l.id, l.paiements]));
   const [quantites, setQuantites] = useState<Record<string, number>>(
     () => ({ ...modeleQ(), ...(sauvegarde?.quantites ?? {}) }),
-  );
-  const [paiements, setPaiements] = useState<Record<string, number>>(
-    () => ({ ...modeleP(), ...(sauvegarde?.paiements ?? {}) }),
   );
   const [formatrices, setFormatrices] = useState(sauvegarde?.formatrices ?? 0);
   // Nul = le nombre d'apprenantes suit les lignes « apprenante » ; forçable à la main.
@@ -84,24 +77,21 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
     if (premier.current) { premier.current = false; return; }
     setStatut({ etat: "en_cours" });
     const t = setTimeout(() => {
-      enregistrerSimulation(cle, { quantites, paiements, formatrices, apprenantesForcees })
+      enregistrerSimulation(cle, { quantites, paiements: {}, formatrices, apprenantesForcees })
         .then((le) => setStatut({ etat: "enregistre", le }))
         .catch((e: unknown) => setStatut({ etat: "erreur", message: e instanceof Error ? e.message : String(e) }));
     }, 700);
     return () => clearTimeout(t);
-  }, [cle, quantites, paiements, formatrices, apprenantesForcees]);
+  }, [cle, quantites, formatrices, apprenantesForcees]);
 
   const revenirAuModele = () => {
     setQuantites(modeleQ());
-    setPaiements(modeleP());
     setFormatrices(0);
     setApprenantesForcees(null);
   };
 
   const q = (id: string) => quantites[id] ?? 0;
-  const p = (id: string) => paiements[id] ?? 0;
-  const caLigne = (l: LigneSimulation) => (l.prix ?? 0) * p(l.id) * q(l.id);
-  const ca = lignes.reduce((s, l) => s + caLigne(l), 0);
+  const ca = lignes.reduce((s, l) => s + (l.prix ?? 0) * q(l.id), 0);
   const aCouvrirAn = aCouvrirMois * 12;
   const apprenantesAuto = lignes.filter((l) => l.apprenante).reduce((s, l) => s + q(l.id), 0);
   const apprenantes = apprenantesForcees ?? apprenantesAuto;
@@ -109,7 +99,7 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
   const coutFormatrices = formatriceMois != null ? formatrices * formatriceMois * 12 : 0;
   const ecart = ca - aCouvrirAn - coutApprenantes - coutFormatrices;
 
-  const champ = "w-16 rounded border border-neutral-300 px-2 py-1 text-right tabular-nums";
+  const champ = "w-20 rounded border border-neutral-300 px-2 py-1 text-right tabular-nums";
 
   return (
     <div className="space-y-3">
@@ -133,9 +123,9 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
           <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
             <tr>
               <th className="px-3 py-2">Ce qu’elle verse</th>
+              <th className="px-3 py-2">Rythme</th>
               <th className="px-3 py-2 text-right">Prix</th>
-              <th className="px-3 py-2 text-right">Paiements</th>
-              <th className="px-3 py-2 text-right">Quantité / an</th>
+              <th className="px-3 py-2 text-right">Quantité</th>
               <th className="px-3 py-2 text-right">CA TTC / an</th>
             </tr>
           </thead>
@@ -146,28 +136,31 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
                   {l.label}
                   {l.precision && <span className="block text-xs text-neutral-500">{l.precision}</span>}
                 </td>
+                <td className="px-3 py-2 text-xs">
+                  {l.rythme === "mensuel"
+                    ? <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-900">
+                        mensuel{l.duree ? ` · ${l.duree}` : ""}
+                      </span>
+                    : l.rythme === "hebdo"
+                      ? <span className="rounded bg-sky-100 px-1.5 py-0.5 text-sky-900">par semaine et par animateur</span>
+                      : <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-neutral-700">{l.duree ?? "à l’unité"}</span>}
+                </td>
                 <td className="px-3 py-2 text-right tabular-nums">
                   {l.prix == null ? <span className="text-amber-700">à fixer</span> : CHF.format(l.prix)}
                 </td>
                 <td className="px-3 py-2 text-right">
                   <input
                     type="number" min={0} step={1} className={champ}
-                    value={p(l.id)}
-                    onChange={(e) => setPaiements((x) => ({ ...x, [l.id]: entier(e.target.value) }))}
-                    aria-label={`Paiements par personne — ${l.label}`}
-                  />
-                  <span className="block text-xs text-neutral-400">{l.paiementsNote}</span>
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <input
-                    type="number" min={0} step={1} className={champ}
                     value={q(l.id)}
-                    onChange={(e) => setQuantites((x) => ({ ...x, [l.id]: entier(e.target.value) }))}
-                    aria-label={`Quantité sur l’année — ${l.label}`}
+                    onChange={(e) => setQuantites((p) => ({ ...p, [l.id]: entier(e.target.value) }))}
+                    aria-label={`Quantité — ${l.label}`}
                   />
+                  {l.rythme === "hebdo" && (
+                    <span className="block text-xs text-neutral-400">animations</span>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-right font-medium tabular-nums">
-                  {l.prix == null ? <span className="text-neutral-400">—</span> : CHF.format(caLigne(l))}
+                  {l.prix == null ? <span className="text-neutral-400">—</span> : CHF.format(l.prix * q(l.id))}
                 </td>
               </tr>
             ))}
@@ -197,7 +190,7 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
                 Apprenantes
                 <span className="block text-xs text-neutral-500">
                   {CHF2.format(coutApprenanteAn)} par an chacune
-                  {apprenantesForcees == null ? " — les entrées de parcours, sans les options ni la découverte" : ""}
+                  {apprenantesForcees == null ? " — les parcours, sans les options ni la découverte" : ""}
                 </span>
               </td>
               <td className="px-3 py-2 text-right">
@@ -205,7 +198,7 @@ export function Simulation({ lignes, aCouvrirMois, coutApprenanteAn, formatriceM
                   type="number" min={0} step={1} className={champ}
                   value={apprenantes}
                   onChange={(e) => setApprenantesForcees(entier(e.target.value))}
-                  aria-label="Nombre d’apprenantes sur l’année"
+                  aria-label="Nombre d’apprenantes"
                 />
                 {apprenantesForcees != null && (
                   <button type="button" className="ml-2 text-xs text-neutral-500 underline"
