@@ -302,7 +302,7 @@ export default async function ModelePage() {
             <tbody className="divide-y divide-neutral-100">
               <tr>
                 <td className="px-3 py-2">z1</td>
-                <td className="px-3 py-2 text-neutral-600">à l’unité</td>
+                <td className="px-3 py-2 text-neutral-600">{lireTexte(["bareme_modes", "z1"]) ?? "à l’unité"}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{z1 != null ? `${z1} CHF` : "à fixer"}</td>
                 <td className="px-3 py-2 text-right text-neutral-400">—</td>
                 <td className="px-3 py-2 text-right text-neutral-400">—</td>
@@ -311,13 +311,21 @@ export default async function ModelePage() {
                 <tr key={b.canal}>
                   <td className="px-3 py-2">{b.canal}</td>
                   <td className="px-3 py-2 text-neutral-600">
-                    {b.mode === "forfait" ? "forfait mensuel" : "% du chiffre d’affaires"}
+                    {/* v0.9.15 (DEC Patrick 26.09) : le libellé du programme ; le `mode`
+                        de la base (forfait / pourcentage_ca) reste la vérité technique. */}
+                    {lireTexte(["bareme_modes", b.canal])
+                      ?? (b.mode === "forfait" ? "forfait mensuel" : "% du chiffre d’affaires")}
                   </td>
                   <td className={"px-3 py-2 text-right tabular-nums " + (b.complet ? "" : "text-amber-700")}>
                     {b.complet ? b.base : "à fixer"}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">{b.acceleration}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{b.lancement}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-neutral-500">
+                    {b.lancement}
+                    {lireTexte(["bareme_lancement_note", b.canal]) && (
+                      <span className="block text-xs text-neutral-400">{lireTexte(["bareme_lancement_note", b.canal])}</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -325,14 +333,11 @@ export default async function ModelePage() {
         </div>
         <p className="text-sm text-neutral-600">
           Le <strong>forfait facture ce qu’on donne</strong>, le{" "}
-          <strong>pourcentage suit ce qu’elle gagne</strong> — d’où l’inversion
-          apparente : en z3 le lancement coûte plus cher que l’accélération, en z4
-          il coûte moins. Une femme qui lance sa pratique gagne peu.
+          <strong>pourcentage suit ce qu’elle gagne</strong>.
           <br />
-          <strong>Il n’y a pas de tarif « praticienne établie »</strong>, et il ne
-          faut pas en créer un : celle qui arrive avec un cabinet passe quand même
-          par z2 puis z3 — l’accélération n’achète que de la vitesse, jamais un
-          palier. Giulia : z1 → z3 en 61 jours, sans en sauter aucun.
+          {/* DEC Patrick 26.09 : « z4 est le tarif praticienne établie » — remplace
+              « il n'y a pas de tarif praticienne établie » (09.09). */}
+          <strong>z4 est le tarif praticienne établie.</strong>
         </p>
       </section>
     </main>
