@@ -303,7 +303,7 @@ export default async function ModelePage() {
               <tr>
                 <td className="px-3 py-2">z1</td>
                 <td className="px-3 py-2 text-neutral-600">{lireTexte(["bareme_modes", "z1"]) ?? "à l’unité"}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{z1 != null ? `${z1} CHF` : "à fixer"}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{z1 != null ? `${z1} CHF` : "à fixer"}</td>
                 <td className="px-3 py-2 text-right text-neutral-400">—</td>
                 <td className="px-3 py-2 text-right text-neutral-400">—</td>
               </tr>
@@ -316,11 +316,11 @@ export default async function ModelePage() {
                     {lireTexte(["bareme_modes", b.canal])
                       ?? (b.mode === "forfait" ? "forfait mensuel" : "% du chiffre d’affaires")}
                   </td>
-                  <td className={"px-3 py-2 text-right tabular-nums " + (b.complet ? "" : "text-amber-700")}>
+                  <td className={"whitespace-nowrap px-3 py-2 text-right tabular-nums " + (b.complet ? "" : "text-amber-700")}>
                     {b.complet ? b.base : "à fixer"}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">{b.acceleration}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-neutral-500">
+                  <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{b.acceleration}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-neutral-500">
                     {b.lancement}
                     {lireTexte(["bareme_lancement_note", b.canal]) && (
                       <span className="block text-xs text-neutral-400">{lireTexte(["bareme_lancement_note", b.canal])}</span>
