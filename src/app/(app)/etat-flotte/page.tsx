@@ -84,7 +84,14 @@ export default async function EtatFlottePage() {
   }
 
   const c = data.contenu ?? {};
-  const pins = (c.pins ?? []).filter((p) => !p.outil);
+  // HORS FLOTTE — DEC Patrick 25.09.2026 : « dépôt gelé hors de la flotte - ai pas à en être
+  // informé ». Distinct de la GRÂCE (un pin gelé d'une app VIVANTE, qui reste affiché) : un
+  // dépôt hors flotte n'est plus une app de la flotte, il ne compte nulle part — ni dans les
+  // pins, ni dans les « versions du socle commun qui tournent ». Le 25.09, svlbh-palette-
+  // chromatique (v0.85.1, gelé le 20.09) faisait afficher 2 socles Android alors que les
+  // 5 apps vivantes étaient toutes alignées sur v1.1.6.
+  const HORS_FLOTTE = new Set(["svlbh-palette-chromatique"]);
+  const pins = (c.pins ?? []).filter((p) => !p.outil && !HORS_FLOTTE.has(p.app));
   const doctrine = pins.filter((p) => !p.gele);
   const enRetard = doctrine.filter((p) => p.retard > 0);
   const gracies = pins.filter((p) => p.gele && p.retard > 0);
