@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
+import CanauxSection from "./canaux";
 
 export const metadata: Metadata = { title: "État de la flotte" };
 export const dynamic = "force-dynamic";
@@ -79,6 +80,7 @@ export default async function EtatFlottePage() {
           tourné, il n’y a rien à montrer — et surtout rien à déduire.
           {error ? <span className="block mt-2 text-sm opacity-80">({error.message})</span> : null}
         </p>
+        <div className="mt-8"><CanauxSection /></div>
       </main>
     );
   }
@@ -131,6 +133,10 @@ export default async function EtatFlottePage() {
           l’état du travail vit dans le Kanban, pas ici.
         </p>
       </header>
+
+      {/* Les canaux d'abord : c'est la seule partie de cette page qui touche des personnes.
+          DEC Patrick 27.09.2026. Mesure indépendante du relevé des dépôts, avec sa propre date. */}
+      <CanauxSection />
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
