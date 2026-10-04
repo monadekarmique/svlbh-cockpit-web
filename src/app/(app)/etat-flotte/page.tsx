@@ -39,6 +39,9 @@ const SEUIL_FRAICHEUR_MIN = 12 * 60; // au-delà, la page se déclare vieille
 type Pin = {
   app: string; core: string; epingle: string; dernier: string;
   retard: number; outil: boolean; gele: boolean;
+  // Depuis le 04.10.2026 (DEC Patrick) : `retard` compte des JOURS de tags ; `retard_tags` garde le nombre de tags,
+  // et `voix` dit qui remonte le pin. Absents des relevés plus anciens : la page retombe alors sur « tags ».
+  retard_tags?: number; tags_sans_date?: number; voix?: string;
 };
 type Clone = { nom: string; tag: string; date: string };
 type Contenu = {
@@ -46,6 +49,7 @@ type Contenu = {
   clones?: Clone[];
   tete_core?: string | null;
   plafond?: number;
+  unite_du_plafond?: string;
   hors_convention?: Record<string, { tous: string[]; nouveaux: string[] }>;
 };
 type Releve = {
@@ -200,8 +204,11 @@ export default async function EtatFlottePage() {
                     ) : (
                       <span className={p.gele ? "text-amber-700" : p.retard > plafond
                         ? "text-rose-700 font-medium" : "text-neutral-700"}>
-                        {p.retard} tag{p.retard > 1 ? "s" : ""}
+                        {p.retard_tags === undefined
+                          ? `${p.retard} tag${p.retard > 1 ? "s" : ""}`
+                          : `${p.retard_tags} tag${p.retard_tags > 1 ? "s" : ""} sur ${p.retard} jour${p.retard > 1 ? "s" : ""}`}
                         {p.gele ? " · en grâce" : p.retard > plafond ? " · au-delà du plafond" : ""}
+                        {p.voix && !p.gele ? ` · ${p.voix}` : ""}
                       </span>
                     )}
                   </td>
@@ -211,7 +218,9 @@ export default async function EtatFlottePage() {
           </table>
         </div>
         <p className="mt-2 text-xs text-neutral-500">
-          Plafond : {plafond} tags. Une grâce est datée et motivée dans
+          Plafond : {plafond} {c.unite_du_plafond ?? "tags"}
+          {c.unite_du_plafond ? " — quatre tags d’un même jour comptent pour un jour, et le plafond n’arrête que la voix qui tient le dépôt" : ""}.
+          Une grâce est datée et motivée dans
           <code className="mx-1">bin/ecart-core-gel.json</code> — elle s’affiche
           toujours : un gel caché redeviendrait la dette invisible qu’on mesure.
         </p>
