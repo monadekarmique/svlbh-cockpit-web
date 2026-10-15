@@ -77,6 +77,36 @@ export async function requireSt6(): Promise<void> {
   }
 }
 
+// Gate des deux programmes myShaman de /soins-cabinet (DEC Patrick 15.10.2026, carte 9effbd34 :
+// « donne accès à anne sur et aux abonée au programme myShamanFamily Pro au Soin Vifa entité
+// Familiale et myShaman Audot des entités familiales »). Le droit vit en base, dans
+// programmes_myshaman_accessibles() (propriétaire, Anne, abonnées MyShamanFamily PRO) — la même
+// fonction que lisent Priv-1 Apple et Android : une ligne de liste n'ouvre jamais un refus.
+// Une panne de la fonction rend « rien » → /dashboard, comme avant pour tout le monde sauf Patrick.
+export type ProgrammeMyShamanSlug = "audit-entites-familiales" | "vifa-entites-familiales";
+
+export async function programmesMyShamanAccessibles(): Promise<ProgrammeMyShamanSlug[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("programmes_myshaman_accessibles");
+  return Array.isArray(data) ? (data as ProgrammeMyShamanSlug[]) : [];
+}
+
+export async function requireProgrammeMyShaman(slug: ProgrammeMyShamanSlug): Promise<void> {
+  const reqHeaders = await headers();
+  if (reqHeaders.get("x-svlbh-bearer-reader")) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const ouverts = await programmesMyShamanAccessibles();
+  if (!ouverts.includes(slug)) {
+    redirect("/dashboard");
+  }
+}
+
 // Gate /hdom — outil de décodage hDOM paramétrable (DEC Patrick 2026-08-01 :
 // « la version paramétrable pour les ST5+ »). Plus strict que le cockpit
 // (ST3+) : le panneau expose le vocabulaire gaté et se remplit au pendule.

@@ -21,10 +21,27 @@ import { version as appVersion } from "../../../package.json";
 // Aucune règle de canal n'est recopiée ici. Les modules Admin / Compliance
 // restent gatés au niveau de leur page. Cercle SR et la liste blanche
 // cockpit_access restent deux entrées indépendantes.
+// 15.10.2026 (carte 9effbd34) : les deux pages myShaman de /soins-cabinet s'ouvrent aussi à Anne et aux
+// abonnées MyShamanFamily PRO, qui n'ont pas forcément un canal z3 — pour CES DEUX PAGES SEULEMENT,
+// l'entrée suit programmes_myshaman_accessibles() (le reste du cockpit reste fermé sous z3). Sans ça,
+// le pont de session des apps (NativeWebSSO) tomberait sur /access-denied.
+const PAGES_MYSHAMAN: Record<string, "audit-entites-familiales" | "vifa-entites-familiales"> = {
+  "/soins-cabinet/audit-entites-familiales": "audit-entites-familiales",
+  "/soins-cabinet/vifa-entites-familiales": "vifa-entites-familiales",
+};
+
 async function isCockpitAllowed(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
+  pathname: string | null,
 ): Promise<boolean> {
+  const slugMyShaman = pathname ? PAGES_MYSHAMAN[pathname.replace(/\/+$/, "")] : undefined;
+  if (slugMyShaman) {
+    const { data: ouverts } = await supabase.rpc("programmes_myshaman_accessibles");
+    if (Array.isArray(ouverts) && ouverts.includes(slugMyShaman)) {
+      return true;
+    }
+  }
   const profile = await resolveProfile<{
     cercle_lumiere_sr: boolean | null;
   }>(supabase, userId, "cercle_lumiere_sr");
@@ -76,7 +93,7 @@ export default async function CockpitLayout({
   if (user) await autoRelinkProfile(supabase, user);
 
   if (!bearerReaderSvlbhId) {
-    const allowed = await isCockpitAllowed(supabase, user!.id);
+    const allowed = await isCockpitAllowed(supabase, user!.id, reqHeaders.get("x-svlbh-pathname"));
     if (!allowed) {
       redirect("/access-denied");
     }

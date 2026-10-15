@@ -5,7 +5,7 @@
 // CRÉATEUR est affiché, download libre par la même URL signée.
 
 import Link from "next/link";
-import { requireSt6 } from "@/lib/owner-gate";
+import { requireProgrammeMyShaman } from "@/lib/owner-gate";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   CORRESPONDANCES_JOSE_VLBH,
@@ -109,7 +109,9 @@ function SourceCard({
 }
 
 export default async function SoinVifaEntitesFamilialesPage() {
-  await requireSt6();
+  // Depuis le 15.10.2026 (carte 9effbd34) : le droit vient de la base — propriétaire, Anne,
+  // abonnées MyShamanFamily PRO — et non plus de ST6 seul.
+  await requireProgrammeMyShaman("vifa-entites-familiales");
 
   const [joseUrl, apacheUrl, tableauUrl] = await Promise.all([
     signMedia(SOURCE_JOSE.fichier),

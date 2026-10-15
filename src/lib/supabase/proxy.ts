@@ -48,12 +48,16 @@ async function validateBearerReader(
 // + `x-svlbh-bearer-reader: <svlbh_id de Patrick>` lisait /tva (200) alors que
 // sans l'en-tête il était renvoyé sur /access-denied. On les retire de TOUTE
 // requête entrante ; seule la branche Bearer ci-dessous les pose, après RPC.
-const EN_TETES_INTERNES = ["x-svlbh-bearer-reader", "x-svlbh-bearer-token"] as const;
+const EN_TETES_INTERNES = ["x-svlbh-bearer-reader", "x-svlbh-bearer-token", "x-svlbh-pathname"] as const;
 
 function sansEnTetesInternes(request: NextRequest): Headers {
   const h = new Headers(request.headers);
   const retires = EN_TETES_INTERNES.filter((n) => h.has(n));
   for (const n of retires) h.delete(n);
+  // Le chemin demandé, pour le layout (app) : l'entrée du cockpit s'ouvre aux abonnées MyShamanFamily PRO
+  // pour les deux pages myShaman de /soins-cabinet seulement (15.10.2026, carte 9effbd34). Posé ici, jamais
+  // repris du client.
+  h.set("x-svlbh-pathname", request.nextUrl.pathname);
   if (retires.length > 0) {
     console.warn(
       `[proxy] en-tête interne venu du client retiré sur ${request.nextUrl.pathname}: ${retires.join(", ")}`,

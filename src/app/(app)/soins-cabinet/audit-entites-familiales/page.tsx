@@ -11,7 +11,7 @@
 // (sacred-scripts.json).
 
 import Link from "next/link";
-import { requireSt6 } from "@/lib/owner-gate";
+import { requireProgrammeMyShaman } from "@/lib/owner-gate";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -54,7 +54,9 @@ const A_DICTER: Sigil[] = [
 ];
 
 export default async function AuditEntitesFamilialesPage() {
-  await requireSt6();
+  // Depuis le 15.10.2026 (carte 9effbd34) : le droit vient de la base — propriétaire, Anne,
+  // abonnées MyShamanFamily PRO — et non plus de ST6 seul.
+  await requireProgrammeMyShaman("audit-entites-familiales");
 
   return (
     <div className="space-y-5">
