@@ -103,6 +103,13 @@ export default async function AdminPage() {
           {praticiennes.filter((p) => p.pro_status === "MIGRATED").length} MIGRATED.{" "}
           Chaque changement est tracé dans <Link href="/compliance/audit-log" className="underline">audit_log</Link>.
         </p>
+        {isOwner && (
+          <p className="mt-2">
+            <Link href="/admin/couts" className="inline-block rounded-lg bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-900 ring-1 ring-blue-200">
+              💶 Coûts de l&apos;API · plafond du mois
+            </Link>
+          </p>
+        )}
         {!isOwner && (
           <p className="mt-2 inline-block rounded-lg bg-amber-50 px-3 py-1 text-[11px] text-amber-900 ring-1 ring-amber-200">
             👁 ST5 · tu peux gérer ST0-ST4 mais pas toucher aux ST5/ST6 (réservé Owner).
