@@ -49,13 +49,24 @@ export default async function CoutsPage() {
   const moisZurich = zurich(maintenant.toISOString()).slice(0, 7);
   const debut = new Date(`${moisZurich}-01T00:00:00+02:00`);
   debut.setDate(debut.getDate() - 1); // marge de fuseau ; le filtre exact se fait ci-dessous en heure de Zurich
-  const { data, error } = await sb
-    .from("digisha_cout_appel")
-    .select("appele_le, source, mode, model, cout_usd")
-    .gte("appele_le", debut.toISOString())
-    .order("appele_le", { ascending: false })
-    .limit(20000);
-  const lignes = ((data ?? []) as Ligne[]).filter((l) => zurich(l.appele_le).startsWith(moisZurich));
+  // PostgREST rend 1000 lignes au plus par lecture : on lit par pages. Mesuré le 19.10 à 08h4x — octobre comptait 1 438 appels,
+  // la première version ne voyait que les 1000 derniers (depuis le 18.10 01h17) : jours du début absents, total faux.
+  const PAGE = 1000;
+  const brutes: Ligne[] = [];
+  let error: { message: string } | null = null;
+  for (let de = 0; de < 100 * PAGE; de += PAGE) {
+    const r = await sb
+      .from("digisha_cout_appel")
+      .select("appele_le, source, mode, model, cout_usd")
+      .gte("appele_le", debut.toISOString())
+      .order("appele_le", { ascending: false })
+      .order("id", { ascending: false })
+      .range(de, de + PAGE - 1);
+    if (r.error) { error = r.error; break; }
+    brutes.push(...((r.data ?? []) as Ligne[]));
+    if ((r.data ?? []).length < PAGE) break;
+  }
+  const lignes = brutes.filter((l) => zurich(l.appele_le).startsWith(moisZurich));
   const total = lignes.reduce((s, l) => s + Number(l.cout_usd ?? 0), 0);
   const part = total / PLAFOND_MOIS_USD;
   const aujourdhui = zurich(maintenant.toISOString());
