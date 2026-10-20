@@ -177,6 +177,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "owner",
   },
   {
+    href: "/releve-hebdo",
+    label: "Relevé du lundi",
+    navLabel: "Relevé",
+    icon: "🗂️",
+    desc: "Les groupes découverts sur les ponts : inscrire au ramassage ou écarter, groupe par groupe",
+    color: "#15803D",
+    group: "owner",
+  },
+  {
     href: "/etat-flotte",
     label: "État de la flotte",
     navLabel: "Flotte",
