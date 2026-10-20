@@ -168,6 +168,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "owner",
   },
   {
+    href: "/indexer",
+    label: "Indexer le savoir",
+    navLabel: "Indexer",
+    icon: "📖",
+    desc: "Les quatre canaux, les fils et DiGiSha qui défilent : indexer, ignorer, définir, phrase énergétique",
+    color: "#86198F",
+    group: "owner",
+  },
+  {
     href: "/etat-flotte",
     label: "État de la flotte",
     navLabel: "Flotte",
