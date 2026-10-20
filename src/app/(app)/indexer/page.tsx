@@ -36,13 +36,23 @@ export default async function IndexerPage({ searchParams }: { searchParams: Prom
   const elements = ((data ?? []) as Element[]);
   const { data: ph } = await sb.rpc("index_phrases", { p_jour: jour });
   const phrases = ((ph ?? []) as Phrase[]);
-  const chemins = [...new Set(elements.map((e) => e.chemin).filter((c): c is string => !!c))];
+  // une signature par seau (fil-medias : les chats ; abo-medias : les groupes inscrits au ramassage), avec la session de Patrick
   const urls = new Map<string, string>();
-  for (let i = 0; i < chemins.length; i += 100) {
-    const { data: s } = await sb.storage.from("fil-medias").createSignedUrls(chemins.slice(i, i + 100), 3600);
-    for (const x of s ?? []) if (x.path && x.signedUrl) urls.set(x.path, x.signedUrl);
+  const erreurs: string[] = [];
+  for (const seau of ["fil-medias", "abo-medias"]) {
+    const chemins = [...new Set(elements.filter((e) => e.seau === seau && e.chemin).map((e) => e.chemin as string))];
+    for (let i = 0; i < chemins.length; i += 100) {
+      const { data: s, error: es } = await sb.storage.from(seau).createSignedUrls(chemins.slice(i, i + 100), 3600);
+      if (es) erreurs.push(`${seau} : ${es.message}`);
+      for (const x of s ?? []) {
+        if (x.path && x.signedUrl) urls.set(`${seau}/${x.path}`, x.signedUrl);
+        else if (x.error) erreurs.push(`${seau} : ${x.error}`);
+      }
+    }
   }
-  for (const e of elements) e.url = e.chemin ? urls.get(e.chemin) ?? null : null;
+  for (const e of elements) e.url = e.chemin && e.seau ? urls.get(`${e.seau}/${e.chemin}`) ?? null : null;
+  const medias = elements.filter((e) => e.media_type);
+  const affiches = medias.filter((e) => e.url).length;
   const [jj, mm, aaaa] = [jour.slice(8, 10), jour.slice(5, 7), jour.slice(0, 4)];
   return (
     <div className="p-4">
@@ -52,10 +62,13 @@ export default async function IndexerPage({ searchParams }: { searchParams: Prom
         {jour < aujourdhui && <Link href={`/indexer?jour=${decaler(jour, 1)}`} className="text-sm underline">lendemain →</Link>}
         {jour < aujourdhui && <Link href="/indexer" className="text-sm underline">aujourd&apos;hui</Link>}
       </div>
-      <p className="text-sm text-gray-500 mb-4">
-        Ce que tu marques « Indexer » entre au savoir de DiGiSha au passage suivant (toutes les deux heures) ; avec un mot, un texte
-        devient la définition de ce mot dans son lexique ; ta propre définition, écrite sous le mot, prime sur le texte. « Ignorer » : elle ne
-        le lit plus. Le pré-tri propose, tu tranches. Phrase énergétique : touche « + phrase » sur les médias dans l&apos;ordre, nomme-la.
+      <p className="text-sm text-gray-500 mb-1">
+        Banc de montage : clique sur les pièces dans l&apos;ordre (textes, photos, stickers, échanges DiGiSha) — elles se numérotent et
+        s&apos;assemblent en haut. Nomme le montage, choisis la zone, « Valider » : il part au passage suivant (toutes les deux heures).
+      </p>
+      <p className="text-xs text-gray-400 mb-4">
+        {medias.length} média(s) ce jour · {affiches} affiché(s) · {medias.filter((e) => !e.chemin).length} sans fichier en base (restés sur le pont)
+        {erreurs.length > 0 && <span className="text-red-700"> · signature refusée : {[...new Set(erreurs)].slice(0, 3).join(" ; ")}</span>}
       </p>
       {error ? <p className="text-red-700">Lecture impossible : {error.message}</p> : <IndexerClient initial={elements} phrases={phrases} jour={jour} />}
     </div>
