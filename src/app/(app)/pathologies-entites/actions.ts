@@ -138,7 +138,7 @@ export async function chargerFlux(jour: string): Promise<Flux> {
 // DÉPOSE une demande, l'agent du Mac (bin/pont-envois.py) la ramasse après 5 s et appelle le pont. Pendant
 // ces 5 secondes, « Annuler » la retire et RIEN n'est parti. Un envoi, lui, est irréversible.
 export type Demande = {
-  demande_id: string; genre: "message" | "membre"; pont: string;
+  demande_id: string; genre: "message" | "membre" | "pack"; pont: string;
   cible_nom: string | null; cible_jid: string; texte: string | null; membres: string[] | null;
   pieces?: string[] | null; envoyes?: { piece: string; rang?: number; ok: boolean; id: string }[] | null;
   etat: "attente" | "en_cours" | "parti" | "refuse" | "annule";
@@ -196,6 +196,18 @@ export async function demanderPack(
     p_texte: waMessageId, p_membres: null, p_montage: null, p_pieces: null,
   });
   return error ? { ok: false, erreur: error.message } : { ok: true, id: data as string };
+}
+
+// Patrick, 21.10 : « mettre anne par exemple et me voir proposer toutes les annes qui sont contact avec moi sur mes
+// z1 à z4 ». pont_contacts_chercher (migration 2026-10-21k) lit pont_contact — les noms que l'agent du Mac lit dans les
+// ponts chaque heure — et rend le destinataire tel que /api/send le prend (numéro, ou <lid>@lid faute de numéro).
+export type Contact = { cle: string; nom: string; pont: string; telephone: string | null; destinataire: string };
+
+export async function chercherContacts(q: string): Promise<Contact[]> {
+  if (q.trim().length < 2) return [];
+  const sb = await createClient();
+  const { data } = await sb.rpc("pont_contacts_chercher", { p_q: q.trim() });
+  return (data ?? []) as Contact[];
 }
 
 export async function annulerDemande(id: string): Promise<{ ok: boolean; erreur?: string }> {

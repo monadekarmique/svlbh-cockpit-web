@@ -7,8 +7,8 @@
 // L'agent du Mac la ramasse après 5 secondes. Pendant ces 5 secondes, « Annuler » la retire — c'est la
 // sécurité que Patrick a demandée. Un envoi, lui, est irréversible : il touche de vraies personnes.
 
-import { useState, useTransition } from "react";
-import { annulerDemande, demanderAjout, demanderEnvoi, type Demande, type Groupe } from "./actions";
+import { useEffect, useState, useTransition } from "react";
+import { annulerDemande, chercherContacts, demanderAjout, demanderEnvoi, type Contact, type Demande, type Groupe } from "./actions";
 
 // Le z2 de Patrick — s'envoyer à soi-même, pour un premier essai qui ne coûte rien
 // (Patrick, 21.10 : « le premier essais peut être fait sur mon propre z2 »).
@@ -37,11 +37,35 @@ export function PorterClient({ groupes, demandes, pieces, apercu, montageId }: {
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, demarrer] = useTransition();
 
+  // Une PERSONNE plutôt qu'un groupe — Patrick, 21.10 : « mettre anne par exemple et me voir proposer toutes les annes
+  // qui sont contact avec moi sur mes z1 à z4 ». On tape, les contacts des ponts arrivent (pont_contact, lus chaque
+  // heure sur le Mac), on clique : la cible devient son numéro, le pont celui qui la connaît.
+  const [personne, setPersonne] = useState<Contact | null>(null);
+  const [recherche, setRecherche] = useState("");
+  const [suggestions, setSuggestions] = useState<Contact[]>([]);
+  useEffect(() => {
+    if (recherche.trim().length < 2) return;   // la liste se vide dans le onChange, pas ici (pas de setState synchrone dans un effet)
+    let vivant = true;
+    const t = setTimeout(async () => { const r = await chercherContacts(recherche); if (vivant) setSuggestions(r); }, 250);
+    return () => { vivant = false; clearTimeout(t); };
+  }, [recherche]);
+  const choisirPersonne = (c: Contact) => {
+    if (ouvert === "membre") {
+      // en mode « Ajouter quelqu'un », la personne trouvée s'ajoute aux numéros
+      if (c.telephone) setNumeros((n) => (n.trim() ? `${n.trim()} ${c.telephone}` : c.telephone!));
+      else setErreur(`${c.nom} n'a pas de numéro connu des ponts (contact par identifiant masqué) — on ne peut pas l'ajouter à un groupe`);
+    } else {
+      setPersonne(c); setCible(c.destinataire); setPont(c.pont);
+    }
+    setRecherche(""); setSuggestions([]);
+  };
+
   const essai = cible === ESSAI.jid;
-  const groupe = groupes.find((g) => g.chat_jid === cible);
-  const pontsPossibles = essai ? [ESSAI.pont] : groupe?.ponts ?? [];
+  const versPersonne = personne !== null && cible === personne.destinataire;
+  const groupe = versPersonne ? undefined : groupes.find((g) => g.chat_jid === cible);
+  const pontsPossibles = essai ? [ESSAI.pont] : versPersonne ? [personne.pont] : groupe?.ponts ?? [];
   const pontRetenu = pont && pontsPossibles.includes(pont) ? pont : pontsPossibles[0] ?? "";
-  const nomCible = essai ? ESSAI.nom : groupe?.chat ?? "";
+  const nomCible = essai ? ESSAI.nom : versPersonne ? personne.nom : groupe?.chat ?? "";
 
   const poser = () =>
     demarrer(async () => {
@@ -98,14 +122,35 @@ export function PorterClient({ groupes, demandes, pieces, apercu, montageId }: {
       {ouvert && (
         <div className="mt-3 space-y-2 rounded-lg bg-white p-3 ring-1 ring-sky-200">
           <div className="flex flex-wrap items-center gap-2">
-            <select value={cible} onChange={(x) => { setCible(x.target.value); setPont(""); }}
+            <select value={versPersonne ? "" : cible} onChange={(x) => { setPersonne(null); setCible(x.target.value); setPont(""); }}
               className="min-w-[20rem] flex-1 rounded-md border border-gray-300 px-2 py-1 text-base">
-              <option value="">— où ça va —</option>
+              <option value="">{versPersonne ? `→ ${personne.nom}` : "— où ça va —"}</option>
               <option value={ESSAI.jid}>{ESSAI.nom} (sans risque)</option>
               {groupes.map((g) => (
                 <option key={g.chat_jid} value={g.chat_jid}>{g.chat} [{g.ponts.join(", ")}]</option>
               ))}
             </select>
+            <div className="relative min-w-[16rem] flex-1">
+              <input value={recherche} onChange={(x) => { setRecherche(x.target.value); if (x.target.value.trim().length < 2) setSuggestions([]); }} maxLength={80}
+                placeholder={ouvert === "membre" ? "ou cherche la personne : Anne, Chloé, 4179…" : "ou une personne : Anne, Chloé, 4179…"}
+                className="w-full rounded-md border border-gray-300 px-2 py-1 text-base" />
+              {suggestions.length > 0 && (
+                <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                  {suggestions.map((c) => (
+                    <li key={`${c.pont}-${c.cle}`}>
+                      <button type="button" onClick={() => choisirPersonne(c)}
+                        className="flex w-full items-baseline justify-between gap-2 px-2 py-1 text-left text-sm hover:bg-sky-50">
+                        <span className="truncate font-medium">{c.nom}</span>
+                        <span className="shrink-0 text-xs text-gray-500">{c.pont} · {c.telephone ? `+${c.telephone}` : "sans numéro"}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {recherche.trim().length >= 2 && suggestions.length === 0 && (
+                <p className="absolute z-20 mt-1 w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 shadow">aucun contact des ponts ne porte ce nom</p>
+              )}
+            </div>
             {pontsPossibles.length > 1 && (
               <select value={pontRetenu} onChange={(x) => setPont(x.target.value)}
                 className="rounded-md border border-gray-300 px-2 py-1 text-base" title="par quel pont">
@@ -144,7 +189,7 @@ export function PorterClient({ groupes, demandes, pieces, apercu, montageId }: {
           {cible && (
             <p className="rounded-md bg-amber-50 p-2 text-sm text-amber-900 ring-1 ring-amber-200">
               {ouvert === "message"
-                ? <>Ce texte partira dans <b>{nomCible}</b> par <b>{pontRetenu || "—"}</b>{essai ? "" : " — de vraies personnes le liront."}</>
+                ? <>Ce texte partira {versPersonne ? "à" : "dans"} <b>{nomCible}</b> par <b>{pontRetenu || "—"}</b>{essai ? "" : versPersonne ? " — une vraie personne le lira." : " — de vraies personnes le liront."}</>
                 : <>Ces personnes seront ajoutées à <b>{nomCible}</b> par <b>{pontRetenu || "—"}</b>.</>}
             </p>
           )}
@@ -168,7 +213,7 @@ export function PorterClient({ groupes, demandes, pieces, apercu, montageId }: {
               <span className="font-medium">{d.cible_nom ?? d.cible_jid}</span>
               <span className="text-gray-500">· {d.pont} ·</span>
               <span className="min-w-0 flex-1 truncate text-gray-700">
-                {d.genre === "message" ? (d.texte ?? "").slice(0, 80) : `ajout de ${(d.membres ?? []).join(", ")}`}
+                {d.genre === "message" ? (d.texte ?? "").slice(0, 80) : d.genre === "pack" ? "pack de stickers → banc" : `ajout de ${(d.membres ?? []).join(", ")}`}
               </span>
               {d.etat === "attente" && (
                 <button type="button" onClick={() => annuler(d.demande_id)} className="text-xs font-medium text-red-700 underline">
