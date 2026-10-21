@@ -219,6 +219,17 @@ export async function chercherGroupes(q: string): Promise<Groupe[]> {
   return (data ?? []) as Groupe[];
 }
 
+// Patrick, 21.10 : « ajouter des packs d'outils interponts ». Les fichiers sont déjà montés au seau index-packs depuis le
+// navigateur (sous sa session, dossier = packId) ; ici on pose le pack : sans groupe ni pont, visible de toute praticienne,
+// publiable par n'importe quel pont (migration 2026-10-21q).
+export async function creerPack(
+  packId: string, nom: string, editeur: string, stickers: { rang: number; chemin: string }[],
+): Promise<{ ok: boolean; erreur?: string }> {
+  const sb = await createClient();
+  const { error } = await sb.rpc("index_pack_creer", { p_pack_id: packId, p_nom: nom, p_editeur: editeur || null, p_stickers: stickers });
+  return error ? { ok: false, erreur: error.message } : { ok: true };
+}
+
 export async function annulerDemande(id: string): Promise<{ ok: boolean; erreur?: string }> {
   const sb = await createClient();
   const { data, error } = await sb.rpc("pont_annuler", { p_demande: id });

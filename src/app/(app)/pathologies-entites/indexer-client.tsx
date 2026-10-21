@@ -12,6 +12,7 @@ import { PorterClient } from "./porter-client";
 import { PreparerClient } from "./preparer-client";
 import { LottieSticker } from "./lottie-sticker";
 import { DigishaClient, TexteWhatsApp } from "./digisha-client";
+import { AjouterPackClient } from "./ajouter-pack-client";
 import { copier, markdownVersWhatsApp, pourWhatsApp, questionDe, texteDe } from "./whatsapp";
 
 const SECONDES = 20; // le pont écrit en 1 s ; 20 s suffit pour suivre un enseignement sans marteler la base
@@ -430,6 +431,8 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes, ateli
       )}
       {/* Patrick, 21.10 : « un DiGiSha qui me permette de dialoguer avec DiGiSha pour des définitions » */}
       <DigishaClient lectureSeule={lectureSeule} apresReponse={relireMaintenant} />
+      {/* Patrick, 21.10 : « ajouter des packs d'outils interponts » — lui seul (il faut écrire le seau) */}
+      {!atelier && <AjouterPackClient apresAjout={relireMaintenant} />}
       <div className="mb-3 flex flex-wrap items-center gap-4 text-base">
         <label className="flex items-center gap-1 font-medium">
           <input type="checkbox" checked={parChat} onChange={(x) => { setParChat(x.target.checked); if (!x.target.checked) setChatChoisi(null); }} />
