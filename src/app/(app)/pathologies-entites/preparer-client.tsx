@@ -7,25 +7,22 @@
 
 import { useState } from "react";
 import type { Element } from "./actions";
+import { copier as copierTexte, markdownVersWhatsApp, pourWhatsApp, texteDe } from "./whatsapp";
 
-const GENRE: Record<string, string> = { image: "photo", video: "vidéo", audio: "vocal", sticker: "sticker", document: "document" };
-
-function texteDe(e: Element): string {
-  return e.wa_message_id.startsWith("dg:") ? (e.texte ?? "").split("\n— DiGiSha : ")[0] : (e.texte ?? "");
-}
+const GENRE: Record<string, string> = { image: "photo", video: "vidéo", audio: "vocal", sticker: "sticker", document: "document", sticker_pack: "pack de stickers" };
 
 export function PreparerClient({ sequence, parId }: { sequence: string[]; parId: Map<string, Element> }) {
   const [copie, setCopie] = useState<string | null>(null);
   const pieces = sequence.map((id, i) => ({ rang: i + 1, e: parId.get(id) }));
   // le commentaire d'une pièce (21.10) suit la pièce : à la suite d'un texte, en légende d'un média
-  const avecCom = (e: Element) => [texteDe(e).trim(), (e.commentaire ?? "").trim()].filter(Boolean).join("\n");
+  const avecCom = (e: Element) => [markdownVersWhatsApp(texteDe(e)), (e.commentaire ?? "").trim()].filter(Boolean).join("\n");
   const textes = pieces.filter((p) => p.e && !p.e.media_type && avecCom(p.e));
   const medias = pieces.filter((p) => p.e?.media_type);
-  const bloc = textes.map((p) => avecCom(p.e!)).join("\n\n");
+  // le texte tel que WhatsApp le prend (gras *…*, commentaires en italique) — Patrick, 21.10 : « un format qui me permette un copy paste »
+  const bloc = pourWhatsApp(textes.map((p) => p.e!.wa_message_id), parId);
 
   const copier = async (t: string, cle: string) => {
-    try { await navigator.clipboard.writeText(t); setCopie(cle); setTimeout(() => setCopie(null), 2000); }
-    catch { setCopie("refus"); }
+    if (await copierTexte(t)) { setCopie(cle); setTimeout(() => setCopie(null), 2000); } else setCopie("refus");
   };
 
   if (sequence.length === 0) return null;

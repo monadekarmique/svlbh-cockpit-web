@@ -11,7 +11,8 @@ import { chargerFlux, chargerFluxPraticienne, commenter, demanderPack, poserMont
 import { PorterClient } from "./porter-client";
 import { PreparerClient } from "./preparer-client";
 import { LottieSticker } from "./lottie-sticker";
-import { DigishaClient } from "./digisha-client";
+import { DigishaClient, TexteWhatsApp } from "./digisha-client";
+import { copier, markdownVersWhatsApp, pourWhatsApp, questionDe, texteDe } from "./whatsapp";
 
 const SECONDES = 20; // le pont écrit en 1 s ; 20 s suffit pour suivre un enseignement sans marteler la base
 
@@ -51,9 +52,7 @@ function Media({ e, petit = false, grand = false }: { e: Element; petit?: boolea
   return <a href={e.url} target="_blank" rel="noreferrer" className="text-xs underline" onClick={(x) => x.stopPropagation()}>document</a>;
 }
 
-function texteDe(e: Element): string {
-  return e.wa_message_id.startsWith("dg:") ? (e.texte ?? "").split("\n— DiGiSha : ")[0] : (e.texte ?? "");
-}
+// texteDe / questionDe / pourWhatsApp : ./whatsapp.ts — pour un tour DiGiSha la pièce est la RÉPONSE (la définition)
 
 // La séquence du banc, mise à plat — c'est CE texte qui part dans un groupe quand on publie.
 // (21.10 : « seul le mot test a été envoyé pas le reste » — le bouton Publier était branché à côté
@@ -105,7 +104,15 @@ function Piece({ e, rang, nouveau, basculer, commenter, attacherPack, lectureSeu
           <span className="max-w-[50%] truncate" title={e.chat}>{e.chat}</span>
         </span>
         <span className="mt-1 block"><Media e={e} /></span>
-        {e.texte && <span className="mt-1 block max-h-72 overflow-y-auto whitespace-pre-wrap text-[15px] leading-relaxed">{e.texte}</span>}
+        {e.wa_message_id.startsWith("dg:") ? (
+          /* un tour DiGiSha : la question en petit, la RÉPONSE (la définition) comme texte de la pièce, au format WhatsApp */
+          <>
+            {questionDe(e) && <span className="mt-1 block text-xs text-indigo-700">{questionDe(e)}</span>}
+            <span className="mt-1 block max-h-72 overflow-y-auto text-[15px] leading-relaxed"><TexteWhatsApp texte={markdownVersWhatsApp(texteDe(e))} /></span>
+          </>
+        ) : (
+          e.texte && <span className="mt-1 block max-h-72 overflow-y-auto whitespace-pre-wrap text-[15px] leading-relaxed">{e.texte}</span>
+        )}
       </button>
       {e.media_type === "sticker_pack" && attacherPack && !lectureSeule && (
         <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 px-2 py-1">
@@ -136,6 +143,11 @@ function Piece({ e, rang, nouveau, basculer, commenter, attacherPack, lectureSeu
 function Planche({ nom, texte, zone, sequence, parId, fermer }: {
   nom: string; texte: string; zone: Zone; sequence: string[]; parId: Map<string, Element>; fermer: () => void;
 }) {
+  const [copie, setCopie] = useState<string | null>(null);
+  const copierPlanche = async () => {
+    setCopie((await copier(pourWhatsApp(sequence, parId, { nom, intro: texte }))) ? "copié ✓" : "refus — sélectionne à la main");
+    setTimeout(() => setCopie(null), 2000);
+  };
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-white/97 backdrop-blur">
       <div className="mx-auto max-w-3xl px-4 py-8">
@@ -147,9 +159,14 @@ function Planche({ nom, texte, zone, sequence, parId, fermer }: {
             <h2 className="mt-1 text-2xl font-semibold tracking-tight">{nom.trim() || "sans nom"}</h2>
             {texte.trim() && <p className="mt-2 max-w-prose whitespace-pre-wrap text-sm text-gray-700">{texte.trim()}</p>}
           </div>
-          <button type="button" onClick={fermer} className="shrink-0 rounded-md border border-gray-300 px-3 py-1 text-sm">
-            Fermer
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button type="button" onClick={copierPlanche} disabled={sequence.length === 0}
+              className="rounded-md border border-emerald-400 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-900 disabled:opacity-40"
+              title="la planche prête à coller dans WhatsApp">{copie ?? "Copier pour WhatsApp"}</button>
+            <button type="button" onClick={fermer} className="rounded-md border border-gray-300 px-3 py-1 text-sm">
+              Fermer
+            </button>
+          </div>
         </div>
         <ol className="space-y-6">
           {sequence.map((id, i) => {
@@ -204,6 +221,12 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose,
   const [zone, setZone] = useState<Zone>(atelier ? "soin" : "lexique");
   const [erreur, setErreur] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  // Patrick, 21.10 : « les textes fournis dans un format qui me permette un copy paste dans whatsapp »
+  const [copie, setCopie] = useState<string | null>(null);
+  const copierBanc = async () => {
+    setCopie((await copier(pourWhatsApp(sequence, parId, { nom, intro: texte }))) ? "copié ✓" : "refus — sélectionne à la main");
+    setTimeout(() => setCopie(null), 2000);
+  };
   const [planche, setPlanche] = useState(false);
   const [enCours, demarrer] = useTransition();
   const assemble = assembler(sequence, parId);
@@ -262,6 +285,10 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose,
             <button type="button" onClick={() => setPlanche(true)}
               className="rounded-md border border-fuchsia-300 px-3 py-1 text-sm text-fuchsia-900"
               title="voir la suite en grand, dans l'ordre où elle se donne">Voir la planche</button>
+            <button type="button" onClick={copierBanc} disabled={sequence.length === 0}
+              className="rounded-md border border-emerald-400 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-900 disabled:opacity-40"
+              title="le texte du banc prêt à coller dans WhatsApp : titre en gras, un bloc par pièce, commentaires en italique">
+              {copie ?? "Copier pour WhatsApp"}</button>
             <button type="button" disabled={enCours || lectureSeule} onClick={valider}
               className="rounded-md bg-fuchsia-700 px-4 py-1 text-sm font-semibold text-white disabled:opacity-40"
               title={lectureSeule ? "en « voir comme » on regarde — on ne valide pas au nom de quelqu'un d'autre" : undefined}>Valider</button>

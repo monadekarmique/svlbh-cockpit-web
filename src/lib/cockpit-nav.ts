@@ -174,18 +174,9 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     icon: "📖",
     desc: "Monter une séquence depuis les canaux, les fils et DiGiSha — puis la publier dans un groupe ou y ajouter quelqu'un",
     color: "#86198F",
-    group: "owner",
-  },
-  {
-    // Patrick, 21.10.2026 : une praticienne voit ses groupes, monte sa planche, et publie depuis son
-    // téléphone. Gate requireSt5Plus dans la page ; le périmètre est tenu par la base.
-    href: "/mes-planches",
-    label: "Mes planches",
-    navLabel: "Planches",
-    icon: "🪶",
-    desc: "Tes groupes, ton banc de montage — puis le texte et les médias en main pour publier depuis ton téléphone",
-    color: "#047857",
-    group: "shamanes",   // le bloc des praticiennes — visible dès ST5, la page garde son propre gate
+    // Patrick, 21.10.2026 : « tu peux envoyer le lien à Anne vers cockpit / pathologies-entités » — une page pour tout le
+    // monde (ST5+), le périmètre tenu par la base : une praticienne y voit ses groupes, jamais les ponts de Patrick.
+    group: "shamanes",
   },
   {
     href: "/releve-hebdo",
