@@ -22,20 +22,17 @@ const ETATS: Record<Demande["etat"], { texte: string; classe: string }> = {
   annule: { texte: "annulé", classe: "bg-gray-200 text-gray-700" },
 };
 
-export function PorterClient({ groupes, demandes, texteDuBanc, montageId }: {
-  groupes: Groupe[]; demandes: Demande[]; texteDuBanc: string; montageId: string | null;
+// Patrick, 21.10 : « je veux publier de vraies planches ». Ce qui part, ce sont les PIÈCES du banc, dans
+// l'ordre — chacune en un message WhatsApp, un média avec son fichier. Le texte libre est un mot d'intro
+// facultatif qui part en premier. On n'aplatit plus les pièces en « [photo] ».
+export function PorterClient({ groupes, demandes, pieces, apercu, montageId }: {
+  groupes: Groupe[]; demandes: Demande[]; pieces: string[]; apercu: string; montageId: string | null;
 }) {
   const [liste, setListe] = useState(demandes);
   const [ouvert, setOuvert] = useState<"message" | "membre" | null>(null);
   const [cible, setCible] = useState("");
   const [pont, setPont] = useState("");
-  // `touche` passe à vrai dès que Patrick modifie le texte à la main : à partir de là on ne l'écrase plus
-  // avec le banc. Tant qu'il n'y a pas touché, le texte SUIT le banc — sinon il resterait figé à l'ouverture
-  // du panneau et on publierait une version périmée (21.10 : « seul le mot test a été envoyé pas le reste »).
-  const [touche, setTouche] = useState(false);
-  const [saisi, setSaisi] = useState("");
-  const texte = touche ? saisi : texteDuBanc;
-  const setTexte = (v: string) => { setTouche(true); setSaisi(v); };
+  const [texte, setTexte] = useState("");
   const [numeros, setNumeros] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, demarrer] = useTransition();
@@ -53,8 +50,8 @@ export function PorterClient({ groupes, demandes, texteDuBanc, montageId }: {
       if (!pontRetenu) { setErreur("aucun pont ne voit cette conversation"); return; }
       // on refuse ici, en français, plutôt que de laisser la base répondre « violates check
       // constraint pont_demande_charge » (21.10 : Patrick est tombé dessus).
-      if (ouvert === "message" && !texte.trim()) {
-        setErreur("il n'y a rien à publier : pose des pièces sur le banc, ou écris le texte.");
+      if (ouvert === "message" && !texte.trim() && pieces.length === 0) {
+        setErreur("il n'y a rien à publier : pose des pièces sur le banc, ou écris un mot d'intro.");
         return;
       }
       if (ouvert === "membre" && !numeros.replace(/[^\d]/g, "")) {
@@ -62,17 +59,18 @@ export function PorterClient({ groupes, demandes, texteDuBanc, montageId }: {
         return;
       }
       const r = ouvert === "message"
-        ? await demanderEnvoi(pontRetenu, cible, nomCible, texte.trim(), montageId)
+        ? await demanderEnvoi(pontRetenu, cible, nomCible, texte.trim(), montageId, pieces)
         : await demanderAjout(pontRetenu, cible, nomCible,
             numeros.split(/[\s,;]+/).map((x) => x.replace(/[^\d]/g, "")).filter((x) => x.length >= 8));
       if (!r.ok) { setErreur(r.erreur ?? "refusé"); return; }
       setListe((xs) => [{
         demande_id: r.id ?? "", genre: ouvert === "message" ? "message" : "membre", pont: pontRetenu,
-        cible_nom: nomCible, cible_jid: cible, texte: ouvert === "message" ? texte.trim() : null,
+        cible_nom: nomCible, cible_jid: cible, texte: ouvert === "message" ? texte.trim() || null : null,
+        pieces: ouvert === "message" ? pieces : null,
         membres: ouvert === "membre" ? numeros.split(/[\s,;]+/).filter(Boolean) : null,
         etat: "attente", resultat: null, demande_le: new Date().toISOString(), traite_le: null,
       }, ...xs]);
-      setOuvert(null); setNumeros("");
+      setOuvert(null); setNumeros(""); setTexte("");
     });
 
   const annuler = (id: string) =>
@@ -86,7 +84,7 @@ export function PorterClient({ groupes, demandes, texteDuBanc, montageId }: {
     <section className="mb-4 rounded-xl border border-sky-200 bg-sky-50/60 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-base font-semibold text-sky-900">Porter vers un groupe</h2>
-        <button type="button" onClick={() => { setOuvert(ouvert === "message" ? null : "message"); setTouche(false); }}
+        <button type="button" onClick={() => setOuvert(ouvert === "message" ? null : "message")}
           className="rounded-md border border-sky-300 bg-white px-3 py-1 text-sm font-medium text-sky-900">
           Publier le montage…
         </button>
@@ -118,10 +116,19 @@ export function PorterClient({ groupes, demandes, texteDuBanc, montageId }: {
 
           {ouvert === "message" ? (
             <>
-              <textarea value={texte} onChange={(x) => setTexte(x.target.value)} rows={6} maxLength={4000}
-                placeholder="le texte qui partira — relis-le, il part tel quel"
+              <textarea value={texte} onChange={(x) => setTexte(x.target.value)} rows={2} maxLength={4000}
+                placeholder="un mot d'intro, s'il en faut — il part en premier, tel quel"
                 className="w-full rounded-md border border-gray-300 px-2 py-1 text-[15px] leading-relaxed" />
-              <p className="text-xs text-gray-500">{texte.trim().length} caractère(s) — ils partent tels quels.</p>
+              {pieces.length > 0 ? (
+                <div className="rounded-md bg-gray-50 p-2 ring-1 ring-gray-200">
+                  <p className="mb-1 text-xs font-medium text-gray-600">
+                    Puis les {pieces.length} pièce(s) du banc, dans l&apos;ordre — chacune en un message, les médias avec leur fichier :
+                  </p>
+                  <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap text-[13px] leading-snug text-gray-800">{apercu}</pre>
+                </div>
+              ) : (
+                <p className="text-xs text-amber-800">Le banc est vide : seul le mot d&apos;intro partirait. Pose des pièces pour publier une planche.</p>
+              )}
             </>
           ) : (
             <>

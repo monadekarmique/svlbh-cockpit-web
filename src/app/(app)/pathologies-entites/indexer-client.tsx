@@ -309,7 +309,7 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes }: {
       <Banc sequence={sequence} parId={parId} jour={jour} montages={montages} retirer={basculer} deplacer={deplacer}
         vider={() => setSequence([])} pose={(p) => setMontages((xs) => [...xs, p])} />
       {/* « Porter » reçoit la séquence du banc, assemblée — c'est elle qui part, pas une zone de saisie vide. */}
-      <PorterClient groupes={groupes} demandes={demandes} texteDuBanc={assembler(sequence, parId)} montageId={null} />
+      <PorterClient groupes={groupes} demandes={demandes} pieces={sequence} apercu={assembler(sequence, parId)} montageId={null} />
       <div className="mb-3 flex flex-wrap items-center gap-4 text-base">
         <label className="flex items-center gap-1 font-medium">
           <input type="checkbox" checked={parChat} onChange={(x) => { setParChat(x.target.checked); if (!x.target.checked) setChatChoisi(null); }} />

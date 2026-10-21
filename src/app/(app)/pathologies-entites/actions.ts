@@ -73,6 +73,7 @@ export async function chargerFlux(jour: string): Promise<Flux> {
 export type Demande = {
   demande_id: string; genre: "message" | "membre"; pont: string;
   cible_nom: string | null; cible_jid: string; texte: string | null; membres: string[] | null;
+  pieces?: string[] | null; envoyes?: { piece: string; rang?: number; ok: boolean; id: string }[] | null;
   etat: "attente" | "en_cours" | "parti" | "refuse" | "annule";
   resultat: string | null; demande_le: string; traite_le: string | null;
 };
@@ -91,13 +92,16 @@ export async function listerGroupes(jour: string): Promise<Groupe[]> {
   return [...m.values()].map((g) => ({ ...g, ponts: g.ponts.sort() })).sort((a, b) => a.chat.localeCompare(b.chat));
 }
 
+// Patrick, 21.10 : « je veux publier de vraies planches ». La demande porte les PIÈCES du banc (les
+// wa_message_id, dans l'ordre) : l'agent du Mac descend chaque média du seau et le porte au pont avec son
+// fichier. Le texte libre, s'il y en a un, part en premier (migration 2026-10-21c).
 export async function demanderEnvoi(
-  pont: string, cibleJid: string, cibleNom: string, texte: string, montageId: string | null,
+  pont: string, cibleJid: string, cibleNom: string, texte: string, montageId: string | null, pieces: string[],
 ): Promise<{ ok: boolean; id?: string; erreur?: string }> {
   const sb = await createClient();
   const { data, error } = await sb.rpc("pont_demander", {
     p_genre: "message", p_pont: pont, p_cible_jid: cibleJid, p_cible_nom: cibleNom,
-    p_texte: texte, p_membres: null, p_montage: montageId,
+    p_texte: texte || null, p_membres: null, p_montage: montageId, p_pieces: pieces.length ? pieces : null,
   });
   return error ? { ok: false, erreur: error.message } : { ok: true, id: data as string };
 }
