@@ -6,11 +6,12 @@
 // une pièce la pose sur le banc (elle prend son numéro), un second clic l'en retire. Le banc montre la définition assemblée dans
 // l'ordre ; on déplace une pièce (← →), on nomme, on choisit la zone, « Valider ». Le passage des deux heures l'envoie dans sa zone.
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { chargerFlux, chargerFluxPraticienne, commenter, poserMontage, type Demande, type Element, type Groupe, type Phrase, type Zone } from "./actions";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { chargerFlux, chargerFluxPraticienne, commenter, poserMontage, type Demande, type Element, type Flux, type Groupe, type Phrase, type Zone } from "./actions";
 import { PorterClient } from "./porter-client";
 import { PreparerClient } from "./preparer-client";
 import { LottieSticker } from "./lottie-sticker";
+import { DigishaClient } from "./digisha-client";
 
 const SECONDES = 20; // le pont écrit en 1 s ; 20 s suffit pour suivre un enseignement sans marteler la base
 
@@ -291,24 +292,27 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes, ateli
   // (pas d'effet de resynchronisation : la page passe key={jour}, donc changer de jour remonte
   //  le composant et repart d'un état neuf — React le fait mieux qu'un setState dans un effet.)
 
+  // appliquer : une relecture du flux — par le direct, ou après un tour de DiGiSha (sa réponse devient une pièce).
+  // L'atelier relit SON flux : index_flux (celui de Patrick) refuse une praticienne, et le direct restait muet.
+  const appliquer = useCallback((f: Flux) => {
+    if (f.erreur) return;
+    const frais = f.elements.filter((e) => !connus.current.has(e.wa_message_id)).map((e) => e.wa_message_id);
+    for (const id of frais) connus.current.add(id);
+    setElements(f.elements);
+    setMontages(f.phrases);
+    if (frais.length) setNouveaux((s) => new Set([...s, ...frais]));
+    setDerniere(new Date().toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+  }, []);
+  const relireMaintenant = useCallback(async () => appliquer(await (atelier ? chargerFluxPraticienne : chargerFlux)(jour)), [appliquer, atelier, jour]);
+
   useEffect(() => {
     if (!direct) return;
     let vivant = true;
-    const relire = async () => {
-      // l'atelier relit SON flux — index_flux (celui de Patrick) refuse une praticienne, et le direct restait muet
-      const f = await (atelier ? chargerFluxPraticienne : chargerFlux)(jour);
-      if (!vivant || f.erreur) return;
-      const frais = f.elements.filter((e) => !connus.current.has(e.wa_message_id)).map((e) => e.wa_message_id);
-      for (const id of frais) connus.current.add(id);
-      setElements(f.elements);
-      setMontages(f.phrases);
-      if (frais.length) setNouveaux((s) => new Set([...s, ...frais]));
-      setDerniere(new Date().toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
-    };
+    const relire = async () => { const f = await (atelier ? chargerFluxPraticienne : chargerFlux)(jour); if (vivant) appliquer(f); };
     const t = setInterval(relire, SECONDES * 1000);
     void relire();
     return () => { vivant = false; clearInterval(t); };
-  }, [direct, jour, atelier]);
+  }, [direct, jour, atelier, appliquer]);
 
   const parId = useMemo(() => new Map(elements.map((e) => [e.wa_message_id, e])), [elements]);
   // ── par conversation plutôt que par pont ─────────────────────────────────
@@ -367,6 +371,8 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes, ateli
         /* Patrick : « Porter » reçoit la séquence du banc, assemblée — c'est elle qui part par ses ponts */
         <PorterClient groupes={groupes} demandes={demandes} pieces={sequence} apercu={assembler(sequence, parId)} montageId={null} />
       )}
+      {/* Patrick, 21.10 : « un DiGiSha qui me permette de dialoguer avec DiGiSha pour des définitions » */}
+      <DigishaClient lectureSeule={lectureSeule} apresReponse={relireMaintenant} />
       <div className="mb-3 flex flex-wrap items-center gap-4 text-base">
         <label className="flex items-center gap-1 font-medium">
           <input type="checkbox" checked={parChat} onChange={(x) => { setParChat(x.target.checked); if (!x.target.checked) setChatChoisi(null); }} />

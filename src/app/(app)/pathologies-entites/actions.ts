@@ -251,3 +251,33 @@ export async function commenter(id: string, texte: string, atelier = false): Pro
   const { error } = await sb.rpc("index_commenter", { p_wa_message_id: id, p_texte: texte });
   return error ? { ok: false, erreur: error.message } : { ok: true };
 }
+
+// ── DiGiSha dans la fenêtre ──────────────────────────────────────────────────
+// Patrick, 21.10.2026 : « dialoguer avec DiGiSha pour des définitions ». Même contrat que la route
+// /api/digisha-chat de priv.svlbh.com (mesuré le 21.10) : le serveur vlbh-energy-mcp, sur Render, prend la
+// session Supabase de l'appelante en Bearer, répond { reply } et écrit le tour dans digisha_chat_log sous
+// SON identité (source render-accompagnement) — d'où une pièce « dg:… » dans la colonne DiGiSha au prochain
+// rafraîchissement. Aucun jeton ici : le titre d'accès est la session.
+const DIGISHA_BASE = process.env.DIGISHA_BASE_URL || "https://vlbh-energy-mcp.onrender.com";
+
+export async function dialoguerDigisha(
+  messages: { role: "user" | "assistant"; content: string }[],
+): Promise<{ ok: boolean; reply?: string; erreur?: string }> {
+  if (!messages.length) return { ok: false, erreur: "rien à demander" };
+  const sb = await createClient();
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session?.access_token) return { ok: false, erreur: "pas de session" };
+  try {
+    const res = await fetch(`${DIGISHA_BASE}/digisha/accompagnement`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ messages, no_log: false }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    const data = (await res.json().catch(() => ({}))) as { reply?: string; detail?: string };
+    if (!res.ok) return { ok: false, erreur: data?.detail ?? `DiGiSha : ${res.status}` };
+    return { ok: true, reply: data.reply ?? "" };
+  } catch {
+    return { ok: false, erreur: "DiGiSha injoignable" };
+  }
+}
