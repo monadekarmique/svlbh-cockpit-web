@@ -210,6 +210,15 @@ export async function chercherContacts(q: string): Promise<Contact[]> {
   return (data ?? []) as Contact[];
 }
 
+// Patrick, 21.10 : « demander un groupe WhatsApp qui n'existe pas dans le menu déroulant en écrivant les premières lettres ».
+// pont_groupes_chercher (migration 2026-10-21p) : groupe_decouvert ∪ z3_message (180 j), z1 à z4 seulement, Patrick seul.
+export async function chercherGroupes(q: string): Promise<Groupe[]> {
+  if (q.trim().length < 2) return [];
+  const sb = await createClient();
+  const { data } = await sb.rpc("pont_groupes_chercher", { p_q: q.trim() });
+  return (data ?? []) as Groupe[];
+}
+
 export async function annulerDemande(id: string): Promise<{ ok: boolean; erreur?: string }> {
   const sb = await createClient();
   const { data, error } = await sb.rpc("pont_annuler", { p_demande: id });

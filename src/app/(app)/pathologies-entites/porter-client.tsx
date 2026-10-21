@@ -8,7 +8,10 @@
 // sécurité que Patrick a demandée. Un envoi, lui, est irréversible : il touche de vraies personnes.
 
 import { useEffect, useState, useTransition } from "react";
-import { annulerDemande, chercherContacts, demanderAjout, demanderEnvoi, type Contact, type Demande, type Groupe } from "./actions";
+import { annulerDemande, chercherContacts, chercherGroupes, demanderAjout, demanderEnvoi, type Contact, type Demande, type Groupe } from "./actions";
+
+// ce que la recherche propose : un groupe connu des ponts (même absent du flux du jour), ou une personne
+type Suggestion = { genre: "groupe"; g: Groupe } | { genre: "personne"; c: Contact };
 
 // Le z2 de Patrick — s'envoyer à soi-même, pour un premier essai qui ne coûte rien
 // (Patrick, 21.10 : « le premier essais peut être fait sur mon propre z2 »).
@@ -42,13 +45,25 @@ export function PorterClient({ groupes, demandes, pieces, apercu, montageId }: {
   // heure sur le Mac), on clique : la cible devient son numéro, le pont celui qui la connaît.
   const [personne, setPersonne] = useState<Contact | null>(null);
   const [recherche, setRecherche] = useState("");
-  const [suggestions, setSuggestions] = useState<Contact[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  // les groupes trouvés par la recherche s'ajoutent au menu (Patrick, 21.10 : « un groupe qui n'existe pas dans le menu déroulant »)
+  const [extra, setExtra] = useState<Groupe[]>([]);
+  const tousGroupes = [...groupes, ...extra.filter((e) => !groupes.some((g) => g.chat_jid === e.chat_jid))];
   useEffect(() => {
     if (recherche.trim().length < 2) return;   // la liste se vide dans le onChange, pas ici (pas de setState synchrone dans un effet)
     let vivant = true;
-    const t = setTimeout(async () => { const r = await chercherContacts(recherche); if (vivant) setSuggestions(r); }, 250);
+    const t = setTimeout(async () => {
+      const [gs, cs] = await Promise.all([chercherGroupes(recherche), chercherContacts(recherche)]);
+      if (vivant) setSuggestions([...gs.map((g) => ({ genre: "groupe" as const, g })), ...cs.map((c) => ({ genre: "personne" as const, c }))]);
+    }, 250);
     return () => { vivant = false; clearTimeout(t); };
   }, [recherche]);
+  const choisirGroupe = (g: Groupe) => {
+    setPersonne(null);
+    setExtra((xs) => (xs.some((x) => x.chat_jid === g.chat_jid) ? xs : [...xs, g]));
+    setCible(g.chat_jid); setPont("");
+    setRecherche(""); setSuggestions([]);
+  };
   const choisirPersonne = (c: Contact) => {
     if (ouvert === "membre") {
       // en mode « Ajouter quelqu'un », la personne trouvée s'ajoute aux numéros
@@ -62,7 +77,7 @@ export function PorterClient({ groupes, demandes, pieces, apercu, montageId }: {
 
   const essai = cible === ESSAI.jid;
   const versPersonne = personne !== null && cible === personne.destinataire;
-  const groupe = versPersonne ? undefined : groupes.find((g) => g.chat_jid === cible);
+  const groupe = versPersonne ? undefined : tousGroupes.find((g) => g.chat_jid === cible);
   const pontsPossibles = essai ? [ESSAI.pont] : versPersonne ? [personne.pont] : groupe?.ponts ?? [];
   const pontRetenu = pont && pontsPossibles.includes(pont) ? pont : pontsPossibles[0] ?? "";
   const nomCible = essai ? ESSAI.nom : versPersonne ? personne.nom : groupe?.chat ?? "";
@@ -126,29 +141,37 @@ export function PorterClient({ groupes, demandes, pieces, apercu, montageId }: {
               className="min-w-[20rem] flex-1 rounded-md border border-gray-300 px-2 py-1 text-base">
               <option value="">{versPersonne ? `→ ${personne.nom}` : "— où ça va —"}</option>
               <option value={ESSAI.jid}>{ESSAI.nom} (sans risque)</option>
-              {groupes.map((g) => (
+              {tousGroupes.map((g) => (
                 <option key={g.chat_jid} value={g.chat_jid}>{g.chat} [{g.ponts.join(", ")}]</option>
               ))}
             </select>
             <div className="relative min-w-[16rem] flex-1">
               <input value={recherche} onChange={(x) => { setRecherche(x.target.value); if (x.target.value.trim().length < 2) setSuggestions([]); }} maxLength={80}
-                placeholder={ouvert === "membre" ? "ou cherche la personne : Anne, Chloé, 4179…" : "ou une personne : Anne, Chloé, 4179…"}
+                placeholder={ouvert === "membre" ? "ou cherche la personne : Anne, Chloé, 4179…" : "ou tape les premières lettres : un groupe (Abo 279…), une personne (Anne…)"}
                 className="w-full rounded-md border border-gray-300 px-2 py-1 text-base" />
               {suggestions.length > 0 && (
-                <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
-                  {suggestions.map((c) => (
-                    <li key={`${c.pont}-${c.cle}`}>
-                      <button type="button" onClick={() => choisirPersonne(c)}
+                <ul className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                  {suggestions.map((s) => s.genre === "groupe" ? (
+                    <li key={`g-${s.g.chat_jid}`}>
+                      <button type="button" onClick={() => choisirGroupe(s.g)}
                         className="flex w-full items-baseline justify-between gap-2 px-2 py-1 text-left text-sm hover:bg-sky-50">
-                        <span className="truncate font-medium">{c.nom}</span>
-                        <span className="shrink-0 text-xs text-gray-500">{c.pont} · {c.telephone ? `+${c.telephone}` : "sans numéro"}</span>
+                        <span className="truncate font-medium">👥 {s.g.chat}</span>
+                        <span className="shrink-0 text-xs text-gray-500">groupe · {s.g.ponts.join(", ")}</span>
+                      </button>
+                    </li>
+                  ) : (
+                    <li key={`p-${s.c.pont}-${s.c.cle}`}>
+                      <button type="button" onClick={() => choisirPersonne(s.c)}
+                        className="flex w-full items-baseline justify-between gap-2 px-2 py-1 text-left text-sm hover:bg-sky-50">
+                        <span className="truncate font-medium">{s.c.nom}</span>
+                        <span className="shrink-0 text-xs text-gray-500">{s.c.pont} · {s.c.telephone ? `+${s.c.telephone}` : "sans numéro"}</span>
                       </button>
                     </li>
                   ))}
                 </ul>
               )}
               {recherche.trim().length >= 2 && suggestions.length === 0 && (
-                <p className="absolute z-20 mt-1 w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 shadow">aucun contact des ponts ne porte ce nom</p>
+                <p className="absolute z-20 mt-1 w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 shadow">aucun groupe ni contact des ponts ne porte ce nom</p>
               )}
             </div>
             {pontsPossibles.length > 1 && (
