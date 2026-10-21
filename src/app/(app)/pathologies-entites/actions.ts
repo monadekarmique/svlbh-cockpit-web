@@ -38,6 +38,32 @@ export type Phrase = { phrase_id: string; nom: string; sens: string | null; zone
 // diverger. Les URLs signées valent une heure ; une relecture les renouvelle au passage.
 export type Flux = { elements: Element[]; phrases: Phrase[]; erreurs: string[]; erreur: string | null };
 
+// L'atelier d'une praticienne (Patrick, 21.10 : « Anne […] a accès aux groupes dans lesquels elle est
+// active »). Même lecture que chargerFlux, mais par index_flux_praticienne (migration 2026-10-21e) : SES
+// groupes, SES tours DiGiSha, et rien d'autre. Les médias sont signés avec SA session — la politique du
+// seau l'admet (authenticated, chemin sous un UUID). Pas de phrases : elle ne monte pas dans les zones.
+export async function chargerFluxPraticienne(jour: string): Promise<Flux> {
+  const sb = await createClient();
+  const { data, error } = await sb.rpc("index_flux_praticienne", { p_jour: jour });
+  if (error) return { elements: [], phrases: [], erreurs: [], erreur: error.message };
+  const elements = (data ?? []) as Element[];
+  const urls = new Map<string, string>();
+  const erreurs: string[] = [];
+  for (const seau of ["fil-medias", "abo-medias"]) {
+    const chemins = [...new Set(elements.filter((e) => e.seau === seau && e.chemin).map((e) => e.chemin as string))];
+    for (let i = 0; i < chemins.length; i += 100) {
+      const { data: s, error: es } = await sb.storage.from(seau).createSignedUrls(chemins.slice(i, i + 100), 3600);
+      if (es) erreurs.push(`${seau} : ${es.message}`);
+      for (const x of s ?? []) {
+        if (x.path && x.signedUrl) urls.set(`${seau}/${x.path}`, x.signedUrl);
+        else if (x.error) erreurs.push(`${seau} : ${x.error}`);
+      }
+    }
+  }
+  for (const e of elements) e.url = e.chemin && e.seau ? urls.get(`${e.seau}/${e.chemin}`) ?? null : null;
+  return { elements, phrases: [], erreurs, erreur: null };
+}
+
 export async function chargerFlux(jour: string): Promise<Flux> {
   const sb = await createClient();
   const { data, error } = await sb.rpc("index_flux", { p_jour: jour });

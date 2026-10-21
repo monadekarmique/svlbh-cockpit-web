@@ -177,6 +177,17 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "owner",
   },
   {
+    // Patrick, 21.10.2026 : une praticienne voit ses groupes, monte sa planche, et publie depuis son
+    // téléphone. Gate requireSt5Plus dans la page ; le périmètre est tenu par la base.
+    href: "/mes-planches",
+    label: "Mes planches",
+    navLabel: "Planches",
+    icon: "🪶",
+    desc: "Tes groupes, ton banc de montage — puis le texte et les médias en main pour publier depuis ton téléphone",
+    color: "#047857",
+    group: "shamanes",   // le bloc des praticiennes — visible dès ST5, la page garde son propre gate
+  },
+  {
     href: "/releve-hebdo",
     label: "Relevé du lundi",
     navLabel: "Relevé",

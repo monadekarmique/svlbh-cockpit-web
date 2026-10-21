@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { chargerFlux, poserMontage, type Demande, type Element, type Groupe, type Phrase, type Zone } from "./actions";
 import { PorterClient } from "./porter-client";
+import { PreparerClient } from "./preparer-client";
 
 const SECONDES = 20; // le pont écrit en 1 s ; 20 s suffit pour suivre un enseignement sans marteler la base
 
@@ -136,9 +137,11 @@ function Planche({ nom, texte, zone, sequence, parId, fermer }: {
   );
 }
 
-function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose }: {
+function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose, atelier = false }: {
   sequence: string[]; parId: Map<string, Element>; jour: string; montages: Phrase[];
   retirer: (id: string) => void; deplacer: (i: number, d: -1 | 1) => void; vider: () => void; pose: (p: Phrase) => void;
+  // atelier : une praticienne monte sa planche mais ne la verse pas dans les zones de DiGiSha (réservées à Patrick)
+  atelier?: boolean;
 }) {
   const [nom, setNom] = useState("");
   const [texte, setTexte] = useState("");
@@ -192,16 +195,20 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose 
         <>
           <pre className="mb-2 max-h-32 overflow-y-auto whitespace-pre-wrap rounded bg-white/70 p-2 text-[11px] text-gray-700">{assemble}</pre>
           <div className="flex flex-wrap items-center gap-2">
-            <input value={nom} onChange={(x) => setNom(x.target.value)} placeholder="nom : le terme, ou le nom de la phrase" maxLength={200}
+            <input value={nom} onChange={(x) => setNom(x.target.value)} placeholder={atelier ? "nom de ta planche" : "nom : le terme, ou le nom de la phrase"} maxLength={200}
               className="min-w-[14rem] flex-1 rounded-md border border-fuchsia-200 px-2 py-1 text-sm" />
-            <select value={zone} onChange={(x) => setZone(x.target.value as Zone)} className="rounded-md border border-fuchsia-200 px-2 py-1 text-sm"
-              title={ZONES.find((z) => z.cle === zone)?.aide}>
-              {ZONES.map((z) => <option key={z.cle} value={z.cle}>{z.titre}</option>)}
-            </select>
+            {!atelier && (
+              <select value={zone} onChange={(x) => setZone(x.target.value as Zone)} className="rounded-md border border-fuchsia-200 px-2 py-1 text-sm"
+                title={ZONES.find((z) => z.cle === zone)?.aide}>
+                {ZONES.map((z) => <option key={z.cle} value={z.cle}>{z.titre}</option>)}
+              </select>
+            )}
             <button type="button" onClick={() => setPlanche(true)}
               className="rounded-md border border-fuchsia-300 px-3 py-1 text-sm text-fuchsia-900"
               title="voir la suite en grand, dans l'ordre où elle se donne">Voir la planche</button>
-            <button type="button" disabled={enCours} onClick={valider} className="rounded-md bg-fuchsia-700 px-4 py-1 text-sm font-semibold text-white">Valider</button>
+            {!atelier && (
+              <button type="button" disabled={enCours} onClick={valider} className="rounded-md bg-fuchsia-700 px-4 py-1 text-sm font-semibold text-white">Valider</button>
+            )}
           </div>
           <textarea value={texte} onChange={(x) => setTexte(x.target.value)} rows={2} maxLength={4000}
             placeholder="tes mots, s'il en faut (ils viennent avant les pièces dans la définition)"
@@ -223,8 +230,10 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose 
   );
 }
 
-export function IndexerClient({ initial, phrases, jour, groupes, demandes }: {
+export function IndexerClient({ initial, phrases, jour, groupes, demandes, atelier = false }: {
   initial: Element[]; phrases: Phrase[]; jour: string; groupes: Groupe[]; demandes: Demande[];
+  // atelier : /mes-planches — une praticienne monte, « Préparer pour WhatsApp » lui tend la planche, son téléphone publie
+  atelier?: boolean;
 }) {
   const [montages, setMontages] = useState(phrases);
   const [sequence, setSequence] = useState<string[]>([]);
@@ -307,9 +316,14 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes }: {
   return (
     <div>
       <Banc sequence={sequence} parId={parId} jour={jour} montages={montages} retirer={basculer} deplacer={deplacer}
-        vider={() => setSequence([])} pose={(p) => setMontages((xs) => [...xs, p])} />
-      {/* « Porter » reçoit la séquence du banc, assemblée — c'est elle qui part, pas une zone de saisie vide. */}
-      <PorterClient groupes={groupes} demandes={demandes} pieces={sequence} apercu={assembler(sequence, parId)} montageId={null} />
+        vider={() => setSequence([])} pose={(p) => setMontages((xs) => [...xs, p])} atelier={atelier} />
+      {atelier ? (
+        /* une praticienne : la planche lui est mise en main, c'est son téléphone qui publie */
+        <PreparerClient sequence={sequence} parId={parId} />
+      ) : (
+        /* Patrick : « Porter » reçoit la séquence du banc, assemblée — c'est elle qui part par ses ponts */
+        <PorterClient groupes={groupes} demandes={demandes} pieces={sequence} apercu={assembler(sequence, parId)} montageId={null} />
+      )}
       <div className="mb-3 flex flex-wrap items-center gap-4 text-base">
         <label className="flex items-center gap-1 font-medium">
           <input type="checkbox" checked={parChat} onChange={(x) => { setParChat(x.target.checked); if (!x.target.checked) setChatChoisi(null); }} />
