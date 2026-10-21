@@ -21,6 +21,7 @@ const ZONES: { cle: Zone; titre: string; aide: string }[] = [
   { cle: "lexique", titre: "Lexique de DiGiSha", aide: "la définition d'un terme : DiGiSha l'explique ensuite telle quelle" },
   { cle: "phrase", titre: "Phrase énergétique", aide: "la séquence numérotée des médias, son nom et ce qu'elle dit" },
   { cle: "savoir", titre: "Savoir", aide: "une fiche que DiGiSha retrouve quand le sujet revient" },
+  { cle: "soin", titre: "Soin", aide: "la suite des gestes, dans l'ordre où ils se donnent — deux pièces au moins" },
 ];
 const GENRE: Record<string, string> = { image: "photo", video: "vidéo", audio: "vocal", sticker: "sticker", document: "document" };
 
@@ -56,6 +57,67 @@ function Piece({ e, rang, basculer }: { e: Element; rang: number | null; bascule
   );
 }
 
+// La planche — Patrick, 21.10.2026 : « construire et visualiser un soin ». Le banc sert à monter,
+// la planche sert à VOIR : la suite entière, en grand, dans l'ordre où elle se donne. Un geste par
+// ligne, son rang, son média à taille lisible, ses mots dessous. C'est la vue qu'on relit avant de
+// donner le soin — pas une vignette de 160 px.
+function Planche({ nom, texte, zone, sequence, parId, fermer }: {
+  nom: string; texte: string; zone: Zone; sequence: string[]; parId: Map<string, Element>; fermer: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-white/97 backdrop-blur">
+      <div className="mx-auto max-w-3xl px-4 py-8">
+        <div className="mb-6 flex items-start justify-between gap-4 border-b border-gray-200 pb-4">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-fuchsia-700">
+              {ZONES.find((z) => z.cle === zone)?.titre ?? zone} · {sequence.length} geste(s)
+            </p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight">{nom.trim() || "sans nom"}</h2>
+            {texte.trim() && <p className="mt-2 max-w-prose whitespace-pre-wrap text-sm text-gray-700">{texte.trim()}</p>}
+          </div>
+          <button type="button" onClick={fermer} className="shrink-0 rounded-md border border-gray-300 px-3 py-1 text-sm">
+            Fermer
+          </button>
+        </div>
+        <ol className="space-y-6">
+          {sequence.map((id, i) => {
+            const e = parId.get(id);
+            const t = e ? texteDe(e).trim() : "";
+            return (
+              <li key={id} className="flex gap-4">
+                <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-fuchsia-700 text-sm font-bold text-white">
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  {e?.media_type && (
+                    <div className="mb-2">
+                      {e.url && (e.media_type === "image" || e.media_type === "sticker") ? (
+                        <img src={e.url} alt="" loading="lazy" className="max-h-[60vh] rounded-lg" />
+                      ) : (
+                        <Media e={e} />
+                      )}
+                    </div>
+                  )}
+                  {t ? (
+                    <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-gray-900">{t}</p>
+                  ) : (
+                    !e?.media_type && <p className="text-sm italic text-gray-400">pièce introuvable</p>
+                  )}
+                  {e && (
+                    <p className="mt-1 text-[11px] text-gray-400">
+                      {e.heure} · {e.qui}
+                    </p>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
 function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose }: {
   sequence: string[]; parId: Map<string, Element>; jour: string; montages: Phrase[];
   retirer: (id: string) => void; deplacer: (i: number, d: -1 | 1) => void; vider: () => void; pose: (p: Phrase) => void;
@@ -65,6 +127,7 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose 
   const [zone, setZone] = useState<Zone>("lexique");
   const [erreur, setErreur] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [planche, setPlanche] = useState(false);
   const [enCours, demarrer] = useTransition();
   const assemble = sequence.map((id, i) => {
     const e = parId.get(id);
@@ -78,6 +141,7 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose 
       if (!nom.trim()) { setErreur("donne un nom au montage (le terme, ou le nom de la phrase)"); return; }
       if (!sequence.length) { setErreur("clique d'abord sur des pièces"); return; }
       if (zone === "phrase" && sequence.length < 2) { setErreur("une phrase énergétique a deux pièces au moins"); return; }
+      if (zone === "soin" && sequence.length < 2) { setErreur("un soin est une suite de gestes : deux pièces au moins"); return; }
       const r = await poserMontage(nom.trim(), zone, texte.trim() || null, sequence, jour);
       if (!r.ok) { setErreur(r.erreur ?? "refusé"); return; }
       pose({ phrase_id: r.id ?? "", nom: nom.trim(), sens: texte.trim() || null, zone, elements: sequence, consomme: false });
@@ -121,6 +185,9 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose 
               title={ZONES.find((z) => z.cle === zone)?.aide}>
               {ZONES.map((z) => <option key={z.cle} value={z.cle}>{z.titre}</option>)}
             </select>
+            <button type="button" onClick={() => setPlanche(true)}
+              className="rounded-md border border-fuchsia-300 px-3 py-1 text-sm text-fuchsia-900"
+              title="voir la suite en grand, dans l'ordre où elle se donne">Voir la planche</button>
             <button type="button" disabled={enCours} onClick={valider} className="rounded-md bg-fuchsia-700 px-4 py-1 text-sm font-semibold text-white">Valider</button>
           </div>
           <textarea value={texte} onChange={(x) => setTexte(x.target.value)} rows={2} maxLength={4000}
@@ -128,6 +195,9 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose 
             className="mt-2 w-full rounded-md border border-fuchsia-200 px-2 py-1 text-xs" />
           <p className="text-[11px] text-fuchsia-900/70">{ZONES.find((z) => z.cle === zone)?.aide}</p>
         </>
+      )}
+      {planche && sequence.length > 0 && (
+        <Planche nom={nom} texte={texte} zone={zone} sequence={sequence} parId={parId} fermer={() => setPlanche(false)} />
       )}
       {erreur && <p className="mt-1 text-xs text-red-700">{erreur}</p>}
       {ok && <p className="mt-1 text-xs text-emerald-800">{ok}</p>}

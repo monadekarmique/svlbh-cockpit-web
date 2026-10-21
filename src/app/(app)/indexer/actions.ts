@@ -28,7 +28,7 @@ export type Element = {
   url?: string | null;
 };
 
-export type Zone = "lexique" | "phrase" | "savoir";
+export type Zone = "lexique" | "phrase" | "savoir" | "soin";
 export type Phrase = { phrase_id: string; nom: string; sens: string | null; zone: Zone; elements: string[]; consomme: boolean };
 
 export async function decider(
