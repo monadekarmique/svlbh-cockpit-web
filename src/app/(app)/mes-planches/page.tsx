@@ -32,7 +32,7 @@ export default async function MesPlanchesPage({ searchParams }: { searchParams: 
   const aujourdhui = zurichJour(new Date());
   const brut = typeof q.jour === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q.jour) ? q.jour : aujourdhui;
   const jour = brut > aujourdhui ? aujourdhui : brut;
-  const { elements, erreurs, erreur } = await chargerFluxPraticienne(jour);
+  const { elements, phrases, erreurs, erreur } = await chargerFluxPraticienne(jour);
   const medias = elements.filter((e) => e.media_type);
   const affiches = medias.filter((e) => e.url).length;
   const conversations = new Set(elements.filter((e) => e.chat_jid).map((e) => e.chat_jid)).size;
@@ -47,8 +47,8 @@ export default async function MesPlanchesPage({ searchParams }: { searchParams: 
         {jour < aujourdhui && <Link href="/mes-planches" className="text-sm underline">aujourd&apos;hui</Link>}
       </div>
       <p className="mb-1 text-base text-gray-600">
-        Tes groupes du jour. Clique les pièces dans l&apos;ordre — elles se numérotent sur le banc. Puis « Préparer pour WhatsApp » :
-        tu copies le texte, tu ouvres les médias, et tu publies depuis ton téléphone, avec ton numéro.
+        Tes groupes du jour. Clique les pièces dans l&apos;ordre — elles se numérotent sur le banc. Nomme-le, « Valider » : il est à toi,
+        en zone Soin, et tu le retrouves. « Préparer pour WhatsApp » te met le texte et les médias en main — tu publies depuis ton téléphone, avec ton numéro.
       </p>
       <p className="mb-4 text-xs text-gray-400">
         version <code className="rounded bg-gray-100 px-1">{(process.env.RENDER_GIT_COMMIT ?? "locale").slice(0, 7)}</code>
@@ -64,7 +64,7 @@ export default async function MesPlanchesPage({ searchParams }: { searchParams: 
             : <>Lecture impossible : {erreur}</>}
         </p>
       ) : (
-        <IndexerClient key={jour} initial={elements} phrases={[]} jour={jour} groupes={[]} demandes={[]} atelier />
+        <IndexerClient key={jour} initial={elements} phrases={phrases} jour={jour} groupes={[]} demandes={[]} atelier />
       )}
     </div>
   );

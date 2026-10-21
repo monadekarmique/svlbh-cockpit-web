@@ -47,6 +47,9 @@ export async function chargerFluxPraticienne(jour: string): Promise<Flux> {
   const { data, error } = await sb.rpc("index_flux_praticienne", { p_jour: jour });
   if (error) return { elements: [], phrases: [], erreurs: [], erreur: error.message };
   const elements = (data ?? []) as Element[];
+  // ses bancs validés (zone « soin ») — index_phrases ne rend que les siens à une praticienne (migration 2026-10-21g)
+  const { data: ph } = await sb.rpc("index_phrases", { p_jour: jour });
+  const phrases = (ph ?? []) as Phrase[];
   const urls = new Map<string, string>();
   const erreurs: string[] = [];
   for (const seau of ["fil-medias", "abo-medias"]) {
@@ -61,7 +64,7 @@ export async function chargerFluxPraticienne(jour: string): Promise<Flux> {
     }
   }
   for (const e of elements) e.url = e.chemin && e.seau ? urls.get(`${e.seau}/${e.chemin}`) ?? null : null;
-  return { elements, phrases: [], erreurs, erreur: null };
+  return { elements, phrases, erreurs, erreur: null };
 }
 
 export async function chargerFlux(jour: string): Promise<Flux> {

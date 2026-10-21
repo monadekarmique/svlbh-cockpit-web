@@ -145,7 +145,7 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose,
 }) {
   const [nom, setNom] = useState("");
   const [texte, setTexte] = useState("");
-  const [zone, setZone] = useState<Zone>("lexique");
+  const [zone, setZone] = useState<Zone>(atelier ? "soin" : "lexique");
   const [erreur, setErreur] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [planche, setPlanche] = useState(false);
@@ -197,18 +197,16 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose,
           <div className="flex flex-wrap items-center gap-2">
             <input value={nom} onChange={(x) => setNom(x.target.value)} placeholder={atelier ? "nom de ta planche" : "nom : le terme, ou le nom de la phrase"} maxLength={200}
               className="min-w-[14rem] flex-1 rounded-md border border-fuchsia-200 px-2 py-1 text-sm" />
-            {!atelier && (
-              <select value={zone} onChange={(x) => setZone(x.target.value as Zone)} className="rounded-md border border-fuchsia-200 px-2 py-1 text-sm"
-                title={ZONES.find((z) => z.cle === zone)?.aide}>
-                {ZONES.map((z) => <option key={z.cle} value={z.cle}>{z.titre}</option>)}
-              </select>
-            )}
+            {/* une praticienne valide en zone « soin » seulement : les trois autres zones nourrissent DiGiSha au nom
+                de Patrick (index_vers_savoir.py, PATRICK_SVLBH en dur) — la base le refuse aussi (migration 2026-10-21g) */}
+            <select value={zone} onChange={(x) => setZone(x.target.value as Zone)} className="rounded-md border border-fuchsia-200 px-2 py-1 text-sm"
+              title={ZONES.find((z) => z.cle === zone)?.aide} disabled={atelier}>
+              {ZONES.filter((z) => !atelier || z.cle === "soin").map((z) => <option key={z.cle} value={z.cle}>{z.titre}</option>)}
+            </select>
             <button type="button" onClick={() => setPlanche(true)}
               className="rounded-md border border-fuchsia-300 px-3 py-1 text-sm text-fuchsia-900"
               title="voir la suite en grand, dans l'ordre où elle se donne">Voir la planche</button>
-            {!atelier && (
-              <button type="button" disabled={enCours} onClick={valider} className="rounded-md bg-fuchsia-700 px-4 py-1 text-sm font-semibold text-white">Valider</button>
-            )}
+            <button type="button" disabled={enCours} onClick={valider} className="rounded-md bg-fuchsia-700 px-4 py-1 text-sm font-semibold text-white">Valider</button>
           </div>
           <textarea value={texte} onChange={(x) => setTexte(x.target.value)} rows={2} maxLength={4000}
             placeholder="tes mots, s'il en faut (ils viennent avant les pièces dans la définition)"
