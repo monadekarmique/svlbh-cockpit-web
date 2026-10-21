@@ -63,6 +63,69 @@ export async function chargerFlux(jour: string): Promise<Flux> {
   return { elements, phrases, erreurs, erreur: null };
 }
 
+// ── porter vers un groupe WhatsApp ───────────────────────────────────────────
+// Patrick, 21.10.2026 : « j'ai au banc de montage une version que je souhaite publier sur z1 - Abo 279 »,
+// « je veux ajouter Chloé sur Dossier entités z4 », « je peux attendre qq secondes », « je veux cette sécurité ».
+//
+// Le cockpit tourne sur Render, les ponts sur le Mac de Patrick : Render ne peut pas les joindre. La page
+// DÉPOSE une demande, l'agent du Mac (bin/pont-envois.py) la ramasse après 5 s et appelle le pont. Pendant
+// ces 5 secondes, « Annuler » la retire et RIEN n'est parti. Un envoi, lui, est irréversible.
+export type Demande = {
+  demande_id: string; genre: "message" | "membre"; pont: string;
+  cible_nom: string | null; cible_jid: string; texte: string | null; membres: string[] | null;
+  etat: "attente" | "en_cours" | "parti" | "refuse" | "annule";
+  resultat: string | null; demande_le: string; traite_le: string | null;
+};
+export type Groupe = { chat_jid: string; chat: string; ponts: string[] };
+
+/** Les groupes vus par les ponts ce jour-là, avec les ponts qui les voient (un groupe peut être vu par plusieurs). */
+export async function listerGroupes(jour: string): Promise<Groupe[]> {
+  const { elements } = await chargerFlux(jour);
+  const m = new Map<string, Groupe>();
+  for (const e of elements) {
+    if (!e.chat_jid?.endsWith("@g.us")) continue;
+    const g = m.get(e.chat_jid) ?? { chat_jid: e.chat_jid, chat: e.chat, ponts: [] };
+    if (e.bridge && !g.ponts.includes(e.bridge)) g.ponts.push(e.bridge);
+    m.set(e.chat_jid, g);
+  }
+  return [...m.values()].map((g) => ({ ...g, ponts: g.ponts.sort() })).sort((a, b) => a.chat.localeCompare(b.chat));
+}
+
+export async function demanderEnvoi(
+  pont: string, cibleJid: string, cibleNom: string, texte: string, montageId: string | null,
+): Promise<{ ok: boolean; id?: string; erreur?: string }> {
+  const sb = await createClient();
+  const { data, error } = await sb.rpc("pont_demander", {
+    p_genre: "message", p_pont: pont, p_cible_jid: cibleJid, p_cible_nom: cibleNom,
+    p_texte: texte, p_membres: null, p_montage: montageId,
+  });
+  return error ? { ok: false, erreur: error.message } : { ok: true, id: data as string };
+}
+
+export async function demanderAjout(
+  pont: string, cibleJid: string, cibleNom: string, membres: string[],
+): Promise<{ ok: boolean; id?: string; erreur?: string }> {
+  const sb = await createClient();
+  const { data, error } = await sb.rpc("pont_demander", {
+    p_genre: "membre", p_pont: pont, p_cible_jid: cibleJid, p_cible_nom: cibleNom,
+    p_texte: null, p_membres: membres, p_montage: null,
+  });
+  return error ? { ok: false, erreur: error.message } : { ok: true, id: data as string };
+}
+
+export async function annulerDemande(id: string): Promise<{ ok: boolean; erreur?: string }> {
+  const sb = await createClient();
+  const { data, error } = await sb.rpc("pont_annuler", { p_demande: id });
+  if (error) return { ok: false, erreur: error.message };
+  return data === true ? { ok: true } : { ok: false, erreur: "trop tard — la demande est déjà partie" };
+}
+
+export async function listerDemandes(jour: string): Promise<Demande[]> {
+  const sb = await createClient();
+  const { data } = await sb.rpc("pont_demandes", { p_jour: jour });
+  return (data ?? []) as Demande[];
+}
+
 export async function decider(
   id: string, decision: "indexer" | "ignorer", mot: string | null, definition: string | null,
 ): Promise<{ ok: boolean; erreur?: string }> {

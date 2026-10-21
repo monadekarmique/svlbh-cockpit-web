@@ -52,12 +52,12 @@ function Piece({ e, rang, nouveau, basculer }: { e: Element; rang: number | null
           : e.de_patrick ? "border-amber-300 bg-amber-50/40 hover:border-fuchsia-300" : "border-gray-200 bg-white hover:border-fuchsia-300")}>
       {rang && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-fuchsia-700 px-2 text-xs font-bold text-white">{rang}</span>}
       {!rang && nouveau && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-emerald-600 px-2 text-[10px] font-bold text-white">nouveau</span>}
-      <span className="flex justify-between gap-2 text-[11px] text-gray-500">
+      <span className="flex justify-between gap-2 text-xs text-gray-500">
         <span className="truncate">{e.heure} · <b className={e.de_patrick ? "text-amber-800" : ""}>{e.qui}</b></span>
         <span className="max-w-[50%] truncate" title={e.chat}>{e.chat}</span>
       </span>
       <span className="mt-1 block"><Media e={e} /></span>
-      {e.texte && <span className="mt-1 block max-h-60 overflow-y-auto whitespace-pre-wrap text-sm leading-snug">{e.texte}</span>}
+      {e.texte && <span className="mt-1 block max-h-72 overflow-y-auto whitespace-pre-wrap text-[15px] leading-relaxed">{e.texte}</span>}
     </button>
   );
 }
@@ -220,6 +220,8 @@ export function IndexerClient({ initial, phrases, jour }: { initial: Element[]; 
   const [sequence, setSequence] = useState<string[]>([]);
   const [stickers, setStickers] = useState(false);
   const [patrickSeul, setPatrickSeul] = useState(false);
+  const [parChat, setParChat] = useState(false);
+  const [chatChoisi, setChatChoisi] = useState<string | null>(null);
 
   // ── le direct ────────────────────────────────────────────────────────────
   // Le pont écrit le message dans la base en une seconde ; c'est la page qui ne relisait jamais.
@@ -254,18 +256,41 @@ export function IndexerClient({ initial, phrases, jour }: { initial: Element[]; 
   }, [direct, jour]);
 
   const parId = useMemo(() => new Map(elements.map((e) => [e.wa_message_id, e])), [elements]);
+  // ── par conversation plutôt que par pont ─────────────────────────────────
+  // Patrick, 21.10 : un même groupe est vu par plusieurs de ses ponts ; index_flux garde le pont dont
+  // le nom vient en premier, si bien qu'une séquence d'enseignement se retrouve éclatée sur z1…z4.
+  // Mesuré le 21.10 sur MyShaman Family Pro : vu par z1, z2, z3, z4 ET z5 à la fois. « Par conversation »
+  // rend la suite entière d'un coup, dans l'ordre où elle a été donnée.
+  const conversations = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const e of elements) m.set(e.chat, (m.get(e.chat) ?? 0) + 1);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [elements]);
+
+  const colonnes = useMemo(() => {
+    if (parChat) {
+      const retenues = chatChoisi ? conversations.filter(([c]) => c === chatChoisi) : conversations;
+      return retenues.map(([c]) => ({ cle: c, titre: c }));
+    }
+    return COLONNES;
+  }, [parChat, chatChoisi, conversations]);
+
   const parColonne = useMemo(() => {
     const m = new Map<string, Element[]>();
     for (const e of elements) {
       const surLeBanc = sequence.includes(e.wa_message_id);
       if (!surLeBanc && !stickers && e.media_type === "sticker") continue;
       if (!surLeBanc && patrickSeul && !e.de_patrick) continue;
-      const arr = m.get(e.colonne) ?? [];
+      if (!surLeBanc && chatChoisi && e.chat !== chatChoisi) continue;
+      const cle = parChat ? e.chat : e.colonne;
+      const arr = m.get(cle) ?? [];
       arr.push(e);
-      m.set(e.colonne, arr);
+      m.set(cle, arr);
     }
+    // par conversation : du plus ancien au plus récent — la suite se lit dans l'ordre où elle a été donnée
+    if (parChat) for (const arr of m.values()) arr.sort((a, b) => a.heure.localeCompare(b.heure));
     return m;
-  }, [elements, stickers, patrickSeul, sequence]);
+  }, [elements, stickers, patrickSeul, sequence, parChat, chatChoisi]);
   const basculer = (id: string) => setSequence((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const deplacer = (i: number, d: -1 | 1) =>
     setSequence((s) => { const t = [...s]; const j = i + d; if (j < 0 || j >= t.length) return s; [t[i], t[j]] = [t[j], t[i]]; return t; });
@@ -273,7 +298,17 @@ export function IndexerClient({ initial, phrases, jour }: { initial: Element[]; 
     <div>
       <Banc sequence={sequence} parId={parId} jour={jour} montages={montages} retirer={basculer} deplacer={deplacer}
         vider={() => setSequence([])} pose={(p) => setMontages((xs) => [...xs, p])} />
-      <div className="mb-3 flex flex-wrap items-center gap-4 text-sm">
+      <div className="mb-3 flex flex-wrap items-center gap-4 text-base">
+        <label className="flex items-center gap-1 font-medium">
+          <input type="checkbox" checked={parChat} onChange={(x) => { setParChat(x.target.checked); if (!x.target.checked) setChatChoisi(null); }} />
+          Par conversation
+        </label>
+        <select value={chatChoisi ?? ""} onChange={(x) => { setChatChoisi(x.target.value || null); if (x.target.value) setParChat(true); }}
+          className="max-w-[22rem] rounded-md border border-gray-300 px-2 py-1 text-base"
+          title="ne garder qu'une conversation — le groupe que tu lis ou dans lequel tu enseignes">
+          <option value="">toutes les conversations ({conversations.length})</option>
+          {conversations.map(([c, n]) => <option key={c} value={c}>{c} ({n})</option>)}
+        </select>
         <label className="flex items-center gap-1"><input type="checkbox" checked={stickers} onChange={(x) => setStickers(x.target.checked)} /> montrer les stickers</label>
         <label className="flex items-center gap-1"><input type="checkbox" checked={patrickSeul} onChange={(x) => setPatrickSeul(x.target.checked)} /> seulement mes messages</label>
         <label className="flex items-center gap-1 font-medium text-emerald-800">
@@ -289,12 +324,12 @@ export function IndexerClient({ initial, phrases, jour }: { initial: Element[]; 
           {nouveaux.size > 0 && <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-900">{nouveaux.size} nouvelle(s)</span>}
         </span>
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 2xl:grid-cols-6">
-        {COLONNES.map((c) => {
+      <div className={"grid grid-cols-1 gap-3 " + (chatChoisi ? "" : parChat ? "md:grid-cols-2 2xl:grid-cols-3" : "md:grid-cols-3 2xl:grid-cols-6")}>
+        {colonnes.map((c) => {
           const xs = parColonne.get(c.cle) ?? [];
           return (
             <section key={c.cle} className="flex max-h-[70vh] flex-col rounded-xl bg-gray-50 p-2">
-              <h2 className="mb-2 flex justify-between text-sm font-semibold"><span>{c.titre}</span><span className="text-gray-500">{xs.length}</span></h2>
+              <h2 className="mb-2 flex justify-between gap-2 text-base font-semibold"><span className="truncate" title={c.titre}>{c.titre}</span><span className="shrink-0 text-gray-500">{xs.length}</span></h2>
               <div className="overflow-y-auto px-1.5 pt-1.5">
                 {xs.length === 0 && <p className="text-xs text-gray-400">rien ce jour-là</p>}
                 {xs.map((e) => { const i = sequence.indexOf(e.wa_message_id); return <Piece key={e.wa_message_id} e={e} rang={i >= 0 ? i + 1 : null} nouveau={nouveaux.has(e.wa_message_id)} basculer={basculer} />; })}

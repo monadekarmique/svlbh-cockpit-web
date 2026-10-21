@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSt6 } from "@/lib/owner-gate";
-import { chargerFlux } from "./actions";
+import { chargerFlux, listerDemandes, listerGroupes } from "./actions";
 import { IndexerClient } from "./indexer-client";
+import { PorterClient } from "./porter-client";
 
-export const metadata: Metadata = { title: "Indexer" };
+export const metadata: Metadata = { title: "Pathologies & entités" };
 export const dynamic = "force-dynamic";
 
 // Patrick, 20.10.2026 : « ce serait 4 canaux qui défilent dans lesquel je peux identifier pour les médias et les textes si cela
@@ -36,12 +37,14 @@ export default async function IndexerPage({ searchParams }: { searchParams: Prom
   const { elements, phrases, erreurs, erreur } = await chargerFlux(jour);
   const error = erreur ? { message: erreur } : null;
   const medias = elements.filter((e) => e.media_type);
+  // porter vers un groupe : les groupes vus ce jour-là, et les demandes déjà déposées
+  const [groupes, demandes] = error ? [[], []] : await Promise.all([listerGroupes(jour), listerDemandes(jour)]);
   const affiches = medias.filter((e) => e.url).length;
   const [jj, mm, aaaa] = [jour.slice(8, 10), jour.slice(5, 7), jour.slice(0, 4)];
   return (
     <div className="p-4">
       <div className="flex flex-wrap items-baseline gap-3 mb-1">
-        <h1 className="text-xl font-semibold">📖 Indexer — {jj}.{mm}.{aaaa}</h1>
+        <h1 className="text-xl font-semibold">📖 Pathologies &amp; entités — {jj}.{mm}.{aaaa}</h1>
         <Link href={`/indexer?jour=${decaler(jour, -1)}`} className="text-sm underline">← veille</Link>
         {jour < aujourdhui && <Link href={`/indexer?jour=${decaler(jour, 1)}`} className="text-sm underline">lendemain →</Link>}
         {jour < aujourdhui && <Link href="/indexer" className="text-sm underline">aujourd&apos;hui</Link>}
@@ -54,7 +57,12 @@ export default async function IndexerPage({ searchParams }: { searchParams: Prom
         {medias.length} média(s) ce jour · {affiches} affiché(s) · {medias.filter((e) => !e.chemin).length} sans fichier en base (restés sur le pont)
         {erreurs.length > 0 && <span className="text-red-700"> · signature refusée : {[...new Set(erreurs)].slice(0, 3).join(" ; ")}</span>}
       </p>
-      {error ? <p className="text-red-700">Lecture impossible : {error.message}</p> : <IndexerClient key={jour} initial={elements} phrases={phrases} jour={jour} />}
+      {error ? <p className="text-red-700">Lecture impossible : {error.message}</p> : (
+        <>
+          <PorterClient groupes={groupes} demandes={demandes} texteDuBanc="" montageId={null} />
+          <IndexerClient key={jour} initial={elements} phrases={phrases} jour={jour} />
+        </>
+      )}
     </div>
   );
 }
