@@ -7,7 +7,8 @@
 // l'ordre ; on déplace une pièce (← →), on nomme, on choisit la zone, « Valider ». Le passage des deux heures l'envoie dans sa zone.
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { chargerFlux, poserMontage, type Element, type Phrase, type Zone } from "./actions";
+import { chargerFlux, poserMontage, type Demande, type Element, type Groupe, type Phrase, type Zone } from "./actions";
+import { PorterClient } from "./porter-client";
 
 const SECONDES = 20; // le pont écrit en 1 s ; 20 s suffit pour suivre un enseignement sans marteler la base
 
@@ -41,6 +42,18 @@ function Media({ e, petit = false }: { e: Element; petit?: boolean }) {
 
 function texteDe(e: Element): string {
   return e.wa_message_id.startsWith("dg:") ? (e.texte ?? "").split("\n— DiGiSha : ")[0] : (e.texte ?? "");
+}
+
+// La séquence du banc, mise à plat — c'est CE texte qui part dans un groupe quand on publie.
+// (21.10 : « seul le mot test a été envoyé pas le reste » — le bouton Publier était branché à côté
+//  du banc et ne voyait pas la séquence. Elle se calcule ici, une fois, et sert aux deux.)
+function assembler(sequence: string[], parId: Map<string, Element>): string {
+  return sequence.map((id, i) => {
+    const e = parId.get(id);
+    if (!e) return `${i + 1}. ?`;
+    const t = texteDe(e).trim();
+    return `${i + 1}. ` + (e.media_type ? `[${GENRE[e.media_type] ?? "média"}]${t ? " " + t : ""}` : t);
+  }).join("\n");
 }
 
 function Piece({ e, rang, nouveau, basculer }: { e: Element; rang: number | null; nouveau?: boolean; basculer: (id: string) => void }) {
@@ -134,12 +147,7 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose 
   const [ok, setOk] = useState<string | null>(null);
   const [planche, setPlanche] = useState(false);
   const [enCours, demarrer] = useTransition();
-  const assemble = sequence.map((id, i) => {
-    const e = parId.get(id);
-    if (!e) return `${i + 1}. ?`;
-    const t = texteDe(e).trim();
-    return `${i + 1}. ` + (e.media_type ? `[${GENRE[e.media_type] ?? "média"}]${t ? " " + t : ""}` : t);
-  }).join("\n");
+  const assemble = assembler(sequence, parId);
   const valider = () =>
     demarrer(async () => {
       setOk(null);
@@ -215,10 +223,12 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose 
   );
 }
 
-export function IndexerClient({ initial, phrases, jour }: { initial: Element[]; phrases: Phrase[]; jour: string }) {
+export function IndexerClient({ initial, phrases, jour, groupes, demandes }: {
+  initial: Element[]; phrases: Phrase[]; jour: string; groupes: Groupe[]; demandes: Demande[];
+}) {
   const [montages, setMontages] = useState(phrases);
   const [sequence, setSequence] = useState<string[]>([]);
-  const [stickers, setStickers] = useState(false);
+  const [stickers, setStickers] = useState(true);   // montrés par défaut (DEC Patrick 21.10)
   const [patrickSeul, setPatrickSeul] = useState(false);
   const [parChat, setParChat] = useState(false);
   const [chatChoisi, setChatChoisi] = useState<string | null>(null);
@@ -298,6 +308,8 @@ export function IndexerClient({ initial, phrases, jour }: { initial: Element[]; 
     <div>
       <Banc sequence={sequence} parId={parId} jour={jour} montages={montages} retirer={basculer} deplacer={deplacer}
         vider={() => setSequence([])} pose={(p) => setMontages((xs) => [...xs, p])} />
+      {/* « Porter » reçoit la séquence du banc, assemblée — c'est elle qui part, pas une zone de saisie vide. */}
+      <PorterClient groupes={groupes} demandes={demandes} texteDuBanc={assembler(sequence, parId)} montageId={null} />
       <div className="mb-3 flex flex-wrap items-center gap-4 text-base">
         <label className="flex items-center gap-1 font-medium">
           <input type="checkbox" checked={parChat} onChange={(x) => { setParChat(x.target.checked); if (!x.target.checked) setChatChoisi(null); }} />

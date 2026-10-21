@@ -3,7 +3,6 @@ import Link from "next/link";
 import { requireSt6 } from "@/lib/owner-gate";
 import { chargerFlux, listerDemandes, listerGroupes } from "./actions";
 import { IndexerClient } from "./indexer-client";
-import { PorterClient } from "./porter-client";
 
 export const metadata: Metadata = { title: "Pathologies & entités" };
 export const dynamic = "force-dynamic";
@@ -58,10 +57,7 @@ export default async function IndexerPage({ searchParams }: { searchParams: Prom
         {erreurs.length > 0 && <span className="text-red-700"> · signature refusée : {[...new Set(erreurs)].slice(0, 3).join(" ; ")}</span>}
       </p>
       {error ? <p className="text-red-700">Lecture impossible : {error.message}</p> : (
-        <>
-          <PorterClient groupes={groupes} demandes={demandes} texteDuBanc="" montageId={null} />
-          <IndexerClient key={jour} initial={elements} phrases={phrases} jour={jour} />
-        </>
+        <IndexerClient key={jour} initial={elements} phrases={phrases} jour={jour} groupes={groupes} demandes={demandes} />
       )}
     </div>
   );
