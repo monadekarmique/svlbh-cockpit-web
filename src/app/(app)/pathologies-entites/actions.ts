@@ -35,6 +35,8 @@ export type Element = {
   definition: string | null;
   consomme: boolean;
   url?: string | null;
+  // Patrick, 21.10 : « attacher un commentaire à chaque photo » — le mien (celui de la cible en voir-comme), migration 2026-10-21i
+  commentaire?: string | null;
 };
 
 export type Zone = "lexique" | "phrase" | "savoir" | "soin";
@@ -60,6 +62,7 @@ export async function chargerFluxPraticienne(jour: string): Promise<Flux> {
   // ses bancs validés (zone « soin ») — index_phrases ne rend que les siens à une praticienne (migration 2026-10-21g)
   const { data: ph } = await sb.rpc("index_phrases", { p_jour: jour });
   const phrases = (ph ?? []) as Phrase[];
+  await poserCommentaires(sb, elements);
   const urls = new Map<string, string>();
   const erreurs: string[] = [];
   for (const seau of ["fil-medias", "abo-medias"]) {
@@ -77,6 +80,18 @@ export async function chargerFluxPraticienne(jour: string): Promise<Flux> {
   return { elements, phrases, erreurs, erreur: null };
 }
 
+// mes commentaires sur ces pièces (index_commentaires : l'identité effective — la cible en voir-comme)
+async function poserCommentaires(sb: Awaited<ReturnType<typeof createClient>>, elements: Element[]): Promise<void> {
+  if (!elements.length) return;
+  const ids = elements.map((e) => e.wa_message_id);
+  const coms = new Map<string, string>();
+  for (let i = 0; i < ids.length; i += 500) {
+    const { data } = await sb.rpc("index_commentaires", { p_ids: ids.slice(i, i + 500) });
+    for (const c of (data ?? []) as { wa_message_id: string; texte: string }[]) coms.set(c.wa_message_id, c.texte);
+  }
+  for (const e of elements) e.commentaire = coms.get(e.wa_message_id) ?? null;
+}
+
 export async function chargerFlux(jour: string): Promise<Flux> {
   const sb = await createClient();
   const { data, error } = await sb.rpc("index_flux", { p_jour: jour });
@@ -84,6 +99,7 @@ export async function chargerFlux(jour: string): Promise<Flux> {
   const elements = (data ?? []) as Element[];
   const { data: ph } = await sb.rpc("index_phrases", { p_jour: jour });
   const phrases = (ph ?? []) as Phrase[];
+  await poserCommentaires(sb, elements);
 
   const urls = new Map<string, string>();
   const erreurs: string[] = [];
@@ -224,4 +240,14 @@ export async function quitterVoirComme(): Promise<void> {
   const sb = await createClient();
   await sb.rpc("end_coach_view");
   revalidatePath("/mes-planches");
+}
+
+// ── un commentaire par pièce ─────────────────────────────────────────────────
+// Patrick, 21.10.2026 : « j'aimerais pouvoir attacher un commentaire à chaque photo ». Le commentaire est à qui
+// l'écrit, suit la pièce (banc, planche, Préparer, publication, montage validé). Texte vide = effacer.
+// atelier : avec l'en-tête de surface, pour que la base refuse d'écrire pendant un voir-comme.
+export async function commenter(id: string, texte: string, atelier = false): Promise<{ ok: boolean; erreur?: string }> {
+  const sb = await createClient(atelier ? { surface: SURFACE } : {});
+  const { error } = await sb.rpc("index_commenter", { p_wa_message_id: id, p_texte: texte });
+  return error ? { ok: false, erreur: error.message } : { ok: true };
 }

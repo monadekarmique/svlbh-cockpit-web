@@ -17,9 +17,11 @@ function texteDe(e: Element): string {
 export function PreparerClient({ sequence, parId }: { sequence: string[]; parId: Map<string, Element> }) {
   const [copie, setCopie] = useState<string | null>(null);
   const pieces = sequence.map((id, i) => ({ rang: i + 1, e: parId.get(id) }));
-  const textes = pieces.filter((p) => p.e && !p.e.media_type && texteDe(p.e).trim());
+  // le commentaire d'une pièce (21.10) suit la pièce : à la suite d'un texte, en légende d'un média
+  const avecCom = (e: Element) => [texteDe(e).trim(), (e.commentaire ?? "").trim()].filter(Boolean).join("\n");
+  const textes = pieces.filter((p) => p.e && !p.e.media_type && avecCom(p.e));
   const medias = pieces.filter((p) => p.e?.media_type);
-  const bloc = textes.map((p) => texteDe(p.e!).trim()).join("\n\n");
+  const bloc = textes.map((p) => avecCom(p.e!)).join("\n\n");
 
   const copier = async (t: string, cle: string) => {
     try { await navigator.clipboard.writeText(t); setCopie(cle); setTimeout(() => setCopie(null), 2000); }
@@ -59,7 +61,7 @@ export function PreparerClient({ sequence, parId }: { sequence: string[]; parId:
                 {e!.url && (e!.media_type === "image" || e!.media_type === "sticker")
                   ? <img src={e!.url} alt="" className="h-14 w-14 rounded object-contain" />
                   : <span className="w-14 text-center text-[11px] text-gray-500">{GENRE[e!.media_type!] ?? e!.media_type}</span>}
-                <span className="min-w-0 flex-1 truncate text-sm text-gray-700">{texteDe(e!).trim() || GENRE[e!.media_type!] || "média"}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-gray-700">{avecCom(e!) || GENRE[e!.media_type!] || "média"}</span>
                 {e!.url ? (
                   <a href={e!.url} target="_blank" rel="noreferrer"
                     className="shrink-0 rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-900">

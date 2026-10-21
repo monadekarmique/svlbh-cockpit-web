@@ -7,9 +7,10 @@
 // l'ordre ; on déplace une pièce (← →), on nomme, on choisit la zone, « Valider ». Le passage des deux heures l'envoie dans sa zone.
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { chargerFlux, chargerFluxPraticienne, poserMontage, type Demande, type Element, type Groupe, type Phrase, type Zone } from "./actions";
+import { chargerFlux, chargerFluxPraticienne, commenter, poserMontage, type Demande, type Element, type Groupe, type Phrase, type Zone } from "./actions";
 import { PorterClient } from "./porter-client";
 import { PreparerClient } from "./preparer-client";
+import { LottieSticker } from "./lottie-sticker";
 
 const SECONDES = 20; // le pont écrit en 1 s ; 20 s suffit pour suivre un enseignement sans marteler la base
 
@@ -29,12 +30,18 @@ const ZONES: { cle: Zone; titre: string; aide: string }[] = [
 ];
 const GENRE: Record<string, string> = { image: "photo", video: "vidéo", audio: "vocal", sticker: "sticker", document: "document" };
 
-function Media({ e, petit = false }: { e: Element; petit?: boolean }) {
+function Media({ e, petit = false, grand = false }: { e: Element; petit?: boolean; grand?: boolean }) {
   if (!e.media_type) return null;
   if (!e.url) return <span className="text-xs italic text-gray-500">{GENRE[e.media_type] ?? e.media_type} — fichier resté sur le pont</span>;
-  if (e.media_type === "image" || e.media_type === "sticker")
-    return <img src={e.url} alt="" loading="lazy"
-      className={petit ? "h-16 w-16 rounded object-contain" : e.media_type === "sticker" ? "h-24 w-24 object-contain" : "max-h-48 rounded"} />;
+  if (e.media_type === "sticker") {
+    // Patrick, 21.10 : « que le sticker apparaisse comme sticker » — sans cadre, à sa taille, et un animé se JOUE :
+    // le ramassage range les stickers animés en Lottie (.json) qu'une balise <img> laisse vide.
+    const taille = petit ? "h-16 w-16" : grand ? "h-48 w-48" : "h-28 w-28";
+    if ((e.chemin ?? "").toLowerCase().endsWith(".json")) return <LottieSticker url={e.url} className={taille} />;
+    return <img src={e.url} alt="" loading="lazy" className={`${taille} object-contain drop-shadow-sm`} />;
+  }
+  if (e.media_type === "image")
+    return <img src={e.url} alt="" loading="lazy" className={petit ? "h-16 w-16 rounded object-contain" : "max-h-48 rounded"} />;
   if (petit) return <span className="block h-16 w-16 text-[10px] text-gray-500">{GENRE[e.media_type]}</span>;
   if (e.media_type === "video") return <video src={e.url} controls className="max-h-48 rounded" preload="none" onClick={(x) => x.stopPropagation()} />;
   if (e.media_type === "audio") return <audio src={e.url} controls className="w-full" preload="none" onClick={(x) => x.stopPropagation()} />;
@@ -53,26 +60,49 @@ function assembler(sequence: string[], parId: Map<string, Element>): string {
     const e = parId.get(id);
     if (!e) return `${i + 1}. ?`;
     const t = texteDe(e).trim();
-    return `${i + 1}. ` + (e.media_type ? `[${GENRE[e.media_type] ?? "média"}]${t ? " " + t : ""}` : t);
+    const c = (e.commentaire ?? "").trim();   // le commentaire suit la pièce (21.10 : « attacher un commentaire à chaque photo »)
+    return `${i + 1}. ` + (e.media_type ? `[${GENRE[e.media_type] ?? "média"}]${t ? " " + t : ""}` : t) + (c ? ` — ${c}` : "");
   }).join("\n");
 }
 
-function Piece({ e, rang, nouveau, basculer }: { e: Element; rang: number | null; nouveau?: boolean; basculer: (id: string) => void }) {
+function Piece({ e, rang, nouveau, basculer, commenter, lectureSeule = false }: {
+  e: Element; rang: number | null; nouveau?: boolean; basculer: (id: string) => void;
+  commenter: (id: string, texte: string) => Promise<string | null>; lectureSeule?: boolean;
+}) {
+  // Patrick, 21.10 : « attacher un commentaire à chaque photo » — le mien, posé au blur (ou Entrée), vide = effacé
+  const [com, setCom] = useState(e.commentaire ?? "");
+  const [etat, setEtat] = useState<"" | "…" | "✓" | "✗">("");
+  const poser = async () => {
+    if (com.trim() === (e.commentaire ?? "").trim()) return;
+    setEtat("…");
+    const err = await commenter(e.wa_message_id, com.trim());
+    setEtat(err ? "✗" : "✓");
+    if (!err) setTimeout(() => setEtat(""), 1500);
+  };
   return (
-    <button type="button" onClick={() => basculer(e.wa_message_id)}
-      className={"relative mb-2 block w-full rounded-lg border p-2 text-left transition " +
+    <div className={"relative mb-2 rounded-lg border transition " +
         (rang ? "border-fuchsia-500 bg-fuchsia-50 ring-2 ring-fuchsia-400"
           : nouveau ? "border-emerald-400 bg-emerald-50/60 ring-1 ring-emerald-300 hover:border-fuchsia-300"
           : e.de_patrick ? "border-amber-300 bg-amber-50/40 hover:border-fuchsia-300" : "border-gray-200 bg-white hover:border-fuchsia-300")}>
-      {rang && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-fuchsia-700 px-2 text-xs font-bold text-white">{rang}</span>}
-      {!rang && nouveau && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-emerald-600 px-2 text-[10px] font-bold text-white">nouveau</span>}
-      <span className="flex justify-between gap-2 text-xs text-gray-500">
-        <span className="truncate">{e.heure} · <b className={e.de_patrick ? "text-amber-800" : ""}>{e.qui}</b></span>
-        <span className="max-w-[50%] truncate" title={e.chat}>{e.chat}</span>
-      </span>
-      <span className="mt-1 block"><Media e={e} /></span>
-      {e.texte && <span className="mt-1 block max-h-72 overflow-y-auto whitespace-pre-wrap text-[15px] leading-relaxed">{e.texte}</span>}
-    </button>
+      {rang && <span className="absolute -left-1.5 -top-1.5 z-10 rounded-full bg-fuchsia-700 px-2 text-xs font-bold text-white">{rang}</span>}
+      {!rang && nouveau && <span className="absolute -left-1.5 -top-1.5 z-10 rounded-full bg-emerald-600 px-2 text-[10px] font-bold text-white">nouveau</span>}
+      <button type="button" onClick={() => basculer(e.wa_message_id)} className="block w-full p-2 text-left">
+        <span className="flex justify-between gap-2 text-xs text-gray-500">
+          <span className="truncate">{e.heure} · <b className={e.de_patrick ? "text-amber-800" : ""}>{e.qui}</b></span>
+          <span className="max-w-[50%] truncate" title={e.chat}>{e.chat}</span>
+        </span>
+        <span className="mt-1 block"><Media e={e} /></span>
+        {e.texte && <span className="mt-1 block max-h-72 overflow-y-auto whitespace-pre-wrap text-[15px] leading-relaxed">{e.texte}</span>}
+      </button>
+      <div className="flex items-center gap-1 border-t border-gray-100 px-2 py-1">
+        <input value={com} onChange={(x) => setCom(x.target.value)} onBlur={poser}
+          onKeyDown={(x) => { if (x.key === "Enter") (x.target as HTMLInputElement).blur(); }}
+          disabled={lectureSeule} maxLength={2000} placeholder={lectureSeule ? "" : "commentaire…"}
+          title={lectureSeule ? "en « voir comme » on regarde" : "ton commentaire suit la pièce : banc, planche, publication"}
+          className="min-w-0 flex-1 bg-transparent text-[13px] italic text-gray-700 placeholder:text-gray-300 focus:outline-none disabled:opacity-60" />
+        {etat && <span className="text-[11px] text-gray-500">{etat}</span>}
+      </div>
+    </div>
   );
 }
 
@@ -110,10 +140,10 @@ function Planche({ nom, texte, zone, sequence, parId, fermer }: {
                 <div className="min-w-0 flex-1">
                   {e?.media_type && (
                     <div className="mb-2">
-                      {e.url && (e.media_type === "image" || e.media_type === "sticker") ? (
+                      {e.url && e.media_type === "image" ? (
                         <img src={e.url} alt="" loading="lazy" className="max-h-[60vh] rounded-lg" />
                       ) : (
-                        <Media e={e} />
+                        <Media e={e} grand />
                       )}
                     </div>
                   )}
@@ -122,6 +152,7 @@ function Planche({ nom, texte, zone, sequence, parId, fermer }: {
                   ) : (
                     !e?.media_type && <p className="text-sm italic text-gray-400">pièce introuvable</p>
                   )}
+                  {e?.commentaire && <p className="mt-1 whitespace-pre-wrap text-[14px] italic leading-relaxed text-gray-700">{e.commentaire}</p>}
                   {e && (
                     <p className="mt-1 text-[11px] text-gray-400">
                       {e.heure} · {e.qui}
@@ -316,6 +347,13 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes, ateli
     return m;
   }, [elements, stickers, patrickSeul, sequence, parChat, chatChoisi]);
   const basculer = (id: string) => setSequence((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  // le commentaire d'une pièce : écrit en base (refusé en voir-comme), puis reporté dans l'état pour que le banc,
+  // la planche et l'aperçu de publication le voient tout de suite
+  const commenterPiece = async (id: string, texte: string): Promise<string | null> => {
+    const r = await commenter(id, texte, atelier);
+    if (r.ok) setElements((xs) => xs.map((e) => (e.wa_message_id === id ? { ...e, commentaire: texte || null } : e)));
+    return r.ok ? null : (r.erreur ?? "refusé");
+  };
   const deplacer = (i: number, d: -1 | 1) =>
     setSequence((s) => { const t = [...s]; const j = i + d; if (j < 0 || j >= t.length) return s; [t[i], t[j]] = [t[j], t[i]]; return t; });
   return (
@@ -363,7 +401,7 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes, ateli
               <h2 className="mb-2 flex justify-between gap-2 text-base font-semibold"><span className="truncate" title={c.titre}>{c.titre}</span><span className="shrink-0 text-gray-500">{xs.length}</span></h2>
               <div className="overflow-y-auto px-1.5 pt-1.5">
                 {xs.length === 0 && <p className="text-xs text-gray-400">rien ce jour-là</p>}
-                {xs.map((e) => { const i = sequence.indexOf(e.wa_message_id); return <Piece key={e.wa_message_id} e={e} rang={i >= 0 ? i + 1 : null} nouveau={nouveaux.has(e.wa_message_id)} basculer={basculer} />; })}
+                {xs.map((e) => { const i = sequence.indexOf(e.wa_message_id); return <Piece key={e.wa_message_id} e={e} rang={i >= 0 ? i + 1 : null} nouveau={nouveaux.has(e.wa_message_id)} basculer={basculer} commenter={commenterPiece} lectureSeule={lectureSeule} />; })}
               </div>
             </section>
           );
