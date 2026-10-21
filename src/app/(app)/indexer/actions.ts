@@ -31,6 +31,38 @@ export type Element = {
 export type Zone = "lexique" | "phrase" | "savoir" | "soin";
 export type Phrase = { phrase_id: string; nom: string; sens: string | null; zone: Zone; elements: string[]; consomme: boolean };
 
+// Le direct (Patrick, 21.10.2026 : « il faut donc bâtir la possibilité d'interagir avec un canal en
+// direct »). Mesuré le 21.10 : un message du groupe est écrit dans z3_message en UNE seconde — le pont
+// écrit déjà en temps réel. Ce qui manquait n'était pas le captage, c'était que la page ne relisait
+// jamais. chargerFlux est la MÊME lecture que celle du rendu : la page et le direct ne peuvent pas
+// diverger. Les URLs signées valent une heure ; une relecture les renouvelle au passage.
+export type Flux = { elements: Element[]; phrases: Phrase[]; erreurs: string[]; erreur: string | null };
+
+export async function chargerFlux(jour: string): Promise<Flux> {
+  const sb = await createClient();
+  const { data, error } = await sb.rpc("index_flux", { p_jour: jour });
+  if (error) return { elements: [], phrases: [], erreurs: [], erreur: error.message };
+  const elements = (data ?? []) as Element[];
+  const { data: ph } = await sb.rpc("index_phrases", { p_jour: jour });
+  const phrases = (ph ?? []) as Phrase[];
+
+  const urls = new Map<string, string>();
+  const erreurs: string[] = [];
+  for (const seau of ["fil-medias", "abo-medias"]) {
+    const chemins = [...new Set(elements.filter((e) => e.seau === seau && e.chemin).map((e) => e.chemin as string))];
+    for (let i = 0; i < chemins.length; i += 100) {
+      const { data: s, error: es } = await sb.storage.from(seau).createSignedUrls(chemins.slice(i, i + 100), 3600);
+      if (es) erreurs.push(`${seau} : ${es.message}`);
+      for (const x of s ?? []) {
+        if (x.path && x.signedUrl) urls.set(`${seau}/${x.path}`, x.signedUrl);
+        else if (x.error) erreurs.push(`${seau} : ${x.error}`);
+      }
+    }
+  }
+  for (const e of elements) e.url = e.chemin && e.seau ? urls.get(`${e.seau}/${e.chemin}`) ?? null : null;
+  return { elements, phrases, erreurs, erreur: null };
+}
+
 export async function decider(
   id: string, decision: "indexer" | "ignorer", mot: string | null, definition: string | null,
 ): Promise<{ ok: boolean; erreur?: string }> {

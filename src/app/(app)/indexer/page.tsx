@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSt6 } from "@/lib/owner-gate";
-import { createClient } from "@/lib/supabase/server";
-import type { Element, Phrase } from "./actions";
+import { chargerFlux } from "./actions";
 import { IndexerClient } from "./indexer-client";
 
 export const metadata: Metadata = { title: "Indexer" };
@@ -31,26 +30,11 @@ export default async function IndexerPage({ searchParams }: { searchParams: Prom
   const aujourdhui = zurichJour(new Date());
   const brut = typeof q.jour === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q.jour) ? q.jour : aujourdhui;
   const jour = brut > aujourdhui ? aujourdhui : brut;
-  const sb = await createClient();
-  const { data, error } = await sb.rpc("index_flux", { p_jour: jour });
-  const elements = ((data ?? []) as Element[]);
-  const { data: ph } = await sb.rpc("index_phrases", { p_jour: jour });
-  const phrases = ((ph ?? []) as Phrase[]);
-  // une signature par seau (fil-medias : les chats ; abo-medias : les groupes inscrits au ramassage), avec la session de Patrick
-  const urls = new Map<string, string>();
-  const erreurs: string[] = [];
-  for (const seau of ["fil-medias", "abo-medias"]) {
-    const chemins = [...new Set(elements.filter((e) => e.seau === seau && e.chemin).map((e) => e.chemin as string))];
-    for (let i = 0; i < chemins.length; i += 100) {
-      const { data: s, error: es } = await sb.storage.from(seau).createSignedUrls(chemins.slice(i, i + 100), 3600);
-      if (es) erreurs.push(`${seau} : ${es.message}`);
-      for (const x of s ?? []) {
-        if (x.path && x.signedUrl) urls.set(`${seau}/${x.path}`, x.signedUrl);
-        else if (x.error) erreurs.push(`${seau} : ${x.error}`);
-      }
-    }
-  }
-  for (const e of elements) e.url = e.chemin && e.seau ? urls.get(`${e.seau}/${e.chemin}`) ?? null : null;
+  // la MÊME lecture que celle du direct (chargerFlux, actions.ts) : la page et le rafraîchissement
+  // ne peuvent pas diverger. Une signature par seau — fil-medias : les chats ; abo-medias : les
+  // groupes inscrits au ramassage — avec la session de Patrick.
+  const { elements, phrases, erreurs, erreur } = await chargerFlux(jour);
+  const error = erreur ? { message: erreur } : null;
   const medias = elements.filter((e) => e.media_type);
   const affiches = medias.filter((e) => e.url).length;
   const [jj, mm, aaaa] = [jour.slice(8, 10), jour.slice(5, 7), jour.slice(0, 4)];
@@ -70,7 +54,7 @@ export default async function IndexerPage({ searchParams }: { searchParams: Prom
         {medias.length} média(s) ce jour · {affiches} affiché(s) · {medias.filter((e) => !e.chemin).length} sans fichier en base (restés sur le pont)
         {erreurs.length > 0 && <span className="text-red-700"> · signature refusée : {[...new Set(erreurs)].slice(0, 3).join(" ; ")}</span>}
       </p>
-      {error ? <p className="text-red-700">Lecture impossible : {error.message}</p> : <IndexerClient initial={elements} phrases={phrases} jour={jour} />}
+      {error ? <p className="text-red-700">Lecture impossible : {error.message}</p> : <IndexerClient key={jour} initial={elements} phrases={phrases} jour={jour} />}
     </div>
   );
 }

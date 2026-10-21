@@ -6,8 +6,10 @@
 // une pièce la pose sur le banc (elle prend son numéro), un second clic l'en retire. Le banc montre la définition assemblée dans
 // l'ordre ; on déplace une pièce (← →), on nomme, on choisit la zone, « Valider ». Le passage des deux heures l'envoie dans sa zone.
 
-import { useMemo, useState, useTransition } from "react";
-import { poserMontage, type Element, type Phrase, type Zone } from "./actions";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { chargerFlux, poserMontage, type Element, type Phrase, type Zone } from "./actions";
+
+const SECONDES = 20; // le pont écrit en 1 s ; 20 s suffit pour suivre un enseignement sans marteler la base
 
 const COLONNES: { cle: string; titre: string }[] = [
   { cle: "z1", titre: "z1 · visiteuses" },
@@ -41,12 +43,15 @@ function texteDe(e: Element): string {
   return e.wa_message_id.startsWith("dg:") ? (e.texte ?? "").split("\n— DiGiSha : ")[0] : (e.texte ?? "");
 }
 
-function Piece({ e, rang, basculer }: { e: Element; rang: number | null; basculer: (id: string) => void }) {
+function Piece({ e, rang, nouveau, basculer }: { e: Element; rang: number | null; nouveau?: boolean; basculer: (id: string) => void }) {
   return (
     <button type="button" onClick={() => basculer(e.wa_message_id)}
       className={"relative mb-2 block w-full rounded-lg border p-2 text-left transition " +
-        (rang ? "border-fuchsia-500 bg-fuchsia-50 ring-2 ring-fuchsia-400" : e.de_patrick ? "border-amber-300 bg-amber-50/40 hover:border-fuchsia-300" : "border-gray-200 bg-white hover:border-fuchsia-300")}>
+        (rang ? "border-fuchsia-500 bg-fuchsia-50 ring-2 ring-fuchsia-400"
+          : nouveau ? "border-emerald-400 bg-emerald-50/60 ring-1 ring-emerald-300 hover:border-fuchsia-300"
+          : e.de_patrick ? "border-amber-300 bg-amber-50/40 hover:border-fuchsia-300" : "border-gray-200 bg-white hover:border-fuchsia-300")}>
       {rang && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-fuchsia-700 px-2 text-xs font-bold text-white">{rang}</span>}
+      {!rang && nouveau && <span className="absolute -left-1.5 -top-1.5 rounded-full bg-emerald-600 px-2 text-[10px] font-bold text-white">nouveau</span>}
       <span className="flex justify-between gap-2 text-[11px] text-gray-500">
         <span className="truncate">{e.heure} · <b className={e.de_patrick ? "text-amber-800" : ""}>{e.qui}</b></span>
         <span className="max-w-[50%] truncate" title={e.chat}>{e.chat}</span>
@@ -215,10 +220,43 @@ export function IndexerClient({ initial, phrases, jour }: { initial: Element[]; 
   const [sequence, setSequence] = useState<string[]>([]);
   const [stickers, setStickers] = useState(false);
   const [patrickSeul, setPatrickSeul] = useState(false);
-  const parId = useMemo(() => new Map(initial.map((e) => [e.wa_message_id, e])), [initial]);
+
+  // ── le direct ────────────────────────────────────────────────────────────
+  // Le pont écrit le message dans la base en une seconde ; c'est la page qui ne relisait jamais.
+  // Toutes les 20 s on relit le MÊME flux que le rendu, et les pièces apparues depuis l'ouverture
+  // portent un liseré « nouveau » jusqu'au prochain passage. Le banc n'est pas touché : une pièce
+  // posée garde son rang. Le direct ne s'arme que sur le jour courant — relire la veille n'a pas de sens.
+  const [elements, setElements] = useState(initial);
+  const [direct, setDirect] = useState(false);
+  const [nouveaux, setNouveaux] = useState<Set<string>>(new Set());
+  const [derniere, setDerniere] = useState<string | null>(null);
+  const connus = useRef(new Set(initial.map((e) => e.wa_message_id)));
+
+  // (pas d'effet de resynchronisation : la page passe key={jour}, donc changer de jour remonte
+  //  le composant et repart d'un état neuf — React le fait mieux qu'un setState dans un effet.)
+
+  useEffect(() => {
+    if (!direct) return;
+    let vivant = true;
+    const relire = async () => {
+      const f = await chargerFlux(jour);
+      if (!vivant || f.erreur) return;
+      const frais = f.elements.filter((e) => !connus.current.has(e.wa_message_id)).map((e) => e.wa_message_id);
+      for (const id of frais) connus.current.add(id);
+      setElements(f.elements);
+      setMontages(f.phrases);
+      if (frais.length) setNouveaux((s) => new Set([...s, ...frais]));
+      setDerniere(new Date().toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+    };
+    const t = setInterval(relire, SECONDES * 1000);
+    void relire();
+    return () => { vivant = false; clearInterval(t); };
+  }, [direct, jour]);
+
+  const parId = useMemo(() => new Map(elements.map((e) => [e.wa_message_id, e])), [elements]);
   const parColonne = useMemo(() => {
     const m = new Map<string, Element[]>();
-    for (const e of initial) {
+    for (const e of elements) {
       const surLeBanc = sequence.includes(e.wa_message_id);
       if (!surLeBanc && !stickers && e.media_type === "sticker") continue;
       if (!surLeBanc && patrickSeul && !e.de_patrick) continue;
@@ -227,7 +265,7 @@ export function IndexerClient({ initial, phrases, jour }: { initial: Element[]; 
       m.set(e.colonne, arr);
     }
     return m;
-  }, [initial, stickers, patrickSeul, sequence]);
+  }, [elements, stickers, patrickSeul, sequence]);
   const basculer = (id: string) => setSequence((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const deplacer = (i: number, d: -1 | 1) =>
     setSequence((s) => { const t = [...s]; const j = i + d; if (j < 0 || j >= t.length) return s; [t[i], t[j]] = [t[j], t[i]]; return t; });
@@ -238,7 +276,18 @@ export function IndexerClient({ initial, phrases, jour }: { initial: Element[]; 
       <div className="mb-3 flex flex-wrap items-center gap-4 text-sm">
         <label className="flex items-center gap-1"><input type="checkbox" checked={stickers} onChange={(x) => setStickers(x.target.checked)} /> montrer les stickers</label>
         <label className="flex items-center gap-1"><input type="checkbox" checked={patrickSeul} onChange={(x) => setPatrickSeul(x.target.checked)} /> seulement mes messages</label>
-        <span className="text-gray-500">{initial.length} pièce(s) ce jour</span>
+        <label className="flex items-center gap-1 font-medium text-emerald-800">
+          <input type="checkbox" checked={direct} onChange={(x) => { setDirect(x.target.checked); if (!x.target.checked) setNouveaux(new Set()); }} />
+          <span className={direct ? "inline-flex items-center gap-1" : ""}>
+            {direct && <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-600" />}
+            En direct
+          </span>
+        </label>
+        <span className="text-gray-500">
+          {elements.length} pièce(s) ce jour
+          {direct && <> · relu toutes les {SECONDES} s{derniere && ` · dernière lecture ${derniere}`}</>}
+          {nouveaux.size > 0 && <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-900">{nouveaux.size} nouvelle(s)</span>}
+        </span>
       </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3 2xl:grid-cols-6">
         {COLONNES.map((c) => {
@@ -248,7 +297,7 @@ export function IndexerClient({ initial, phrases, jour }: { initial: Element[]; 
               <h2 className="mb-2 flex justify-between text-sm font-semibold"><span>{c.titre}</span><span className="text-gray-500">{xs.length}</span></h2>
               <div className="overflow-y-auto px-1.5 pt-1.5">
                 {xs.length === 0 && <p className="text-xs text-gray-400">rien ce jour-là</p>}
-                {xs.map((e) => { const i = sequence.indexOf(e.wa_message_id); return <Piece key={e.wa_message_id} e={e} rang={i >= 0 ? i + 1 : null} basculer={basculer} />; })}
+                {xs.map((e) => { const i = sequence.indexOf(e.wa_message_id); return <Piece key={e.wa_message_id} e={e} rang={i >= 0 ? i + 1 : null} nouveau={nouveaux.has(e.wa_message_id)} basculer={basculer} />; })}
               </div>
             </section>
           );
