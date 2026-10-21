@@ -51,6 +51,16 @@ export function PorterClient({ groupes, demandes, texteDuBanc, montageId }: {
       setErreur(null);
       if (!cible) { setErreur("choisis d'abord où ça va"); return; }
       if (!pontRetenu) { setErreur("aucun pont ne voit cette conversation"); return; }
+      // on refuse ici, en français, plutôt que de laisser la base répondre « violates check
+      // constraint pont_demande_charge » (21.10 : Patrick est tombé dessus).
+      if (ouvert === "message" && !texte.trim()) {
+        setErreur("il n'y a rien à publier : pose des pièces sur le banc, ou écris le texte.");
+        return;
+      }
+      if (ouvert === "membre" && !numeros.replace(/[^\d]/g, "")) {
+        setErreur("il manque le numéro de la personne à ajouter.");
+        return;
+      }
       const r = ouvert === "message"
         ? await demanderEnvoi(pontRetenu, cible, nomCible, texte.trim(), montageId)
         : await demanderAjout(pontRetenu, cible, nomCible,

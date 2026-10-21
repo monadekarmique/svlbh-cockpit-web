@@ -52,6 +52,11 @@ export default async function IndexerPage({ searchParams }: { searchParams: Prom
         Banc de montage : clique sur les pièces dans l&apos;ordre (textes, photos, stickers, échanges DiGiSha) — elles se numérotent et
         s&apos;assemblent en haut. Nomme le montage, choisis la zone, « Valider » : il part au passage suivant (toutes les deux heures).
       </p>
+      {/* La version servie, visible : le 21.10 Patrick a publié trois fois depuis une page gardée en
+          cache par son navigateur, et rien ne le lui disait. Render pose RENDER_GIT_COMMIT. */}
+      <p className="text-xs text-gray-400 mb-4">
+        version <code className="rounded bg-gray-100 px-1">{(process.env.RENDER_GIT_COMMIT ?? "locale").slice(0, 7)}</code> ·{" "}
+      </p>
       <p className="text-xs text-gray-400 mb-4">
         {medias.length} média(s) ce jour · {affiches} affiché(s) · {medias.filter((e) => !e.chemin).length} sans fichier en base (restés sur le pont)
         {erreurs.length > 0 && <span className="text-red-700"> · signature refusée : {[...new Set(erreurs)].slice(0, 3).join(" ; ")}</span>}
