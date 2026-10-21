@@ -7,7 +7,7 @@
 // l'ordre ; on déplace une pièce (← →), on nomme, on choisit la zone, « Valider ». Le passage des deux heures l'envoie dans sa zone.
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { chargerFlux, chargerFluxPraticienne, commenter, poserMontage, type Demande, type Element, type Flux, type Groupe, type Phrase, type Zone } from "./actions";
+import { chargerFlux, chargerFluxPraticienne, commenter, demanderPack, poserMontage, type Demande, type Element, type Flux, type Groupe, type Phrase, type Zone } from "./actions";
 import { PorterClient } from "./porter-client";
 import { PreparerClient } from "./preparer-client";
 import { LottieSticker } from "./lottie-sticker";
@@ -22,6 +22,7 @@ const COLONNES: { cle: string; titre: string }[] = [
   { cle: "z4", titre: "z4 · pédago ST4" },
   { cle: "fils", titre: "Fils" },
   { cle: "digisha", titre: "DiGiSha" },
+  { cle: "pack", titre: "Packs de stickers" },   // attachés au banc (21.10, migration 21j)
 ];
 const ZONES: { cle: Zone; titre: string; aide: string }[] = [
   { cle: "lexique", titre: "Lexique de DiGiSha", aide: "la définition d'un terme : DiGiSha l'explique ensuite telle quelle" },
@@ -29,10 +30,11 @@ const ZONES: { cle: Zone; titre: string; aide: string }[] = [
   { cle: "savoir", titre: "Savoir", aide: "une fiche que DiGiSha retrouve quand le sujet revient" },
   { cle: "soin", titre: "Soin", aide: "la suite des gestes, dans l'ordre où ils se donnent — deux pièces au moins" },
 ];
-const GENRE: Record<string, string> = { image: "photo", video: "vidéo", audio: "vocal", sticker: "sticker", document: "document" };
+const GENRE: Record<string, string> = { image: "photo", video: "vidéo", audio: "vocal", sticker: "sticker", document: "document", sticker_pack: "pack de stickers" };
 
 function Media({ e, petit = false, grand = false }: { e: Element; petit?: boolean; grand?: boolean }) {
   if (!e.media_type) return null;
+  if (e.media_type === "sticker_pack") return null;   // le texte de la pièce dit déjà le pack ; « Attacher » le met sur le banc
   if (!e.url) return <span className="text-xs italic text-gray-500">{GENRE[e.media_type] ?? e.media_type} — fichier resté sur le pont</span>;
   if (e.media_type === "sticker") {
     // Patrick, 21.10 : « que le sticker apparaisse comme sticker » — sans cadre, à sa taille, et un animé se JOUE :
@@ -66,13 +68,23 @@ function assembler(sequence: string[], parId: Map<string, Element>): string {
   }).join("\n");
 }
 
-function Piece({ e, rang, nouveau, basculer, commenter, lectureSeule = false }: {
+function Piece({ e, rang, nouveau, basculer, commenter, attacherPack, lectureSeule = false }: {
   e: Element; rang: number | null; nouveau?: boolean; basculer: (id: string) => void;
-  commenter: (id: string, texte: string) => Promise<string | null>; lectureSeule?: boolean;
+  commenter: (id: string, texte: string) => Promise<string | null>;
+  // attacherPack : Patrick seul (il faut un pont) — « attacher un pack de stickers » : ses stickers deviennent des pièces
+  attacherPack?: (e: Element) => Promise<string | null>;
+  lectureSeule?: boolean;
 }) {
   // Patrick, 21.10 : « attacher un commentaire à chaque photo » — le mien, posé au blur (ou Entrée), vide = effacé
   const [com, setCom] = useState(e.commentaire ?? "");
   const [etat, setEtat] = useState<"" | "…" | "✓" | "✗">("");
+  const [pack, setPack] = useState<string | null>(null);
+  const attacher = async () => {
+    if (!attacherPack) return;
+    setPack("…");
+    const err = await attacherPack(e);
+    setPack(err ? `✗ ${err}` : "demandé — ses stickers arrivent dans la colonne « Packs de stickers » dans ~20 s");
+  };
   const poser = async () => {
     if (com.trim() === (e.commentaire ?? "").trim()) return;
     setEtat("…");
@@ -95,6 +107,16 @@ function Piece({ e, rang, nouveau, basculer, commenter, lectureSeule = false }: 
         <span className="mt-1 block"><Media e={e} /></span>
         {e.texte && <span className="mt-1 block max-h-72 overflow-y-auto whitespace-pre-wrap text-[15px] leading-relaxed">{e.texte}</span>}
       </button>
+      {e.media_type === "sticker_pack" && attacherPack && !lectureSeule && (
+        <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 px-2 py-1">
+          <button type="button" onClick={attacher} disabled={pack === "…"}
+            className="rounded-md bg-indigo-700 px-3 py-1 text-xs font-semibold text-white disabled:opacity-40"
+            title="le pont exporte le pack, ses stickers deviennent des pièces du banc — rien ne part sur WhatsApp">
+            Attacher le pack au banc
+          </button>
+          {pack && <span className="text-[11px] text-gray-600">{pack}</span>}
+        </div>
+      )}
       <div className="flex items-center gap-1 border-t border-gray-100 px-2 py-1">
         <input value={com} onChange={(x) => setCom(x.target.value)} onBlur={poser}
           onKeyDown={(x) => { if (x.key === "Enter") (x.target as HTMLInputElement).blur(); }}
@@ -358,6 +380,14 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes, ateli
     if (r.ok) setElements((xs) => xs.map((e) => (e.wa_message_id === id ? { ...e, commentaire: texte || null } : e)));
     return r.ok ? null : (r.erreur ?? "refusé");
   };
+  // attacher un pack (Patrick, 21.10) : la demande part dans la file (5 s), l'agent du Mac exporte le pack du pont et le
+  // pose ; on relit le flux un peu après pour voir ses stickers arriver dans la colonne « Packs de stickers »
+  const attacherPack = async (e: Element): Promise<string | null> => {
+    if (!e.bridge) return "ce pack n'est vu par aucun pont";
+    const r = await demanderPack(e.bridge, e.chat_jid, e.chat, e.wa_message_id);
+    if (r.ok) { setTimeout(() => { void relireMaintenant(); }, 20_000); setTimeout(() => { void relireMaintenant(); }, 45_000); }
+    return r.ok ? null : (r.erreur ?? "refusé");
+  };
   const deplacer = (i: number, d: -1 | 1) =>
     setSequence((s) => { const t = [...s]; const j = i + d; if (j < 0 || j >= t.length) return s; [t[i], t[j]] = [t[j], t[i]]; return t; });
   return (
@@ -407,7 +437,7 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes, ateli
               <h2 className="mb-2 flex justify-between gap-2 text-base font-semibold"><span className="truncate" title={c.titre}>{c.titre}</span><span className="shrink-0 text-gray-500">{xs.length}</span></h2>
               <div className="overflow-y-auto px-1.5 pt-1.5">
                 {xs.length === 0 && <p className="text-xs text-gray-400">rien ce jour-là</p>}
-                {xs.map((e) => { const i = sequence.indexOf(e.wa_message_id); return <Piece key={e.wa_message_id} e={e} rang={i >= 0 ? i + 1 : null} nouveau={nouveaux.has(e.wa_message_id)} basculer={basculer} commenter={commenterPiece} lectureSeule={lectureSeule} />; })}
+                {xs.map((e) => { const i = sequence.indexOf(e.wa_message_id); return <Piece key={e.wa_message_id} e={e} rang={i >= 0 ? i + 1 : null} nouveau={nouveaux.has(e.wa_message_id)} basculer={basculer} commenter={commenterPiece} attacherPack={atelier ? undefined : attacherPack} lectureSeule={lectureSeule} />; })}
               </div>
             </section>
           );

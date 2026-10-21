@@ -62,10 +62,11 @@ export async function chargerFluxPraticienne(jour: string): Promise<Flux> {
   // ses bancs validés (zone « soin ») — index_phrases ne rend que les siens à une praticienne (migration 2026-10-21g)
   const { data: ph } = await sb.rpc("index_phrases", { p_jour: jour });
   const phrases = (ph ?? []) as Phrase[];
+  await poserPacks(sb, elements);
   await poserCommentaires(sb, elements);
   const urls = new Map<string, string>();
   const erreurs: string[] = [];
-  for (const seau of ["fil-medias", "abo-medias"]) {
+  for (const seau of SEAUX) {
     const chemins = [...new Set(elements.filter((e) => e.seau === seau && e.chemin).map((e) => e.chemin as string))];
     for (let i = 0; i < chemins.length; i += 100) {
       const { data: s, error: es } = await sb.storage.from(seau).createSignedUrls(chemins.slice(i, i + 100), 3600);
@@ -78,6 +79,16 @@ export async function chargerFluxPraticienne(jour: string): Promise<Flux> {
   }
   for (const e of elements) e.url = e.chemin && e.seau ? urls.get(`${e.seau}/${e.chemin}`) ?? null : null;
   return { elements, phrases, erreurs, erreur: null };
+}
+
+// les seaux où vivent les fichiers des pièces : fils, Abo, et les packs de stickers attachés au banc (21j)
+const SEAUX = ["fil-medias", "abo-medias", "index-packs"];
+
+// les packs de stickers attachés au banc (index_packs : tous pour Patrick, ceux de ses groupes pour une praticienne,
+// identité effective) — une pièce « pk:<pack>:<rang> » par sticker, colonne « pack »
+async function poserPacks(sb: Awaited<ReturnType<typeof createClient>>, elements: Element[]): Promise<void> {
+  const { data } = await sb.rpc("index_packs");
+  for (const p of (data ?? []) as Element[]) elements.push(p);
 }
 
 // mes commentaires sur ces pièces (index_commentaires : l'identité effective — la cible en voir-comme)
@@ -99,11 +110,12 @@ export async function chargerFlux(jour: string): Promise<Flux> {
   const elements = (data ?? []) as Element[];
   const { data: ph } = await sb.rpc("index_phrases", { p_jour: jour });
   const phrases = (ph ?? []) as Phrase[];
+  await poserPacks(sb, elements);
   await poserCommentaires(sb, elements);
 
   const urls = new Map<string, string>();
   const erreurs: string[] = [];
-  for (const seau of ["fil-medias", "abo-medias"]) {
+  for (const seau of SEAUX) {
     const chemins = [...new Set(elements.filter((e) => e.seau === seau && e.chemin).map((e) => e.chemin as string))];
     for (let i = 0; i < chemins.length; i += 100) {
       const { data: s, error: es } = await sb.storage.from(seau).createSignedUrls(chemins.slice(i, i + 100), 3600);
@@ -168,6 +180,20 @@ export async function demanderAjout(
   const { data, error } = await sb.rpc("pont_demander", {
     p_genre: "membre", p_pont: pont, p_cible_jid: cibleJid, p_cible_nom: cibleNom,
     p_texte: null, p_membres: membres, p_montage: null,
+  });
+  return error ? { ok: false, erreur: error.message } : { ok: true, id: data as string };
+}
+
+// Patrick, 21.10 : « attacher un pack de stickers ». Un pack est un message (sticker_pack) vu par un pont ; la demande
+// part dans la même file que les envois (5 s d'annulation) ; l'agent du Mac exporte le ZIP du pont, dépose les stickers
+// dans le seau index-packs et pose le pack (migration 2026-10-21j). Rien ne part sur WhatsApp : c'est un geste d'atelier.
+export async function demanderPack(
+  pont: string, chatJid: string, chatNom: string, waMessageId: string,
+): Promise<{ ok: boolean; id?: string; erreur?: string }> {
+  const sb = await createClient();
+  const { data, error } = await sb.rpc("pont_demander", {
+    p_genre: "pack", p_pont: pont, p_cible_jid: chatJid, p_cible_nom: chatNom,
+    p_texte: waMessageId, p_membres: null, p_montage: null, p_pieces: null,
   });
   return error ? { ok: false, erreur: error.message } : { ok: true, id: data as string };
 }
