@@ -7,7 +7,7 @@
 // l'ordre ; on déplace une pièce (← →), on nomme, on choisit la zone, « Valider ». Le passage des deux heures l'envoie dans sa zone.
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { chargerFlux, poserMontage, type Demande, type Element, type Groupe, type Phrase, type Zone } from "./actions";
+import { chargerFlux, chargerFluxPraticienne, poserMontage, type Demande, type Element, type Groupe, type Phrase, type Zone } from "./actions";
 import { PorterClient } from "./porter-client";
 import { PreparerClient } from "./preparer-client";
 
@@ -137,11 +137,13 @@ function Planche({ nom, texte, zone, sequence, parId, fermer }: {
   );
 }
 
-function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose, atelier = false }: {
+function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose, atelier = false, lectureSeule = false }: {
   sequence: string[]; parId: Map<string, Element>; jour: string; montages: Phrase[];
   retirer: (id: string) => void; deplacer: (i: number, d: -1 | 1) => void; vider: () => void; pose: (p: Phrase) => void;
   // atelier : une praticienne monte sa planche mais ne la verse pas dans les zones de DiGiSha (réservées à Patrick)
   atelier?: boolean;
+  // lectureSeule : en « voir comme » on regarde — la base refuse Valider (migration 2026-10-21h), l'écran le dit avant
+  lectureSeule?: boolean;
 }) {
   const [nom, setNom] = useState("");
   const [texte, setTexte] = useState("");
@@ -158,7 +160,7 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose,
       if (!sequence.length) { setErreur("clique d'abord sur des pièces"); return; }
       if (zone === "phrase" && sequence.length < 2) { setErreur("une phrase énergétique a deux pièces au moins"); return; }
       if (zone === "soin" && sequence.length < 2) { setErreur("un soin est une suite de gestes : deux pièces au moins"); return; }
-      const r = await poserMontage(nom.trim(), zone, texte.trim() || null, sequence, jour);
+      const r = await poserMontage(nom.trim(), zone, texte.trim() || null, sequence, jour, atelier);
       if (!r.ok) { setErreur(r.erreur ?? "refusé"); return; }
       pose({ phrase_id: r.id ?? "", nom: nom.trim(), sens: texte.trim() || null, zone, elements: sequence, consomme: false });
       setOk(`« ${nom.trim()} » envoyé vers ${ZONES.find((z) => z.cle === zone)?.titre} — il entre au prochain passage.`);
@@ -206,7 +208,9 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose,
             <button type="button" onClick={() => setPlanche(true)}
               className="rounded-md border border-fuchsia-300 px-3 py-1 text-sm text-fuchsia-900"
               title="voir la suite en grand, dans l'ordre où elle se donne">Voir la planche</button>
-            <button type="button" disabled={enCours} onClick={valider} className="rounded-md bg-fuchsia-700 px-4 py-1 text-sm font-semibold text-white">Valider</button>
+            <button type="button" disabled={enCours || lectureSeule} onClick={valider}
+              className="rounded-md bg-fuchsia-700 px-4 py-1 text-sm font-semibold text-white disabled:opacity-40"
+              title={lectureSeule ? "en « voir comme » on regarde — on ne valide pas au nom de quelqu'un d'autre" : undefined}>Valider</button>
           </div>
           <textarea value={texte} onChange={(x) => setTexte(x.target.value)} rows={2} maxLength={4000}
             placeholder="tes mots, s'il en faut (ils viennent avant les pièces dans la définition)"
@@ -228,10 +232,12 @@ function Banc({ sequence, parId, jour, montages, retirer, deplacer, vider, pose,
   );
 }
 
-export function IndexerClient({ initial, phrases, jour, groupes, demandes, atelier = false }: {
+export function IndexerClient({ initial, phrases, jour, groupes, demandes, atelier = false, lectureSeule = false }: {
   initial: Element[]; phrases: Phrase[]; jour: string; groupes: Groupe[]; demandes: Demande[];
   // atelier : /mes-planches — une praticienne monte, « Préparer pour WhatsApp » lui tend la planche, son téléphone publie
   atelier?: boolean;
+  // lectureSeule : Patrick en « voir comme » une praticienne — il voit son atelier, il ne valide pas à sa place
+  lectureSeule?: boolean;
 }) {
   const [montages, setMontages] = useState(phrases);
   const [sequence, setSequence] = useState<string[]>([]);
@@ -258,7 +264,8 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes, ateli
     if (!direct) return;
     let vivant = true;
     const relire = async () => {
-      const f = await chargerFlux(jour);
+      // l'atelier relit SON flux — index_flux (celui de Patrick) refuse une praticienne, et le direct restait muet
+      const f = await (atelier ? chargerFluxPraticienne : chargerFlux)(jour);
       if (!vivant || f.erreur) return;
       const frais = f.elements.filter((e) => !connus.current.has(e.wa_message_id)).map((e) => e.wa_message_id);
       for (const id of frais) connus.current.add(id);
@@ -270,7 +277,7 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes, ateli
     const t = setInterval(relire, SECONDES * 1000);
     void relire();
     return () => { vivant = false; clearInterval(t); };
-  }, [direct, jour]);
+  }, [direct, jour, atelier]);
 
   const parId = useMemo(() => new Map(elements.map((e) => [e.wa_message_id, e])), [elements]);
   // ── par conversation plutôt que par pont ─────────────────────────────────
@@ -314,7 +321,7 @@ export function IndexerClient({ initial, phrases, jour, groupes, demandes, ateli
   return (
     <div>
       <Banc sequence={sequence} parId={parId} jour={jour} montages={montages} retirer={basculer} deplacer={deplacer}
-        vider={() => setSequence([])} pose={(p) => setMontages((xs) => [...xs, p])} atelier={atelier} />
+        vider={() => setSequence([])} pose={(p) => setMontages((xs) => [...xs, p])} atelier={atelier} lectureSeule={lectureSeule} />
       {atelier ? (
         /* une praticienne : la planche lui est mise en main, c'est son téléphone qui publie */
         <PreparerClient sequence={sequence} parId={parId} />

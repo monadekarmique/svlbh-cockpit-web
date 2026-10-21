@@ -4,7 +4,16 @@
 // Gate = la fonction elle-même (index_decider : is_owner_st6 à l'intérieur) ; la page ajoute requireSt6.
 // Ce qui est choisi ici entre au savoir de DiGiSha au passage suivant (savoir_toutes_les_2h.sh, toutes les deux heures).
 
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+
+// Le voir-comme (Patrick, 21.10.2026 : « j'ai une fonction voir comme qui existe »). La session vit dans la base
+// (coach_view_session ; start_coach_view / end_coach_view ; portée par le COMPTE, 60 min glissantes) et la base ne
+// l'applique qu'aux requêtes qui portent l'en-tête x-svlbh-surface d'une surface connue — « cockpit-web » depuis la
+// migration 2026-10-21h. Lecture = ce que voit la cible ; écriture refusée par la base (index_montage_poser).
+// (pas d'export : un fichier "use server" n'exporte que des fonctions async)
+const SURFACE = "cockpit-web";
 
 export type Element = {
   wa_message_id: string;
@@ -41,9 +50,10 @@ export type Flux = { elements: Element[]; phrases: Phrase[]; erreurs: string[]; 
 // L'atelier d'une praticienne (Patrick, 21.10 : « Anne […] a accès aux groupes dans lesquels elle est
 // active »). Même lecture que chargerFlux, mais par index_flux_praticienne (migration 2026-10-21e) : SES
 // groupes, SES tours DiGiSha, et rien d'autre. Les médias sont signés avec SA session — la politique du
-// seau l'admet (authenticated, chemin sous un UUID). Pas de phrases : elle ne monte pas dans les zones.
+// seau l'admet (authenticated, chemin sous un UUID). Ses bancs validés viennent par index_phrases (21g).
+// Avec l'en-tête de surface : en voir-comme, « ses » = ceux de la cible (effective_svlbh_id, migration 21h).
 export async function chargerFluxPraticienne(jour: string): Promise<Flux> {
-  const sb = await createClient();
+  const sb = await createClient({ surface: SURFACE });
   const { data, error } = await sb.rpc("index_flux_praticienne", { p_jour: jour });
   if (error) return { elements: [], phrases: [], erreurs: [], erreur: error.message };
   const elements = (data ?? []) as Element[];
@@ -170,9 +180,48 @@ export async function decider(
 // Le banc de montage (Patrick, 20.10.2026 14h4x : « un banc de montage qui me permette de clicker sur les pièces dans un certain
 // ordre et qui me permette avec valider d'envoyer dans une zone cette définition ») — index_montage_poser, migration 2026-10-20l.
 export async function poserMontage(
-  nom: string, zone: Zone, texte: string | null, pieces: string[], jour: string,
+  nom: string, zone: Zone, texte: string | null, pieces: string[], jour: string, atelier = false,
 ): Promise<{ ok: boolean; id?: string; erreur?: string }> {
-  const sb = await createClient();
+  // atelier : avec l'en-tête de surface, pour que la base VOIE une session voir-comme et refuse d'écrire au nom de la cible
+  const sb = await createClient(atelier ? { surface: SURFACE } : {});
   const { data, error } = await sb.rpc("index_montage_poser", { p_nom: nom, p_zone: zone, p_texte: texte, p_elements: pieces, p_jour: jour });
   return error ? { ok: false, erreur: error.message } : { ok: true, id: data as string };
+}
+
+// ── voir comme ───────────────────────────────────────────────────────────────
+export type VoirComme = { svlbhId: string; prenom: string; nom: string };
+
+/** La session voir-comme ouverte sur ce compte, telle que la base la voit depuis le cockpit — ou null. */
+export async function voirComme(): Promise<VoirComme | null> {
+  const sb = await createClient({ surface: SURFACE });
+  const { data } = await sb.rpc("coach_view_target");
+  if (!data) return null;
+  // la fiche de la cible est lisible pendant la session (policy coach_view_read : svlbh_id = coach_view_target())
+  const { data: p } = await sb.from("praticienne_profile").select("first_name, last_name").eq("svlbh_id", data as string).maybeSingle();
+  return { svlbhId: data as string, prenom: p?.first_name ?? "", nom: p?.last_name ?? "" };
+}
+
+export type Cible = { svlbh_id: string; first_name: string; last_name: string | null };
+
+/** Les praticiennes ST5 actives — les cibles que start_coach_view admet (canal z2 à z4, jamais la propriétaire). */
+export async function ciblesVoirComme(): Promise<Cible[]> {
+  const sb = await createClient();   // sans en-tête : l'identité réelle, propriétaire — la policy st6_owner_all rend toutes les fiches
+  const { data } = await sb.from("praticienne_profile").select("svlbh_id, first_name, last_name")
+    .eq("stx", "ST5").eq("pro_status", "ACTIVE").order("first_name");
+  return (data ?? []) as Cible[];
+}
+
+export async function demarrerVoirComme(fd: FormData): Promise<void> {
+  const cible = String(fd.get("cible") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(cible)) return;
+  const sb = await createClient();
+  const { error } = await sb.rpc("start_coach_view", { p_target: cible });
+  if (error) redirect(`/mes-planches?erreur=${encodeURIComponent(error.message)}`);
+  revalidatePath("/mes-planches");
+}
+
+export async function quitterVoirComme(): Promise<void> {
+  const sb = await createClient();
+  await sb.rpc("end_coach_view");
+  revalidatePath("/mes-planches");
 }
