@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { VERSION } from "@/lib/version";
 import { requireSt5Plus } from "@/lib/owner-gate";
 import { chargerFluxPraticienne, ciblesVoirComme, demarrerVoirComme, quitterVoirComme, voirComme } from "../pathologies-entites/actions";
 import { IndexerClient } from "../pathologies-entites/indexer-client";
@@ -60,7 +61,7 @@ export default async function MesPlanchesPage({ searchParams }: { searchParams: 
         en zone Soin, et tu le retrouves. « Préparer pour WhatsApp » te met le texte et les médias en main — tu publies depuis ton téléphone, avec ton numéro.
       </p>
       <p className="mb-3 text-xs text-gray-400">
-        version <code className="rounded bg-gray-100 px-1">{(process.env.RENDER_GIT_COMMIT ?? "locale").slice(0, 7)}</code>
+        version <strong className="text-gray-600">{VERSION}</strong> <code className="rounded bg-gray-100 px-1">{(process.env.RENDER_GIT_COMMIT ?? "locale").slice(0, 7)}</code>
         {" · "}{conversations} conversation(s) · {medias.length} média(s) · {affiches} affiché(s)
         {medias.length - affiches > 0 && <> · {medias.length - affiches} resté(s) sur le pont</>}
         {erreurs.length > 0 && <span className="text-red-700"> · signature refusée : {[...new Set(erreurs)].slice(0, 3).join(" ; ")}</span>}

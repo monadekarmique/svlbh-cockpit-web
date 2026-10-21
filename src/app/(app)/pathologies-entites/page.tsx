@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { VERSION } from "@/lib/version";
 import { requireSt6 } from "@/lib/owner-gate";
 import { chargerFlux, listerDemandes, listerGroupes } from "./actions";
 import { IndexerClient } from "./indexer-client";
@@ -55,7 +56,7 @@ export default async function IndexerPage({ searchParams }: { searchParams: Prom
       {/* La version servie, visible : le 21.10 Patrick a publié trois fois depuis une page gardée en
           cache par son navigateur, et rien ne le lui disait. Render pose RENDER_GIT_COMMIT. */}
       <p className="text-xs text-gray-400 mb-4">
-        version <code className="rounded bg-gray-100 px-1">{(process.env.RENDER_GIT_COMMIT ?? "locale").slice(0, 7)}</code> ·{" "}
+        version <strong className="text-gray-600">{VERSION}</strong> <code className="rounded bg-gray-100 px-1">{(process.env.RENDER_GIT_COMMIT ?? "locale").slice(0, 7)}</code> ·{" "}
       </p>
       <p className="text-xs text-gray-400 mb-4">
         {medias.length} média(s) ce jour · {affiches} affiché(s) · {medias.filter((e) => !e.chemin).length} sans fichier en base (restés sur le pont)
