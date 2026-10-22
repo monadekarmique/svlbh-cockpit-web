@@ -188,6 +188,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "owner",
   },
   {
+    href: "/resumes-abo",
+    label: "Résumés à relire",
+    navLabel: "Résumés",
+    icon: "📝",
+    desc: "« Ce que tu as manqué » : relire le résumé du jour de chaque groupe Abo, le corriger, le publier aux membres",
+    color: "#7C3AED",
+    group: "owner",
+  },
+  {
     href: "/etat-flotte",
     label: "État de la flotte",
     navLabel: "Flotte",
