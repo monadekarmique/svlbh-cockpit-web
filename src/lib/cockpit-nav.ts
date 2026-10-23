@@ -188,6 +188,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "owner",
   },
   {
+    href: "/canaux-recoltes",
+    label: "Canaux récoltés",
+    navLabel: "Canaux",
+    icon: "🎚️",
+    desc: "Pour chaque groupe et chaque fil : récolté, transcrit, résumé du jour — un interrupteur par usage",
+    color: "#0E7490",
+    group: "owner",
+  },
+  {
     href: "/resumes-abo",
     label: "Résumés à relire",
     navLabel: "Résumés",
