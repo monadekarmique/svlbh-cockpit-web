@@ -30,6 +30,7 @@ export function TherapeutesDnDZonesWrapper({
   nsbFollowersByName,
   cacheesByHost,
   canWriteCachees,
+  cacheesTotal,
 }: {
   therapeutes: DnDTherapeute[];
   mySvlbhId?: string;
@@ -42,10 +43,13 @@ export function TherapeutesDnDZonesWrapper({
   nsbFollowersByName: Record<string, Array<{ name: string; cercle?: string }>>;
   cacheesByHost: Record<string, CacheeData[]>;
   canWriteCachees: boolean;
+  /** Somme des cachées des fiches de la page (titre sous le total GL). */
+  cacheesTotal: number;
 }) {
   return (
     <TherapeutesDnDZones
       initial={therapeutes}
+      cacheesTotal={cacheesTotal}
       mySvlbhId={mySvlbhId}
       isOwner={isOwner}
       renderCard={(t, { isMe, bumpGL }) => {

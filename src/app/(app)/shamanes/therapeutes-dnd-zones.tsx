@@ -34,10 +34,13 @@ export type DnDTherapeute = {
 
 export function TherapeutesDnDZones({
   initial,
+  cacheesTotal,
   mySvlbhId,
   renderCard,
 }: {
   initial: DnDTherapeute[];
+  /** Somme des « 🫥 Cachées · N » des fiches de la page (DEC Patrick 25.10.2026). */
+  cacheesTotal: number;
   mySvlbhId?: string;
   isOwner: boolean;
   renderCard: (
@@ -110,8 +113,8 @@ export function TherapeutesDnDZones({
       </div>
 
       <Zone
-        title={`🌙 Apprenantes cachées (${hidden.length})`}
-        emptyHint="Aucune cachée aujourd'hui. Utilise le bouton « Me cacher » sur ta carte."
+        title={`🌙 Apprenantes cachées (${cacheesTotal.toLocaleString("fr-CH")})`}
+        emptyHint="Aucune thérapeute cachée aujourd'hui. Utilise le bouton « Me cacher » sur ta carte."
       >
         {hidden.map((t) => (
           <li key={t.svlbh_id}>

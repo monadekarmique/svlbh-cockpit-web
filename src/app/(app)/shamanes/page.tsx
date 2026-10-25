@@ -271,6 +271,19 @@ export default async function ShamanesPage() {
   const activesTherapeutes = therapeutes.filter((t) => t.status === "active");
   const hiddenTherapeutes = therapeutes.filter((t) => t.status === "hidden");
 
+  // Total « Apprenantes cachées » sous le total des Guides = somme des
+  // « 🫥 Cachées · N » des fiches affichées (DEC Patrick 25.10.2026) :
+  // thérapeutes actives et cachées (sauf la carte de Patrick, qui masque son
+  // compteur), les deux superviseurs, et les apprenantes quand leur section
+  // est visible. Une cachée dont l'hôte n'a pas de fiche ici ne compte pas.
+  const cacheesOnCards = [
+    ...therapeutes
+      .filter((t) => (t.status === "active" || t.status === "hidden") && t.svlbh_id !== PATRICK_SVLBH_ID)
+      .map((t) => t.svlbh_id),
+    ...Object.values(SUPERVISOR_HOST_SVLBH_ID),
+    ...(canWriteCachees ? APPRENANTES.map((a) => apprenanteSvlbhId(a.name)) : []),
+  ].reduce((sum, host) => sum + (cacheesByHost[host]?.length ?? 0), 0);
+
   // 3ter-bis. Compteurs collaboratifs Backlog (Esprits désincarnés,
   // Entité Champignons, …). DEC Patrick 2026-05-29.
   const { data: countersRaw } = await sb
@@ -555,6 +568,7 @@ export default async function ShamanesPage() {
         nsbFollowersByName={nsbFollowersByName}
         cacheesByHost={cacheesByHost}
         canWriteCachees={canWriteCachees}
+        cacheesTotal={cacheesOnCards}
       />
 
       {/* Cartes virtuelles Patrick × 2 (superviseurs) — sous les thérapeutes
