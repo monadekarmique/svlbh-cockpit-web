@@ -248,7 +248,7 @@ function ApprenanteCardInner({
                     }
                   }}
                   className="w-16 rounded-full border border-rose-400 bg-rose-50 px-2 py-0.5 text-center font-mono text-[11px] font-bold text-rose-900 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  placeholder="NSB"
+                  placeholder="NBB"
                 />
                 <button type="submit" className="sr-only" tabIndex={-1}>
                   Sauver
@@ -268,9 +268,9 @@ function ApprenanteCardInner({
                     ? "border-rose-300 bg-rose-50 text-rose-900"
                     : "border-dashed border-rose-200 bg-white text-rose-400")
                 }
-                title="Cliquer pour saisir / modifier le NSB (vide = effacer)"
+                title="Cliquer pour saisir / modifier le NBB (vide = effacer)"
               >
-                NSB {a.niveaux_bloques ?? "+"}
+                NBB {a.niveaux_bloques ?? "+"}
               </button>
             )}
             {/* BDEC — clone parallèle de DESA, thème vert (consciences
@@ -410,7 +410,7 @@ function ApprenanteCardInner({
                     }
                   }}
                   className="w-full rounded-md border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                  placeholder="Libellé NSB famille"
+                  placeholder="Libellé NBB famille"
                 />
                 <button type="submit" className="sr-only" tabIndex={-1}>
                   Sauver
@@ -464,7 +464,7 @@ function ApprenanteCardInner({
                   }
                 }}
                 className="w-20 rounded-md border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-center font-mono text-[11px] font-bold text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                placeholder="NSB fam."
+                placeholder="NBB fam."
               />
               <button type="submit" className="sr-only" tabIndex={-1}>
                 Sauver
@@ -484,9 +484,9 @@ function ApprenanteCardInner({
                   ? "border-emerald-300 bg-emerald-50 text-emerald-700"
                   : "border-dashed border-emerald-200 bg-white text-emerald-400")
               }
-              title="Cliquer pour saisir / modifier le NSB famille (vide = effacer)"
+              title="Cliquer pour saisir / modifier le NBB famille (vide = effacer)"
             >
-              NSB famille · {a.nsb_familial?.count ?? "+"}
+              NBB famille · {a.nsb_familial?.count ?? "+"}
             </button>
           )}
         </div>
@@ -504,11 +504,11 @@ function ApprenanteCardInner({
                 className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-rose-700"
                 title={
                   follower.cercle
-                    ? `NSB de relation avec ${follower.name} (cercle ${follower.cercle})`
-                    : `NSB de relation avec ${follower.name}`
+                    ? `NBB de relation avec ${follower.name} (cercle ${follower.cercle})`
+                    : `NBB de relation avec ${follower.name}`
                 }
               >
-                NSB · {follower.name}
+                NBB · {follower.name}
                 {follower.cercle ? (
                   <span className="font-normal text-rose-500">· {follower.cercle}</span>
                 ) : null}

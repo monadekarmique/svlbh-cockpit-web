@@ -230,11 +230,11 @@ export function TherapeuteCardClient({
                     className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-rose-700"
                     title={
                       f.cercle
-                        ? `NSB de relation avec ${f.name} (cercle ${f.cercle})`
-                        : `NSB de relation avec ${f.name}`
+                        ? `NBB de relation avec ${f.name} (cercle ${f.cercle})`
+                        : `NBB de relation avec ${f.name}`
                     }
                   >
-                    NSB · {f.name}
+                    NBB · {f.name}
                     {f.cercle ? (
                       <span className="font-normal text-rose-500">· {f.cercle}</span>
                     ) : null}
@@ -283,7 +283,7 @@ export function TherapeuteCardClient({
                       }
                     }}
                     className="w-16 rounded-full border border-rose-400 bg-rose-50 px-2 py-0.5 text-center font-mono text-[11px] font-bold text-rose-900 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                    placeholder="NSB"
+                    placeholder="NBB"
                   />
                   <button type="submit" className="sr-only" tabIndex={-1}>
                     Sauver
@@ -303,17 +303,17 @@ export function TherapeuteCardClient({
                       ? "border-rose-300 bg-rose-50 text-rose-900"
                       : "border-dashed border-rose-200 bg-white text-rose-400")
                   }
-                  title="Cliquer pour saisir / modifier le NSB (vide = retire l'override)"
+                  title="Cliquer pour saisir / modifier le NBB (vide = retire l'override)"
                 >
-                  NSB {t.attention_steps ?? "+"}
+                  NBB {t.attention_steps ?? "+"}
                 </button>
               )
             ) : t.attention_steps != null ? (
               <span
                 className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 font-mono text-[11px] font-bold text-rose-900"
-                title="NSB — Niveaux Shamaniques Bloqués"
+                title="NBB — Nombre de Bundle Bloquants"
               >
-                NSB {t.attention_steps}
+                NBB {t.attention_steps}
               </span>
             ) : null}
             {/* Codes karmiques (rouges) — max 3 par ligne avec retour à la

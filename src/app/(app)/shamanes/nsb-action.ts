@@ -33,7 +33,7 @@ function parseNSB(raw: string | null): number | null {
   const s = raw.trim();
   if (s === "") return null;
   const n = Number(s);
-  if (!Number.isFinite(n) || n < 0) throw new Error("NSB doit être ≥ 0");
+  if (!Number.isFinite(n) || n < 0) throw new Error("NBB doit être ≥ 0");
   return Math.round(n);
 }
 
@@ -59,7 +59,7 @@ export async function setApprenanteNSB(formData: FormData) {
     .eq("name", name);
   if (expected) q = q.eq("updated_at", expected);
   const { data: upd, error: updErr } = await q.select("name");
-  if (updErr) throw new Error(`NSB apprenante : ${updErr.message}`);
+  if (updErr) throw new Error(`NBB apprenante : ${updErr.message}`);
   if (!upd || upd.length === 0) {
     // Disambig : la row existe ? CONFLIT si oui, INSERT sinon.
     const { data: exists } = await sb
@@ -69,7 +69,7 @@ export async function setApprenanteNSB(formData: FormData) {
       .maybeSingle();
     if (exists && expected) {
       revalidatePath("/shamanes");
-      throw new Error("CONFLIT : NSB modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
+      throw new Error("CONFLIT : NBB modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
     }
     const staticTier = APPRENANTES.find((a) => a.name === name)?.tier ?? "formation";
     const { error: insErr } = await sb
@@ -81,7 +81,7 @@ export async function setApprenanteNSB(formData: FormData) {
         updated_at: now,
         updated_by_svlbh_id: me.svlbh_id,
       });
-    if (insErr) throw new Error(`NSB apprenante : ${insErr.message}`);
+    if (insErr) throw new Error(`NBB apprenante : ${insErr.message}`);
   }
   revalidatePath("/shamanes");
 }
@@ -111,7 +111,7 @@ export async function setApprenanteNSBFamilial(formData: FormData) {
     .eq("name", name);
   if (expected) q = q.eq("updated_at", expected);
   const { data: upd, error: updErr } = await q.select("name");
-  if (updErr) throw new Error(`NSB famille : ${updErr.message}`);
+  if (updErr) throw new Error(`NBB famille : ${updErr.message}`);
   if (!upd || upd.length === 0) {
     const { data: exists } = await sb
       .from("apprenante_tier")
@@ -120,7 +120,7 @@ export async function setApprenanteNSBFamilial(formData: FormData) {
       .maybeSingle();
     if (exists && expected) {
       revalidatePath("/shamanes");
-      throw new Error("CONFLIT : NSB famille modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
+      throw new Error("CONFLIT : NBB famille modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
     }
     const staticTier = APPRENANTES.find((a) => a.name === name)?.tier ?? "formation";
     const { error: insErr } = await sb
@@ -132,7 +132,7 @@ export async function setApprenanteNSBFamilial(formData: FormData) {
         updated_at: now,
         updated_by_svlbh_id: me.svlbh_id,
       });
-    if (insErr) throw new Error(`NSB famille : ${insErr.message}`);
+    if (insErr) throw new Error(`NBB famille : ${insErr.message}`);
   }
   revalidatePath("/shamanes");
 }
@@ -160,7 +160,7 @@ export async function setApprenanteNSBFamilialDescription(formData: FormData) {
     .eq("name", name);
   if (expected) q = q.eq("updated_at", expected);
   const { data: upd, error: updErr } = await q.select("name");
-  if (updErr) throw new Error(`NSB famille (libellé) : ${updErr.message}`);
+  if (updErr) throw new Error(`NBB famille (libellé) : ${updErr.message}`);
   if (!upd || upd.length === 0) {
     const { data: exists } = await sb
       .from("apprenante_tier")
@@ -169,7 +169,7 @@ export async function setApprenanteNSBFamilialDescription(formData: FormData) {
       .maybeSingle();
     if (exists && expected) {
       revalidatePath("/shamanes");
-      throw new Error("CONFLIT : NSB famille modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
+      throw new Error("CONFLIT : NBB famille modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
     }
     const staticTier = APPRENANTES.find((a) => a.name === name)?.tier ?? "formation";
     const { error: insErr } = await sb
@@ -181,7 +181,7 @@ export async function setApprenanteNSBFamilialDescription(formData: FormData) {
         updated_at: now,
         updated_by_svlbh_id: me.svlbh_id,
       });
-    if (insErr) throw new Error(`NSB famille (libellé) : ${insErr.message}`);
+    if (insErr) throw new Error(`NBB famille (libellé) : ${insErr.message}`);
   }
   revalidatePath("/shamanes");
 }
@@ -208,7 +208,7 @@ export async function setTherapeuteNSB(formData: FormData) {
     .eq("svlbh_id", svlbhId);
   if (expected) q = q.eq("updated_at", expected);
   const { data: upd, error: updErr } = await q.select("svlbh_id");
-  if (updErr) throw new Error(`NSB thérapeute : ${updErr.message}`);
+  if (updErr) throw new Error(`NBB thérapeute : ${updErr.message}`);
   if (!upd || upd.length === 0) {
     // Disambig : la row existe ? CONFLIT si oui, INSERT sinon.
     const { data: exists } = await sb
@@ -218,7 +218,7 @@ export async function setTherapeuteNSB(formData: FormData) {
       .maybeSingle();
     if (exists && expected) {
       revalidatePath("/shamanes");
-      throw new Error("CONFLIT : NSB modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
+      throw new Error("CONFLIT : NBB modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
     }
     const { error: insErr } = await sb
       .from("praticienne_daily_status")
@@ -229,7 +229,7 @@ export async function setTherapeuteNSB(formData: FormData) {
         attention_set_by_svlbh_id: me.svlbh_id,
         attention_set_at: now,
       });
-    if (insErr) throw new Error(`NSB thérapeute : ${insErr.message}`);
+    if (insErr) throw new Error(`NBB thérapeute : ${insErr.message}`);
   }
   revalidatePath("/shamanes");
 }

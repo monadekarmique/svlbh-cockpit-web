@@ -441,8 +441,8 @@ export default async function ShamanesPage() {
         </summary>
         <dl className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
           <div className="flex gap-2">
-            <dt className="font-mono font-bold text-rose-700">NSB</dt>
-            <dd className="text-neutral-700">Niveaux Shamaniques Bloqués</dd>
+            <dt className="font-mono font-bold text-rose-700">NBB</dt>
+            <dd className="text-neutral-700">Nombre de Bundle Bloquants</dd>
           </div>
         </dl>
       </details>
