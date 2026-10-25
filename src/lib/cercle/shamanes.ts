@@ -102,6 +102,10 @@ export const APPRENANTES: Participant[] = [
   // Duplication de Béatrice Pathey pour Ildiko Togni-Kosma (apprenante
   // ST1 Passive). DEC Patrick 2026-05-29.
   { name: "Ildiko Togni-Kosma", tier: "cercle-akashique", emoji: "🌠" },
+  // Apprenantes ST3 actives. DEC Patrick 2026-10-25 : « je ne vois pas
+  // Fabienne Carrard dans Apprenantes ST3 actives ni Giulia Sonderegger ».
+  { name: "Fabienne Carrard", tier: "st3-active", emoji: "🌹" },
+  { name: "Giulia Sonderegger", tier: "st3-active", emoji: "🌿" },
 ];
 
 export const TIER_LABEL: Record<ParticipantTier, string> = {
