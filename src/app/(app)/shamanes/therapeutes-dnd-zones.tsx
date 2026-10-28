@@ -53,7 +53,11 @@ export function TherapeutesDnDZones({
 
   // Resync local state with server props after revalidatePath (form actions
   // update DB + revalidate, mais le state local resterait stale).
-  const initialSig = initial.map((t) => `${t.svlbh_id}:${t.status}:${t.guides_lumiere}`).join("|");
+  // ⚠️ La signature porte TOUTE la carte (28.10.2026). Elle ne portait que statut et GL : un NBB enregistré ne
+  // changeait pas la signature, la carte gardait l'ancien chiffre ET l'ancien updated_at, et l'essai suivant
+  // partait avec un jeton périmé → « CONFLIT : NBB modifié par quelqu'un d'autre » alors que personne n'avait
+  // écrit (Patrick : « pourquoi est-il si difficile de modifier les chiffres »).
+  const initialSig = JSON.stringify(initial);
   useEffect(() => {
     setItems(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -37,6 +37,54 @@ function parseNSB(raw: string | null): number | null {
   return Math.round(n);
 }
 
+/** Écrit des colonnes de la ligne apprenante_tier d'une apprenante, OCC sur updated_at (row absente → INSERT).
+ *  ⚠️ Un CONFLIT ne se lève que si QUELQU'UN D'AUTRE a écrit depuis la lecture (28.10.2026). NBB, NBB famille et
+ *  son libellé partagent la même ligne et le même updated_at, et la page met ~5 s à se rafraîchir après un
+ *  enregistrement (mesuré le 28.10 : POST /shamanes 5,2–5,9 s) : corriger deux pastilles de la même carte coup sur
+ *  coup partait avec le jeton d'avant ma propre écriture → « modifié par quelqu'un d'autre » alors que c'était moi. */
+async function ecrireApprenante(
+  sb: Awaited<ReturnType<typeof createClient>>,
+  moi: string,
+  name: string,
+  champs: Record<string, unknown>,
+  expected: string,
+  libelle: string,
+  quoi: string,
+) {
+  const ligne = { ...champs, updated_at: new Date().toISOString(), updated_by_svlbh_id: moi };
+  let q = sb.from("apprenante_tier").update(ligne).eq("name", name);
+  if (expected) q = q.eq("updated_at", expected);
+  const { data: upd, error: updErr } = await q.select("name");
+  if (updErr) throw new Error(`${libelle} : ${updErr.message}`);
+  if (upd && upd.length > 0) return;
+  // Disambig : la row existe ? CONFLIT si quelqu'un d'autre l'a écrite, INSERT si elle n'existe pas.
+  const { data: exists } = await sb
+    .from("apprenante_tier")
+    .select("name, updated_by_svlbh_id")
+    .eq("name", name)
+    .maybeSingle();
+  if (exists && expected) {
+    if (exists.updated_by_svlbh_id !== moi) {
+      revalidatePath("/shamanes");
+      throw new Error(`CONFLIT : ${quoi} modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.`);
+    }
+    // Le dernier écrivain, c'est moi : mon enregistrement précédent, pas un conflit.
+    const { data: re, error: reErr } = await sb
+      .from("apprenante_tier")
+      .update(ligne)
+      .eq("name", name)
+      .select("name");
+    if (reErr) throw new Error(`${libelle} : ${reErr.message}`);
+    if (!re || re.length === 0) throw new Error(`${libelle} : écriture refusée par la base`);
+    return;
+  }
+  const staticTier = APPRENANTES.find((a) => a.name === name)?.tier ?? "formation";
+  const { error: insErr } = await sb
+    .from("apprenante_tier")
+    .insert({ name, tier: staticTier, ...ligne });
+  if (insErr) throw new Error(`${libelle} : ${insErr.message}`);
+}
+
 export async function setApprenanteNSB(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("name requis");
@@ -44,45 +92,7 @@ export async function setApprenanteNSB(formData: FormData) {
   const expected = String(formData.get("expected_updated_at") ?? "").trim();
 
   const { sb, me } = await assertOwner();
-  const now = new Date().toISOString();
-
-  // UPDATE conditionnel sur expected_updated_at (OCC). Si la row existe
-  // mais updated_at ≠ expected → 0 rows touchées → CONFLIT. Si la row
-  // n'existe pas (premier set NSB), INSERT direct (pas de conflit possible).
-  let q = sb
-    .from("apprenante_tier")
-    .update({
-      niveaux_bloques: value,
-      updated_at: now,
-      updated_by_svlbh_id: me.svlbh_id,
-    })
-    .eq("name", name);
-  if (expected) q = q.eq("updated_at", expected);
-  const { data: upd, error: updErr } = await q.select("name");
-  if (updErr) throw new Error(`NBB apprenante : ${updErr.message}`);
-  if (!upd || upd.length === 0) {
-    // Disambig : la row existe ? CONFLIT si oui, INSERT sinon.
-    const { data: exists } = await sb
-      .from("apprenante_tier")
-      .select("name")
-      .eq("name", name)
-      .maybeSingle();
-    if (exists && expected) {
-      revalidatePath("/shamanes");
-      throw new Error("CONFLIT : NBB modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
-    }
-    const staticTier = APPRENANTES.find((a) => a.name === name)?.tier ?? "formation";
-    const { error: insErr } = await sb
-      .from("apprenante_tier")
-      .insert({
-        name,
-        tier: staticTier,
-        niveaux_bloques: value,
-        updated_at: now,
-        updated_by_svlbh_id: me.svlbh_id,
-      });
-    if (insErr) throw new Error(`NBB apprenante : ${insErr.message}`);
-  }
+  await ecrireApprenante(sb, me.svlbh_id, name, { niveaux_bloques: value }, expected, "NBB apprenante", "NBB");
   revalidatePath("/shamanes");
 }
 
@@ -98,42 +108,7 @@ export async function setApprenanteNSBFamilial(formData: FormData) {
   const expected = String(formData.get("expected_updated_at") ?? "").trim();
 
   const { sb, me } = await assertOwner();
-  const now = new Date().toISOString();
-
-  // UPDATE conditionnel sur expected_updated_at (OCC). Row absente → INSERT.
-  let q = sb
-    .from("apprenante_tier")
-    .update({
-      nsb_familial_count: value,
-      updated_at: now,
-      updated_by_svlbh_id: me.svlbh_id,
-    })
-    .eq("name", name);
-  if (expected) q = q.eq("updated_at", expected);
-  const { data: upd, error: updErr } = await q.select("name");
-  if (updErr) throw new Error(`NBB famille : ${updErr.message}`);
-  if (!upd || upd.length === 0) {
-    const { data: exists } = await sb
-      .from("apprenante_tier")
-      .select("name")
-      .eq("name", name)
-      .maybeSingle();
-    if (exists && expected) {
-      revalidatePath("/shamanes");
-      throw new Error("CONFLIT : NBB famille modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
-    }
-    const staticTier = APPRENANTES.find((a) => a.name === name)?.tier ?? "formation";
-    const { error: insErr } = await sb
-      .from("apprenante_tier")
-      .insert({
-        name,
-        tier: staticTier,
-        nsb_familial_count: value,
-        updated_at: now,
-        updated_by_svlbh_id: me.svlbh_id,
-      });
-    if (insErr) throw new Error(`NBB famille : ${insErr.message}`);
-  }
+  await ecrireApprenante(sb, me.svlbh_id, name, { nsb_familial_count: value }, expected, "NBB famille", "NBB famille");
   revalidatePath("/shamanes");
 }
 
@@ -148,41 +123,9 @@ export async function setApprenanteNSBFamilialDescription(formData: FormData) {
   const expected = String(formData.get("expected_updated_at") ?? "").trim();
 
   const { sb, me } = await assertOwner();
-  const now = new Date().toISOString();
-
-  let q = sb
-    .from("apprenante_tier")
-    .update({
-      nsb_familial_description: value,
-      updated_at: now,
-      updated_by_svlbh_id: me.svlbh_id,
-    })
-    .eq("name", name);
-  if (expected) q = q.eq("updated_at", expected);
-  const { data: upd, error: updErr } = await q.select("name");
-  if (updErr) throw new Error(`NBB famille (libellé) : ${updErr.message}`);
-  if (!upd || upd.length === 0) {
-    const { data: exists } = await sb
-      .from("apprenante_tier")
-      .select("name")
-      .eq("name", name)
-      .maybeSingle();
-    if (exists && expected) {
-      revalidatePath("/shamanes");
-      throw new Error("CONFLIT : NBB famille modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
-    }
-    const staticTier = APPRENANTES.find((a) => a.name === name)?.tier ?? "formation";
-    const { error: insErr } = await sb
-      .from("apprenante_tier")
-      .insert({
-        name,
-        tier: staticTier,
-        nsb_familial_description: value,
-        updated_at: now,
-        updated_by_svlbh_id: me.svlbh_id,
-      });
-    if (insErr) throw new Error(`NBB famille (libellé) : ${insErr.message}`);
-  }
+  await ecrireApprenante(
+    sb, me.svlbh_id, name, { nsb_familial_description: value }, expected, "NBB famille (libellé)", "NBB famille",
+  );
   revalidatePath("/shamanes");
 }
 
@@ -213,12 +156,35 @@ export async function setTherapeuteNSB(formData: FormData) {
     // Disambig : la row existe ? CONFLIT si oui, INSERT sinon.
     const { data: exists } = await sb
       .from("praticienne_daily_status")
-      .select("svlbh_id")
+      .select("svlbh_id, attention_set_by_svlbh_id, attention_set_at")
       .eq("svlbh_id", svlbhId)
       .maybeSingle();
     if (exists && expected) {
+      // ⚠️ CONFLIT seulement si QUELQU'UN D'AUTRE a posé un NBB depuis ma lecture (28.10.2026). updated_at bouge
+      // aussi quand le statut change, et la carte pouvait garder un jeton périmé : le NBB était refusé alors que
+      // personne n'y avait touché.
+      const autre =
+        exists.attention_set_by_svlbh_id !== me.svlbh_id &&
+        exists.attention_set_at != null &&
+        new Date(exists.attention_set_at) > new Date(expected);
+      if (autre) {
+        revalidatePath("/shamanes");
+        throw new Error("CONFLIT : NBB modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
+      }
+      const { data: re, error: reErr } = await sb
+        .from("praticienne_daily_status")
+        .update({
+          attention_steps: value,
+          attention_set_by_svlbh_id: me.svlbh_id,
+          attention_set_at: now,
+          updated_at: now,
+        })
+        .eq("svlbh_id", svlbhId)
+        .select("svlbh_id");
+      if (reErr) throw new Error(`NBB thérapeute : ${reErr.message}`);
+      if (!re || re.length === 0) throw new Error("NBB thérapeute : écriture refusée par la base");
       revalidatePath("/shamanes");
-      throw new Error("CONFLIT : NBB modifié par quelqu'un d'autre. Rafraîchi, ré-essaie.");
+      return;
     }
     const { error: insErr } = await sb
       .from("praticienne_daily_status")
