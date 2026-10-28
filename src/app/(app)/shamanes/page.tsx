@@ -97,62 +97,150 @@ function statusEffective(rawStatus: string | null, updatedAt: string | null): Da
   return rawStatus as DailyStatus;
 }
 
+/** Lance une lecture tout de suite (un constructeur de requête Supabase ne part qu'à son `then`) ; son erreur remonte à
+ *  l'`await` qui l'attend, pas en « unhandledRejection » pendant qu'une lecture précédente est attendue. */
+function lancer<T>(q: PromiseLike<T>): Promise<T> {
+  const p = Promise.resolve(q);
+  p.catch(() => {});
+  return p;
+}
+
 export default async function ShamanesPage() {
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
 
-  const { data: me } = user
-    ? await sb
-        .from("praticienne_profile")
-        .select("svlbh_id, stx, cercle_lumiere_sr")
-        .eq("supabase_user_id", user.id)
-        .maybeSingle()
-    : { data: null };
+  // me et is_z4 ne dépendent que de user : lus ensemble (28.10.2026).
+  const [{ data: me }, { data: z4 }] = await Promise.all([
+    user
+      ? sb
+          .from("praticienne_profile")
+          .select("svlbh_id, stx, cercle_lumiere_sr")
+          .eq("supabase_user_id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    user ? sb.rpc("is_z4") : Promise.resolve({ data: null }),
+  ]);
   const mySvlbhId = me?.svlbh_id as string | undefined;
   const myStx = me?.stx as string | null;
   const isOwner = myStx === "ST6";
   // Édition des compteurs ressentis : suit la RLS d'UPDATE de cercle_felt_count
   // (peut_ecrire_stage(4), même corps que is_z4 : canal z4, ACTIVE, hors review,
   // hors voir-comme). DEC Patrick 23.09.2026 : le canal, plus le stage.
-  const { data: z4 } = user ? await sb.rpc("is_z4") : { data: null };
   const canEditFelt = z4 === true;
+
+  // ⚡ Lectures LANCÉES ENSEMBLE (28.10.2026, Patrick : « traite cette différence de lenteur »). La page les attendait une
+  // par une — une vingtaine d'allers-retours en série, POST /shamanes mesuré à 5,2–5,9 s. Aucune ne dépend d'une autre :
+  // chacune part ici et est attendue là où elle sert.
+  const lectures = {
+    therapeutes: lancer(
+      sb
+        .from("praticienne_profile")
+        .select("svlbh_id, first_name, last_name, code_praticien, stx, tx, capacity_anchor, cercle_lumiere_sr, desa_active, guides_lumiere, guides_lumiere_updated_at, rad_signature")
+        .eq("pro_status", "ACTIVE")
+        .eq("cercle_lumiere_sr", true)
+        .eq("cercle_veto", false)
+        .in("stx", ["ST2", "ST3", "ST4", "ST5", "ST6"])
+        .order("code_praticien", { ascending: true, nullsFirst: false }),
+    ),
+    dynamiques: lancer(fetchDynamiquesByPraticienne(sb)),
+    dhatu: lancer(fetchDhatuMemberships(sb)),
+    dhatuMeta: lancer(getDhatuMeta(sb)),
+    desa: lancer(Promise.all([getDesaCatalog(sb), fetchDesaState(sb)])),
+    cachees: lancer(
+      sb
+        .from("apprenante_cachee")
+        .select("id, svlbh_id, host_svlbh_id, role, display_order, updated_at")
+        .order("host_svlbh_id", { ascending: true })
+        .order("display_order", { ascending: true }),
+    ),
+    daily: lancer(
+      sb
+        .from("praticienne_daily_status")
+        .select("svlbh_id, status, updated_at, attention_color, attention_steps"),
+    ),
+    niveaux: lancer(
+      sb
+        .from("relation")
+        .select("praticienne_svlbh_id, end_a_praticienne_svlbh_id, niveau_shamanique_bloques")
+        .eq("relation_state", "bloquée")
+        .not("niveau_shamanique_bloques", "is", null),
+    ),
+    override: lancer(
+      sb
+        .from("apprenante_tier")
+        .select("svlbh_id, niveaux_bloques")
+        .not("svlbh_id", "is", null)
+        .not("niveaux_bloques", "is", null),
+    ),
+    counters: lancer(
+      sb
+        .from("cercle_backlog_counter")
+        .select("id, name, emoji, count, updated_at")
+        .order("display_order", { ascending: true }),
+    ),
+    saturation: lancer(
+      sb
+        .from("cercle_sr_saturation")
+        .select("ref_type, ref_id, saturation_level, dissipation_mode"),
+    ),
+    rels: lancer(
+      sb
+        .from("relation")
+        .select("relation_id, praticienne_svlbh_id, slideshow_title, relation_type, relation_state, purpose"),
+    ),
+    enes: lancer(
+      sb
+        .from("energie_offensive_tiers")
+        .select("id, source_description, intensity, created_by_svlbh_id")
+        .eq("status", "active"),
+    ),
+    attrs: lancer(
+      sb
+        .from("consultante_attribution")
+        .select("resource_id, praticienne_svlbh_id, resource_type")
+        .in("resource_type", ["relation", "soul_mission", "healing_path", "energie_offensive"]),
+    ),
+    shares: lancer(
+      sb
+        .from("healing_path_share")
+        .select("source_relation_id, sender_svlbh_id, recipient_svlbh_id"),
+    ),
+    felt: lancer(
+      sb
+        .from("cercle_felt_count")
+        .select("type, felt_value, likes_count")
+        .order("type"),
+    ),
+    likes: mySvlbhId
+      ? lancer(sb
+          .from("cercle_felt_count_like")
+          .select("felt_count_type")
+          .eq("liker_svlbh_id", mySvlbhId))
+      : Promise.resolve({ data: [] as Array<{ felt_count_type: string }> }),
+  };
 
   // 1. Membres du Cercle de Lumière (DEC Patrick 2026-05-28) :
   //    stx ∈ ST2..ST6 ∩ cercle_lumiere_sr=true ∩ cercle_veto=false ∩ ACTIVE.
   //    Une thérapeute peut être membre dès ST2+, choisie par le Cercle,
   //    avec droit de veto Patrick (colonne cercle_veto).
-  const { data: therapeutesRaw } = await sb
-    .from("praticienne_profile")
-    .select("svlbh_id, first_name, last_name, code_praticien, stx, tx, capacity_anchor, cercle_lumiere_sr, desa_active, guides_lumiere, guides_lumiere_updated_at, rad_signature")
-    .eq("pro_status", "ACTIVE")
-    .eq("cercle_lumiere_sr", true)
-    .eq("cercle_veto", false)
-    .in("stx", ["ST2", "ST3", "ST4", "ST5", "ST6"])
-    .order("code_praticien", { ascending: true, nullsFirst: false });
+  const { data: therapeutesRaw } = await lectures.therapeutes;
 
   // 1bis. Dynamiques SVLBH attribuées à chaque praticienne (DEC Patrick 2026-05-20)
-  const dynamiquesByPraticienne = await fetchDynamiquesByPraticienne(sb);
+  const dynamiquesByPraticienne = await lectures.dynamiques;
 
   // 1ter. Adhésions dhātu des praticiennes DB depuis la table dhatu_membership
   // (DEC Patrick 2026-05-27 — remplace le statique pour les clés svlbh_id).
-  const dhatuByPraticienne = await fetchDhatuMemberships(sb);
+  const dhatuByPraticienne = await lectures.dhatu;
   // 1quater. Métadonnées des 7 dhātu atomiques (label/emoji/couleur) depuis
   // `dhatu_atom` — source canonique unique (Phase 2 DEC Patrick 2026-05-28).
-  const dhatuMeta = await getDhatuMeta(sb);
+  const dhatuMeta = await lectures.dhatuMeta;
   // 1quinquies. DESA — capacités de libération Dark Entities & Spirit
   // Attachments accordées dynamiquement par l'Owner (DEC Patrick 2026-05-29).
-  const [desaCatalog, desaStateByPraticienne] = await Promise.all([
-    getDesaCatalog(sb),
-    fetchDesaState(sb),
-  ]);
+  const [desaCatalog, desaStateByPraticienne] = await lectures.desa;
   // 1quinquies-bis. Apprenantes cachées par hôte (sub-cards thérapeutes).
   // DEC Patrick 2026-05-29. État DESA/BDEC déjà inclus dans
   // desaStateByPraticienne via leur svlbh_id synthétique.
-  const { data: cacheesRaw } = await sb
-    .from("apprenante_cachee")
-    .select("id, svlbh_id, host_svlbh_id, role, display_order, updated_at")
-    .order("host_svlbh_id", { ascending: true })
-    .order("display_order", { ascending: true });
+  const { data: cacheesRaw } = await lectures.cachees;
   const cacheesByHost: Record<string, Array<{
     id: string; svlbh_id: string; role: string | null;
     desa_granted: string[]; desa_karmic: string[]; updated_at: string;
@@ -187,9 +275,7 @@ export default async function ShamanesPage() {
   }
 
   // 2. Daily status pour chaque
-  const { data: dailyRaw } = await sb
-    .from("praticienne_daily_status")
-    .select("svlbh_id, status, updated_at, attention_color, attention_steps");
+  const { data: dailyRaw } = await lectures.daily;
   type DailyRow = {
     svlbh_id: string; status: string; updated_at: string;
     attention_color: string | null; attention_steps: number | null;
@@ -204,11 +290,7 @@ export default async function ShamanesPage() {
   //   (a) praticienne_svlbh_id = X (relations qu'elle possède côté praticienne)
   //   (b) end_a_praticienne_svlbh_id = X (soins reçus par X comme cible
   //       — ex : Patrick crée une relation vers Anne avec NSB 57)
-  const { data: niveauxRaw } = await sb
-    .from("relation")
-    .select("praticienne_svlbh_id, end_a_praticienne_svlbh_id, niveau_shamanique_bloques")
-    .eq("relation_state", "bloquée")
-    .not("niveau_shamanique_bloques", "is", null);
+  const { data: niveauxRaw } = await lectures.niveaux;
   const niveauxSomme = new Map<string, number>();
   for (const r of (niveauxRaw ?? []) as Array<{ praticienne_svlbh_id: string | null; end_a_praticienne_svlbh_id: string | null; niveau_shamanique_bloques: number }>) {
     const v = r.niveau_shamanique_bloques ?? 0;
@@ -221,11 +303,7 @@ export default async function ShamanesPage() {
   }
   // En plus : niveaux_bloques de l'override apprenante_tier (déclassement
   // temporaire ST4+ comme Cornelia 15). Lookup par svlbh_id. DEC Patrick.
-  const { data: overrideNiveaux } = await sb
-    .from("apprenante_tier")
-    .select("svlbh_id, niveaux_bloques")
-    .not("svlbh_id", "is", null)
-    .not("niveaux_bloques", "is", null);
+  const { data: overrideNiveaux } = await lectures.override;
   const overrideMap = new Map<string, number>();
   for (const r of (overrideNiveaux ?? []) as Array<{ svlbh_id: string; niveaux_bloques: number }>) {
     overrideMap.set(r.svlbh_id, r.niveaux_bloques);
@@ -286,10 +364,7 @@ export default async function ShamanesPage() {
 
   // 3ter-bis. Compteurs collaboratifs Backlog (Esprits désincarnés,
   // Entité Champignons, …). DEC Patrick 2026-05-29.
-  const { data: countersRaw } = await sb
-    .from("cercle_backlog_counter")
-    .select("id, name, emoji, count, updated_at")
-    .order("display_order", { ascending: true });
+  const { data: countersRaw } = await lectures.counters;
   const backlogCounters = ((countersRaw ?? []) as Array<{
     id: string; name: string; emoji: string | null; count: number; updated_at: string;
   }>);
@@ -297,9 +372,7 @@ export default async function ShamanesPage() {
   // 3ter. Backlog Cercle SR — vue de tri/saturation des Soins en commun.
   // Map saturation par soin commun. Items proviennent automatiquement des
   // soinsCommuns (calculé plus bas). Pas de saisie manuelle.
-  const { data: saturationRaw } = await sb
-    .from("cercle_sr_saturation")
-    .select("ref_type, ref_id, saturation_level, dissipation_mode");
+  const { data: saturationRaw } = await lectures.saturation;
   const saturationMap: Record<string, "trois_plus" | "deux" | "un"> = {};
   const dissipationMap: Record<string, "massif" | "moyen" | "minimal" | null> = {};
   for (const r of (saturationRaw ?? []) as Array<{ ref_type: string; ref_id: string; saturation_level: "trois_plus" | "deux" | "un"; dissipation_mode: "massif" | "moyen" | "minimal" | null }>) {
@@ -313,20 +386,10 @@ export default async function ShamanesPage() {
   // 3bis. Soins en commun — relations + énergies offensives multi-praticiennes.
   // Filtre côté Node : contributors distincts ≥ 2.
   // DEC Patrick 2026-05-18 (option 2) : inclus aussi energie_offensive_tiers.
-  const { data: relsRaw } = await sb
-    .from("relation")
-    .select("relation_id, praticienne_svlbh_id, slideshow_title, relation_type, relation_state, purpose");
-  const { data: enesRaw } = await sb
-    .from("energie_offensive_tiers")
-    .select("id, source_description, intensity, created_by_svlbh_id")
-    .eq("status", "active");
-  const { data: attrsRaw } = await sb
-    .from("consultante_attribution")
-    .select("resource_id, praticienne_svlbh_id, resource_type")
-    .in("resource_type", ["relation", "soul_mission", "healing_path", "energie_offensive"]);
-  const { data: sharesRaw } = await sb
-    .from("healing_path_share")
-    .select("source_relation_id, sender_svlbh_id, recipient_svlbh_id");
+  const { data: relsRaw } = await lectures.rels;
+  const { data: enesRaw } = await lectures.enes;
+  const { data: attrsRaw } = await lectures.attrs;
+  const { data: sharesRaw } = await lectures.shares;
 
   const profileByIdRaw = new Map<string, { first_name: string | null; last_name: string | null; code_praticien: number | null }>(
     ((therapeutesRaw ?? []) as Array<{ svlbh_id: string; first_name: string | null; last_name: string | null; code_praticien: number | null }>)
@@ -398,19 +461,11 @@ export default async function ShamanesPage() {
     .sort((a, b) => b.contributors.length - a.contributors.length);
 
   // 3. Compteurs felt (ST1 / ST2 actives)
-  const { data: feltRows } = await sb
-    .from("cercle_felt_count")
-    .select("type, felt_value, likes_count")
-    .order("type");
+  const { data: feltRows } = await lectures.felt;
   const felt = Object.fromEntries(
     ((feltRows ?? []) as Array<{ type: string; felt_value: number; likes_count: number }>).map((r) => [r.type, r]),
   );
-  const { data: myLikes } = mySvlbhId
-    ? await sb
-        .from("cercle_felt_count_like")
-        .select("felt_count_type")
-        .eq("liker_svlbh_id", mySvlbhId)
-    : { data: [] };
+  const { data: myLikes } = await lectures.likes;
   const likedByMe = new Set(((myLikes ?? []) as Array<{ felt_count_type: string }>).map((l) => l.felt_count_type));
 
   return (
@@ -653,18 +708,38 @@ export default async function ShamanesPage() {
           membres du cercle de lumière peuvent voir tous les membres du
           cercle." Tier persisté en DB (apprenante_tier) ; static APPRENANTES
           en fallback. */}
-      {canWriteCachees ? <ApprenantesDnDSection canWriteCachees={canWriteCachees} /> : null}
+      {canWriteCachees ? (
+        <ApprenantesDnDSection
+          canWriteCachees={canWriteCachees}
+          dhatuMeta={dhatuMeta}
+          desaCatalog={desaCatalog}
+          desaStateByPraticienne={desaStateByPraticienne}
+          cacheesByHost={cacheesByHost}
+        />
+      ) : null}
     </div>
   );
 }
 
-async function ApprenantesDnDSection({ canWriteCachees }: { canWriteCachees: boolean }) {
+/** Lit seulement apprenante_tier : dhātu, DESA et cachées viennent du parent, déjà lus pour la même page (28.10.2026 :
+ *  la section relisait apprenante_cachee — 1,3–1,6 s mesurés sous l'identité de Patrick — après le parent). */
+async function ApprenantesDnDSection({
+  canWriteCachees,
+  dhatuMeta,
+  desaCatalog,
+  desaStateByPraticienne,
+  cacheesByHost,
+}: {
+  canWriteCachees: boolean;
+  dhatuMeta: Awaited<ReturnType<typeof getDhatuMeta>>;
+  desaCatalog: Awaited<ReturnType<typeof getDesaCatalog>>;
+  desaStateByPraticienne: Awaited<ReturnType<typeof fetchDesaState>>;
+  cacheesByHost: Record<string, Array<{
+    id: string; svlbh_id: string; role: string | null;
+    desa_granted: string[]; desa_karmic: string[]; updated_at: string;
+  }>>;
+}) {
   const sb = await createClient();
-  const [dhatuMeta, desaCatalog, desaStateByPraticienne] = await Promise.all([
-    getDhatuMeta(sb),
-    getDesaCatalog(sb),
-    fetchDesaState(sb),
-  ]);
   // Reverse map des liens NSB (cf. parent function pour la même logique).
   const nsbFollowersByName: Record<string, Array<{ name: string; cercle?: string }>> = {};
   for (const a of APPRENANTES) {
@@ -679,31 +754,6 @@ async function ApprenantesDnDSection({ canWriteCachees }: { canWriteCachees: boo
   const dbByName = new Map(
     ((data ?? []) as Array<{ name: string; tier: string; description: string | null; niveaux_bloques: number | null; nsb_familial_count: number | null; nsb_familial_description: string | null; updated_at: string }>).map((r) => [r.name, r]),
   );
-  // Cachées par host_svlbh_id (incluant les svlbh_id synthétiques des apprenantes).
-  const { data: cacheesRaw } = await sb
-    .from("apprenante_cachee")
-    .select("id, svlbh_id, host_svlbh_id, role, display_order, updated_at")
-    .order("host_svlbh_id", { ascending: true })
-    .order("display_order", { ascending: true });
-  const cacheesByHost: Record<string, Array<{
-    id: string; svlbh_id: string; role: string | null;
-    desa_granted: string[]; desa_karmic: string[]; updated_at: string;
-  }>> = {};
-  for (const c of (cacheesRaw ?? []) as Array<{
-    id: string; svlbh_id: string; host_svlbh_id: string;
-    role: string | null; display_order: number; updated_at: string;
-  }>) {
-    if (!cacheesByHost[c.host_svlbh_id]) cacheesByHost[c.host_svlbh_id] = [];
-    const st = desaStateByPraticienne[c.svlbh_id];
-    cacheesByHost[c.host_svlbh_id].push({
-      id: c.id,
-      svlbh_id: c.svlbh_id,
-      role: c.role,
-      desa_granted: st?.granted ?? [],
-      desa_karmic: st?.karmic ?? [],
-      updated_at: c.updated_at,
-    });
-  }
   const items: DnDApprenante[] = APPRENANTES.map((a) => {
     const db = dbByName.get(a.name);
     const dbTier = db?.tier;
