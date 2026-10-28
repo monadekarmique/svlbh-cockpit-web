@@ -106,8 +106,14 @@ function lancer<T>(q: PromiseLike<T>): Promise<T> {
 }
 
 export default async function ShamanesPage() {
+  // ⏱ [lenteur] chronométrage PROVISOIRE (28.10.2026, fiche « Cockpit /shamanes : chaque enregistrement attend ~5,5 s ») :
+  // une ligne par rendu dans le journal Render, millisecondes depuis le début du rendu. À retirer dès la mesure faite.
+  const t0 = Date.now();
+  const jalons: string[] = [];
+  const jalon = (nom: string) => jalons.push(`${nom}=${Date.now() - t0}`);
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
+  jalon("getUser");
 
   // me et is_z4 ne dépendent que de user : lus ensemble (28.10.2026).
   const [{ data: me }, { data: z4 }] = await Promise.all([
@@ -120,6 +126,7 @@ export default async function ShamanesPage() {
       : Promise.resolve({ data: null }),
     user ? sb.rpc("is_z4") : Promise.resolve({ data: null }),
   ]);
+  jalon("me");
   const mySvlbhId = me?.svlbh_id as string | undefined;
   const myStx = me?.stx as string | null;
   const isOwner = myStx === "ST6";
@@ -217,7 +224,8 @@ export default async function ShamanesPage() {
           .select("felt_count_type")
           .eq("liker_svlbh_id", mySvlbhId))
       : Promise.resolve({ data: [] as Array<{ felt_count_type: string }> }),
-  };
+  };  for (const [nom, p] of Object.entries(lectures)) p.then(() => jalon(nom), () => jalon(nom + "!"));
+
 
   // 1. Membres du Cercle de Lumière (DEC Patrick 2026-05-28) :
   //    stx ∈ ST2..ST6 ∩ cercle_lumiere_sr=true ∩ cercle_veto=false ∩ ACTIVE.
@@ -468,6 +476,8 @@ export default async function ShamanesPage() {
   const { data: myLikes } = await lectures.likes;
   const likedByMe = new Set(((myLikes ?? []) as Array<{ felt_count_type: string }>).map((l) => l.felt_count_type));
 
+  jalon("fin");
+  console.log(`[lenteur /shamanes] page debut=${t0} ${jalons.join(" ")}`);
   return (
     <div className="space-y-5">
       {/* Auto-refresh 15s pour limiter les conflits multi-utilisateur
@@ -739,6 +749,7 @@ async function ApprenantesDnDSection({
     desa_granted: string[]; desa_karmic: string[]; updated_at: string;
   }>>;
 }) {
+  const t0 = Date.now(); // ⏱ [lenteur] provisoire, cf. ShamanesPage
   const sb = await createClient();
   // Reverse map des liens NSB (cf. parent function pour la même logique).
   const nsbFollowersByName: Record<string, Array<{ name: string; cercle?: string }>> = {};
@@ -754,6 +765,7 @@ async function ApprenantesDnDSection({
   const dbByName = new Map(
     ((data ?? []) as Array<{ name: string; tier: string; description: string | null; niveaux_bloques: number | null; nsb_familial_count: number | null; nsb_familial_description: string | null; updated_at: string }>).map((r) => [r.name, r]),
   );
+  console.log(`[lenteur /shamanes] section-apprenantes debut=${t0} tier=${Date.now() - t0}`);
   const items: DnDApprenante[] = APPRENANTES.map((a) => {
     const db = dbByName.get(a.name);
     const dbTier = db?.tier;

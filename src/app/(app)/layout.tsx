@@ -73,10 +73,15 @@ export default async function CockpitLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // ⏱ [lenteur] chronométrage PROVISOIRE de /shamanes (28.10.2026), à retirer dès la mesure faite.
+  const t0 = Date.now();
+  const jalons: string[] = [];
+  const jalon = (nom: string) => jalons.push(`${nom}=${Date.now() - t0}`);
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  jalon("getUser");
 
   // Bearer reader bypass — multi-instances IA (DEC Patrick 2026-05-20).
   // Si le middleware a validé un Bearer reader, on bypass les redirects et
@@ -91,6 +96,7 @@ export default async function CockpitLayout({
   // Hook post-login : relink praticienne_profile par email match si nécessaire.
   // DEC Patrick 2026-05-12. Skip si Bearer reader (pas de session à relink).
   if (user) await autoRelinkProfile(supabase, user);
+  jalon("relink");
 
   if (!bearerReaderSvlbhId) {
     const allowed = await isCockpitAllowed(supabase, user!.id, reqHeaders.get("x-svlbh-pathname"));
@@ -98,6 +104,7 @@ export default async function CockpitLayout({
       redirect("/access-denied");
     }
   }
+  jalon("acces");
 
   // Profil pour la nav : Owner (ST6) ou Cercle SR voient les modules
   // Admin / Compliance / Facturation directement dans la nav (DEC Patrick 2026-05-12).
@@ -115,6 +122,10 @@ export default async function CockpitLayout({
   // Privilégie l'email DB praticienne_profile (vrai email) sur user.email
   // (qui peut être un alias privaterelay.appleid.com avec Hide My Email).
   const displayEmail = navProfile?.email ?? user?.email ?? "reader";
+  jalon("nav");
+  if ((reqHeaders.get("x-svlbh-pathname") ?? "").startsWith("/shamanes")) {
+    console.log(`[lenteur /shamanes] layout debut=${t0} ${jalons.join(" ")}`);
+  }
 
   return (
     <div className="min-h-dvh bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
