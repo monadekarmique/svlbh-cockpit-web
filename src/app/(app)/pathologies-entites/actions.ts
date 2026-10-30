@@ -81,8 +81,9 @@ export async function chargerFluxPraticienne(jour: string): Promise<Flux> {
   return { elements, phrases, erreurs, erreur: null };
 }
 
-// les seaux où vivent les fichiers des pièces : fils, Abo, et les packs de stickers attachés au banc (21j)
-const SEAUX = ["fil-medias", "abo-medias", "index-packs"];
+// les seaux où vivent les fichiers des pièces : fils, Abo, les packs de stickers attachés au banc (21j), et les photos
+// envoyées à DiGiSha (migration 22b : index_flux rend leur chemin sous « digisha-pieces »)
+const SEAUX = ["fil-medias", "abo-medias", "index-packs", "digisha-pieces"];
 
 // les packs de stickers attachés au banc (index_packs : tous pour Patrick, ceux de ses groupes pour une praticienne,
 // identité effective) — une pièce « pk:<pack>:<rang> » par sticker, colonne « pack »
