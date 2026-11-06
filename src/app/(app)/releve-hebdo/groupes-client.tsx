@@ -68,11 +68,22 @@ function Ligne({ g }: { g: Groupe }) {
   );
 }
 
-export function GroupesClient({ siens, cornelia }: { siens: Groupe[]; cornelia: Groupe[] }) {
+export function GroupesClient({ nouveaux, anciens, cornelia, depuis }:
+  { nouveaux: Groupe[]; anciens: Groupe[]; cornelia: Groupe[]; depuis: string | null }) {
   return (
     <>
-      <h2 className="mt-6 text-lg font-semibold">Tes groupes non inscrits · {siens.length}</h2>
-      <ul className="mt-2">{siens.map((g) => <Ligne key={g.groupe_jid} g={g} />)}</ul>
+      <h2 className="mt-6 text-lg font-semibold">
+        Nouveaux {depuis ? `depuis le relevé du ${depuis}` : ""} · {nouveaux.length}
+      </h2>
+      {nouveaux.length === 0
+        ? <p className="mt-2 text-sm text-gray-600">Aucun groupe nouveau : rien à trancher cette semaine.</p>
+        : <ul className="mt-2">{nouveaux.map((g) => <Ligne key={g.groupe_jid} g={g} />)}</ul>}
+      <details className="mt-6">
+        <summary className="cursor-pointer text-sm text-gray-700">
+          Déjà là les semaines précédentes, toujours ni inscrits ni écartés · {anciens.length}
+        </summary>
+        <ul className="mt-2">{anciens.map((g) => <Ligne key={g.groupe_jid} g={g} />)}</ul>
+      </details>
       <details className="mt-6">
         <summary className="cursor-pointer text-sm text-gray-700">
           Vus seulement par z5, le téléphone de Cornelia · {cornelia.length} — hors ramassage, rien à trancher

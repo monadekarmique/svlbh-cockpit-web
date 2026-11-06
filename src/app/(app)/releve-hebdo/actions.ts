@@ -13,6 +13,7 @@ export type Groupe = {
   messages_30j: number | null;
   patrick_ecrit: boolean | null;
   dernier_message: string | null;
+  decouvert_le?: string | null;
 };
 
 export type Inscription = { ok: boolean; erreur?: string; deja_inscrit?: boolean; membres_ajoutees?: number; reconnues_z2_z5?: number };
