@@ -215,6 +215,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "owner",
   },
   {
+    href: "/ce-qui-attend-dehors",
+    label: "Ce qui attend dehors",
+    navLabel: "Dehors",
+    icon: "📬",
+    desc: "L'argent promis pas encore arrivé, les factures sans paiement, les apps envoyées jamais ouvertes — mesuré, jamais saisi",
+    color: "#B45309",
+    group: "owner",
+  },
+  {
     href: "/compliance",
     label: "Compliance",
     icon: "📋",
