@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
 import CanauxSection from "./canaux";
+import VieSection from "./vie";
 
 export const metadata: Metadata = { title: "État de la flotte" };
 export const dynamic = "force-dynamic";
@@ -85,6 +86,7 @@ export default async function EtatFlottePage() {
           {error ? <span className="block mt-2 text-sm opacity-80">({error.message})</span> : null}
         </p>
         <div className="mt-8"><CanauxSection /></div>
+        <div className="mt-8 space-y-8"><VieSection /></div>
       </main>
     );
   }
@@ -141,6 +143,10 @@ export default async function EtatFlottePage() {
       {/* Les canaux d'abord : c'est la seule partie de cette page qui touche des personnes.
           DEC Patrick 27.09.2026. Mesure indépendante du relevé des dépôts, avec sa propre date. */}
       <CanauxSection />
+
+      {/* Ce qui tourne vraiment, puis ponts, voix, Kanban, dépôts (carte 3163460b, Patrick 05.11 : « tu commences par 2
+          et 3 sur cette page »). Mesure indépendante (bin/releve-vie.py, toutes les 30 min), avec sa propre date. */}
+      <VieSection />
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
