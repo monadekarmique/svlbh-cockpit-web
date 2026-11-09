@@ -258,6 +258,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "monde15",
   },
   {
+    href: "/campagne-5jours",
+    label: "Campagne cinq matins",
+    navLabel: "Cinq matins",
+    icon: "📣",
+    desc: "Session du 14.11.2026 : ce qui est parti chaque jour sur TikTok, Instagram, WhatsApp et Snap, et ce que ça rend.",
+    color: "#b39ddb",
+    group: "monde15",
+  },
+  {
     href: "/versions",
     label: "Versions du modèle",
     navLabel: "Versions",
