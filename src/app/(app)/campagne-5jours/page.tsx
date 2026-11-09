@@ -50,15 +50,17 @@ export default async function Page() {
   await requireSt6();
   const supabase = await createClient();
 
-  const [mesuresR, paiementsR, leadsR] = await Promise.all([
+  // Ventes et leads : une seule porte, campagne_5jours_base() (SECURITY DEFINER gardée par is_owner_st6) — initiation_lead
+  // porte des courriels, elle ne s'ouvre pas en lecture directe.
+  const [mesuresR, baseR] = await Promise.all([
     supabase.from("campagne_mesure").select("*").eq("campagne", CAMPAGNE).order("mesure_le", { ascending: false }),
-    supabase.from("payment").select("payment_id", { count: "exact", head: true }).eq("amount", PRIX).gte("created_at", DEBUT_CAMPAGNE),
-    supabase.from("initiation_lead").select("id", { count: "exact", head: true }).gte("created_at", DEBUT_CAMPAGNE),
+    supabase.rpc("campagne_5jours_base", { p_depuis: DEBUT_CAMPAGNE, p_prix: PRIX }),
   ]);
   const mesures = (mesuresR.data ?? []) as Mesure[];
-  const ventes = paiementsR.count ?? 0;
-  const leads = leadsR.count ?? 0;
-  const erreurs = [mesuresR.error, paiementsR.error, leadsR.error].filter(Boolean).map((e) => e!.message);
+  const base = ((baseR.data ?? []) as { ventes: number; leads: number }[])[0];
+  const ventes = Number(base?.ventes ?? 0);
+  const leads = Number(base?.leads ?? 0);
+  const erreurs = [mesuresR.error, baseR.error].filter(Boolean).map((e) => e!.message || "erreur sans message");
 
   // Les lectures les plus récentes par publication (une publication peut être relue plusieurs fois dans la journée).
   const dernieres = new Map<string, Mesure>();
