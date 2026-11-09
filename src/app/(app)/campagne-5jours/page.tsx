@@ -152,7 +152,6 @@ export default async function Page() {
         <ul className="list-disc space-y-1 pl-5">
           <li>TikTok distribue (172 personnes en huit heures sur le premier motion, 98 % Pour toi) mais le regard dure 3 à 4 secondes : la forme « texte animé » ne retient pas.</li>
           <li>Sur Instagram, 64 % des vues des trente derniers jours viennent des stories : c’est là que vit le seul lien cliquable.</li>
-          <li>Le lien svlbh.com/5jours n’est passé dans aucun message WhatsApp aujourd’hui : les 990 contacts et 94 groupes des ponts restent le levier non utilisé.</li>
         </ul>
       </section>
     </main>
