@@ -11,6 +11,16 @@
 //     Recalibré à 100 car. (p10 mesuré) → 45 tours, 11 %.
 //   · « marqueur ⟦à apprendre⟧ dans la réponse » : 0 occurrence sur 400. Les termes
 //     sont captés côté serveur dans digisha_a_apprendre, pas par un marqueur visible.
+//
+// 10.11.2026 (Patrick : « il faut absolument que le cas d'anne soit monitoré ») : le journal
+// digisha_chat_log n'écrit JAMAIS un tour qui porte une fiche en contexte (« À propos de… »,
+// décodage pour une cliente, mode fil — journal_permis, vlbh-energy-mcp). Sur 7 jours il montrait
+// 166 tours pour 5 personnes quand le serveur en avait fait 274 pour 7. « Par personne » se bâtit
+// donc sur les APPELS (digisha_cout_appel, render-*), et chaque jour se compare aux tours gardés
+// dans les pages (session « digisha:% » + session_attachment). Le 09.11, Anne : 14 appels, 0 page,
+// 0 journal — sa séance sur Yvette refusée à l'enregistrement (migration 2026-11-10a). L'alarme
+// est « des appels, aucune page » : le décompte des pages n'est pas 1 pour 1 (Patrick 05.11 :
+// 49 appels, 97 tours en pages), donc « moins de pages que d'appels » crierait faux.
 import type { Metadata } from "next";
 import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
@@ -33,6 +43,12 @@ type Tour = {
   created_at: string;
 };
 type Cout = { svlbh_id: string | null; model: string | null; cout_usd: number | null };
+type Appel = { svlbh_id: string | null; mode: string | null; appele_le: string };
+type Seance = { session_id: string; praticienne_svlbh_id: string | null; consultante_id: string | null; scheduled_at: string; notes: string | null };
+type Piece = { session_id: string; titre: string | null; tours: string | null; corps: string | null };
+type Page = { session_id: string; jour: string; sujet: string; titre: string; tours: number; corps: string; notes: string };
+type Extrait = { svlbh_id: string | null; terme: string; cree_le: string };
+type Jour = { appels: number; pages: number; journal: number; extraits: number };
 type Profil = { svlbh_id: string; first_name: string | null; last_name: string | null; stx: string | null };
 type Terme = {
   id: string; terme: string; manque: string | null; svlbh_id: string | null;
@@ -45,6 +61,12 @@ type Consigne = Record<string, unknown>;
 async function bornePeriode(jours: number): Promise<string> {
   return new Date(Date.now() - jours * 86400_000).toISOString();
 }
+
+// Une seule date, celle de Zurich : appele_le et created_at sont en UTC, scheduled_at est déjà l'heure de Zurich.
+const jourZurich = (iso: string) => new Intl.DateTimeFormat("fr-CA", { timeZone: "Europe/Zurich" }).format(new Date(iso));
+const jourLocal = (naif: string) => naif.slice(0, 10);
+const jj = (jour: string) => `${jour.slice(8, 10)}.${jour.slice(5, 7)}`;
+const FIN_CORPS = 3000;
 
 const chf = (n: number) => n.toLocaleString("fr-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const heure = (iso: string) =>
@@ -72,12 +94,41 @@ export default async function MoniteurDigishaPage() {
     supabase.from("digisha_consigne").select("*").limit(50),
   ]);
 
+  // Les APPELS : chaque tour que le serveur a fait, gardé ou non (les postes mac-* sont des scripts, pas des personnes).
+  const [{ data: appelsRaw }, { data: seancesRaw }, { data: extraitsRaw }] = await Promise.all([
+    supabase.from("digisha_cout_appel").select("svlbh_id, mode, appele_le").like("source", "render%").gte("appele_le", depuis).limit(5000),
+    supabase
+      .from("session")
+      .select("session_id, praticienne_svlbh_id, consultante_id, scheduled_at, notes")
+      .like("notes", "digisha:%")
+      .gte("scheduled_at", depuis.slice(0, 10))
+      .limit(2000),
+    supabase.from("digisha_a_apprendre").select("svlbh_id, terme, cree_le").gte("cree_le", depuis).limit(1000),
+  ]);
+  const appels = (appelsRaw ?? []) as Appel[];
+  const seances = (seancesRaw ?? []) as Seance[];
+  const extraits = (extraitsRaw ?? []) as Extrait[];
+  const { data: piecesRaw } = seances.length
+    ? await supabase
+        .from("session_attachment")
+        .select("session_id, titre:payload->>title, tours:payload->digisha->>tours, corps:payload->sections->0->>corps")
+        .eq("kind", "fiche")
+        .in("session_id", seances.map((x) => x.session_id))
+    : { data: [] as Piece[] };
+  const pieceDe = new Map<string, Piece>(((piecesRaw ?? []) as Piece[]).map((x) => [x.session_id, x]));
+  const sujets = Array.from(new Set(seances.map((x) => x.consultante_id).filter(Boolean))) as string[];
+  const { data: fichesRaw } = sujets.length
+    ? await supabase.from("consultante_record").select("consultante_id, first_name").in("consultante_id", sujets)
+    : { data: [] as { consultante_id: string; first_name: string | null }[] };
+  const prenomDe = new Map(((fichesRaw ?? []) as { consultante_id: string; first_name: string | null }[]).map((f) => [f.consultante_id, f.first_name ?? "?"]));
+
   const tours = (toursRaw ?? []) as Tour[];
   const couts = (coutsRaw ?? []) as Cout[];
   const termes = (termesRaw ?? []) as Terme[];
   const consignes = (consignesRaw ?? []) as Consigne[];
 
-  const ids = Array.from(new Set(tours.map((t) => t.svlbh_id).filter(Boolean))) as string[];
+  const ids = Array.from(new Set([...tours.map((t) => t.svlbh_id), ...appels.map((a) => a.svlbh_id),
+    ...seances.map((x) => x.praticienne_svlbh_id)].filter(Boolean))) as string[];
   const { data: profilsRaw } = ids.length
     ? await supabase.from("praticienne_profile").select("svlbh_id, first_name, last_name, stx").in("svlbh_id", ids)
     : { data: [] as Profil[] };
@@ -87,21 +138,57 @@ export default async function MoniteurDigishaPage() {
   type Ligne = {
     sid: string | null; nom: string; stx: string | null;
     tours: Tour[]; cout: number; courtes: number; mesure: number; modeles: Map<string, number>;
+    appels: number; pagesTours: number; dernier: string; jours: Map<string, Jour>; pages: Page[];
   };
   const parPersonne = new Map<string, Ligne>();
-  for (const t of tours) {
-    const cle = t.svlbh_id ?? "__nul__";
+  const ligneDe = (sid: string | null): Ligne => {
+    const cle = sid ?? "__nul__";
     if (!parPersonne.has(cle)) {
-      const p = t.svlbh_id ? nomDe.get(t.svlbh_id) : undefined;
+      const p = sid ? nomDe.get(sid) : undefined;
       parPersonne.set(cle, {
-        sid: t.svlbh_id,
-        nom: p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || t.svlbh_id! : t.svlbh_id ? t.svlbh_id : "Non rattaché",
+        sid,
+        nom: p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || sid! : sid ? sid : "Non rattaché",
         stx: p?.stx ?? null,
         tours: [], cout: 0, courtes: 0, mesure: 0, modeles: new Map(),
+        appels: 0, pagesTours: 0, dernier: "", jours: new Map(), pages: [],
       });
     }
-    const l = parPersonne.get(cle)!;
+    return parPersonne.get(cle)!;
+  };
+  const jourDe = (l: Ligne, jour: string): Jour => {
+    if (!l.jours.has(jour)) l.jours.set(jour, { appels: 0, pages: 0, journal: 0, extraits: 0 });
+    return l.jours.get(jour)!;
+  };
+  for (const a of appels) {
+    const l = ligneDe(a.svlbh_id);
+    l.appels++;
+    jourDe(l, jourZurich(a.appele_le)).appels++;
+    if (a.appele_le > l.dernier) l.dernier = a.appele_le;
+  }
+  for (const x of seances) {
+    if (!x.praticienne_svlbh_id) continue;
+    const l = ligneDe(x.praticienne_svlbh_id);
+    const pc = pieceDe.get(x.session_id);
+    const n = Number(pc?.tours ?? 0) || 0;
+    const jour = jourLocal(x.scheduled_at);
+    l.pagesTours += n;
+    jourDe(l, jour).pages += n;
+    const corps = pc?.corps ?? "";
+    l.pages.push({
+      session_id: x.session_id, jour, sujet: x.consultante_id ? prenomDe.get(x.consultante_id) ?? "?" : "elle-même",
+      titre: pc?.titre ?? "(page sans titre)", tours: n, notes: x.notes ?? "",
+      corps: corps.length > FIN_CORPS ? "… " + corps.slice(-FIN_CORPS) : corps,
+    });
+  }
+  for (const e of extraits) {
+    if (!e.svlbh_id || !parPersonne.has(e.svlbh_id)) continue;
+    jourDe(parPersonne.get(e.svlbh_id)!, jourZurich(e.cree_le)).extraits++;
+  }
+  for (const t of tours) {
+    const l = ligneDe(t.svlbh_id);
     l.tours.push(t);
+    jourDe(l, jourZurich(t.created_at)).journal++;
+    if (t.created_at > l.dernier) l.dernier = t.created_at;
     const r = t.assistant_reply ?? "";
     if (r.length < REPONSE_COURTE) l.courtes++;
     if (MESURE_EN_TETE.test(r)) l.mesure++;
@@ -111,7 +198,13 @@ export default async function MoniteurDigishaPage() {
     const l = parPersonne.get(c.svlbh_id ?? "__nul__");
     if (l) l.cout += Number(c.cout_usd ?? 0);
   }
-  const lignes = Array.from(parPersonne.values()).sort((a, b) => b.tours.length - a.tours.length);
+  for (const l of parPersonne.values()) l.pages.sort((a, b) => (a.jour < b.jour ? 1 : -1));
+  const lignes = Array.from(parPersonne.values()).sort((a, b) => b.appels - a.appels || b.tours.length - a.tours.length);
+  // L'alarme : une personne rattachée, un jour où le serveur a répondu et où AUCUN tour n'a été gardé.
+  const pertes = lignes.flatMap((l) =>
+    l.sid ? Array.from(l.jours.entries()).filter(([, j]) => j.appels > 0 && j.pages === 0 && j.journal === 0)
+      .map(([jour, j]) => ({ l, jour, j })) : []).sort((a, b) => (a.jour < b.jour ? 1 : -1));
+  const totalAppels = appels.length;
 
   const totalTours = tours.length;
   const totalCout = couts.reduce((s, c) => s + Number(c.cout_usd ?? 0), 0);
@@ -129,9 +222,10 @@ export default async function MoniteurDigishaPage() {
       </header>
 
       {/* ── bandeau ─────────────────────────────────────────────────────── */}
-      <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[
-          { k: "Tours", v: String(totalTours) },
+          { k: "Appels (serveur)", v: String(totalAppels) },
+          { k: "Tours au journal", v: String(totalTours) },
           { k: "Personnes", v: String(lignes.filter((l) => l.sid).length) },
           { k: "Coût (USD)", v: chf(totalCout) },
           { k: "Termes à apprendre", v: String(termes.filter((t) => !t.reponse).length) },
@@ -142,6 +236,20 @@ export default async function MoniteurDigishaPage() {
           </div>
         ))}
       </section>
+
+      {pertes.length > 0 && (
+        <section className="mb-6 rounded-xl bg-rose-50 p-4 text-sm text-rose-900 ring-1 ring-rose-200">
+          <h2 className="mb-2 font-semibold">Tours non gardés — DiGiSha a répondu, rien n&apos;a été enregistré</h2>
+          <ul className="space-y-1">
+            {pertes.map(({ l, jour, j }) => (
+              <li key={`${l.sid}-${jour}`}>
+                <strong>{l.nom}</strong> · {jj(jour)} : {j.appels} appel(s), 0 tour gardé en page, 0 au journal
+                {j.extraits > 0 && <> — seuls {j.extraits} extrait(s) « à apprendre » subsistent</>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {nonRattaches > 0 && (
         <p className="mb-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
@@ -165,10 +273,19 @@ export default async function MoniteurDigishaPage() {
                     {l.stx && <span className="ml-2 text-xs text-neutral-500">{l.stx}</span>}
                   </span>
                   <span className="text-sm tabular-nums text-neutral-600">
-                    {l.tours.length} tours · {chf(l.cout)} USD · dernier {heure(l.tours[0].created_at)}
+                    {l.appels} appels · {l.pagesTours} tours en pages · {l.tours.length} au journal · {chf(l.cout)} USD
+                    {l.dernier && <> · dernier {heure(l.dernier)}</>}
                   </span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                  {Array.from(l.jours.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1)).map(([jour, j]) => {
+                    const perdu = !!l.sid && j.appels > 0 && j.pages === 0 && j.journal === 0;
+                    return (
+                      <span key={jour} className={`rounded-full px-2 py-0.5 tabular-nums ${perdu ? "bg-rose-200 text-rose-950" : "bg-neutral-100 text-neutral-600"}`}>
+                        {jj(jour)} · {j.appels} appels / {j.pages} en pages / {j.journal} journal
+                      </span>
+                    );
+                  })}
                   {l.courtes > 0 && (
                     <span className="rounded-full bg-neutral-200 px-2 py-0.5">
                       {l.courtes} réponse(s) &lt; {REPONSE_COURTE} car.
@@ -188,6 +305,22 @@ export default async function MoniteurDigishaPage() {
               </summary>
 
               <div className="space-y-3 border-t border-neutral-200 p-4">
+                {l.pages.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Pages DiGiSha ({l.pages.length}) — ce qui est gardé, y compris « À propos de… »
+                    </h3>
+                    {l.pages.slice(0, 12).map((pg) => (
+                      <details key={pg.session_id} className="rounded-lg bg-white ring-1 ring-neutral-200">
+                        <summary className="cursor-pointer p-3 text-sm">
+                          <span className="tabular-nums text-neutral-500">{jj(pg.jour)}</span> · {pg.titre}
+                          <span className="text-neutral-500"> · {pg.sujet} · {pg.tours} tour(s) · {pg.notes.replace(/^digisha:/, "")}</span>
+                        </summary>
+                        <p className="whitespace-pre-wrap border-t border-neutral-100 p-3 text-sm text-neutral-700">{pg.corps}</p>
+                      </details>
+                    ))}
+                  </div>
+                )}
                 {l.tours.slice(0, 20).map((t) => {
                   const r = t.assistant_reply ?? "";
                   const court = r.length < REPONSE_COURTE;
