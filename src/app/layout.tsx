@@ -15,10 +15,13 @@ const geistMono = Geist_Mono({
 // Fonts de la charte doctrine cockpit (DEC Patrick 2026-06-03 v4 — charte
 // topnav Palette de Lumière). Utilisées par <PageBreadcrumb> et par les
 // articles HTML statiques (via fallback CSS sur 'DM Sans' / 'Crimson Pro').
+// Sans liste de graisses : la police VARIABLE (100–1000), servie par Google en un fichier .woff2.
+// Avec la liste 400/500/600/700, Google répond par moments par des adresses « /l/font?kit=…&skey=… »
+// que Next 16.4.1 (Turbopack) ne sait pas lire : « next/font/google queries have exactly one entry »,
+// build Render en échec deux fois le 13.11.2026 (mesuré : 2 réponses « kit » sur 35 depuis le Mac, 0 sur 25 en variable).
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
 });
 
 const crimsonPro = Crimson_Pro({
