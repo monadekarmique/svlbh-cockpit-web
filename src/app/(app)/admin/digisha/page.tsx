@@ -54,7 +54,7 @@ type Terme = {
   id: string; terme: string; manque: string | null; svlbh_id: string | null;
   fois: number | null; cree_le: string | null; statut: string | null; reponse: string | null;
 };
-type Consigne = Record<string, unknown>;
+type Consigne = { id: string; sujet: string | null; auteur_svlbh: string | null; texte: string | null; posee_le: string; retiree_le: string | null; source_session: string | null };
 
 // L'horloge est lue HORS du corps du composant : appeler Date.now() pendant le
 // rendu est une fonction impure (règle React du projet, vue au lint le 19.10).
@@ -91,7 +91,11 @@ export default async function MoniteurDigishaPage() {
       .select("id, terme, manque, svlbh_id, fois, cree_le, statut, reponse")
       .order("fois", { ascending: false })
       .limit(50),
-    supabase.from("digisha_consigne").select("*").limit(50),
+    supabase
+      .from("digisha_consigne")
+      .select("id, sujet, auteur_svlbh, texte, posee_le, retiree_le, source_session")
+      .order("posee_le", { ascending: false })
+      .limit(100),
   ]);
 
   // Les APPELS : chaque tour que le serveur a fait, gardé ou non (les postes mac-* sont des scripts, pas des personnes).
@@ -116,7 +120,8 @@ export default async function MoniteurDigishaPage() {
         .in("session_id", seances.map((x) => x.session_id))
     : { data: [] as Piece[] };
   const pieceDe = new Map<string, Piece>(((piecesRaw ?? []) as Piece[]).map((x) => [x.session_id, x]));
-  const sujets = Array.from(new Set(seances.map((x) => x.consultante_id).filter(Boolean))) as string[];
+  const consignes = (consignesRaw ?? []) as Consigne[];
+  const sujets = Array.from(new Set([...seances.map((x) => x.consultante_id), ...consignes.map((c) => c.sujet)].filter(Boolean))) as string[];
   const { data: fichesRaw } = sujets.length
     ? await supabase.from("consultante_record").select("consultante_id, first_name").in("consultante_id", sujets)
     : { data: [] as { consultante_id: string; first_name: string | null }[] };
@@ -125,10 +130,9 @@ export default async function MoniteurDigishaPage() {
   const tours = (toursRaw ?? []) as Tour[];
   const couts = (coutsRaw ?? []) as Cout[];
   const termes = (termesRaw ?? []) as Terme[];
-  const consignes = (consignesRaw ?? []) as Consigne[];
 
   const ids = Array.from(new Set([...tours.map((t) => t.svlbh_id), ...appels.map((a) => a.svlbh_id),
-    ...seances.map((x) => x.praticienne_svlbh_id)].filter(Boolean))) as string[];
+    ...seances.map((x) => x.praticienne_svlbh_id), ...consignes.map((c) => c.auteur_svlbh)].filter(Boolean))) as string[];
   const { data: profilsRaw } = ids.length
     ? await supabase.from("praticienne_profile").select("svlbh_id, first_name, last_name, stx").in("svlbh_id", ids)
     : { data: [] as Profil[] };
@@ -400,8 +404,10 @@ export default async function MoniteurDigishaPage() {
       {/* ── consignes ───────────────────────────────────────────────────── */}
       <section>
         <h2 className="mb-3 text-lg font-semibold">
-          Consignes par personne{" "}
-          <span className="text-sm font-normal text-neutral-500">(digisha_consigne)</span>
+          Consignes posées à DiGiSha{" "}
+          <span className="text-sm font-normal text-neutral-500">
+            (digisha_consigne — ce que la praticienne lui a dit de retenir pour une personne ; le serveur les relit à chaque appel)
+          </span>
         </h2>
         {consignes.length === 0 ? (
           <p className="rounded-xl bg-neutral-50 p-4 text-sm text-neutral-600 ring-1 ring-neutral-200">
@@ -409,9 +415,44 @@ export default async function MoniteurDigishaPage() {
             une fois le réglage rejoué au banc — un seul à la fois, selon la leçon du 19.10.
           </p>
         ) : (
-          <pre className="overflow-x-auto rounded-xl bg-neutral-50 p-4 text-xs">
-            {JSON.stringify(consignes, null, 2)}
-          </pre>
+          <div className="space-y-4">
+            {Array.from(
+              consignes.reduce((m, c) => {
+                const k = c.sujet ?? "—";
+                m.set(k, [...(m.get(k) ?? []), c]);
+                return m;
+              }, new Map<string, Consigne[]>()),
+            ).map(([sujet, liste]) => {
+              const actives = liste.filter((c) => !c.retiree_le);
+              return (
+                <div key={sujet} className="rounded-xl ring-1 ring-neutral-200">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-neutral-200 px-4 py-3">
+                    <span className="font-medium">
+                      Pour {prenomDe.get(sujet) ?? sujet.slice(0, 8)}
+                    </span>
+                    <span className="text-sm tabular-nums text-neutral-600">
+                      {actives.length} active{actives.length > 1 ? "s" : ""}
+                      {liste.length > actives.length && <> · {liste.length - actives.length} retirée{liste.length - actives.length > 1 ? "s" : ""}</>}
+                    </span>
+                  </div>
+                  <ol className="divide-y divide-neutral-100">
+                    {liste.map((c) => {
+                      const auteur = c.auteur_svlbh ? nomDe.get(c.auteur_svlbh) : undefined;
+                      return (
+                        <li key={c.id} className={`px-4 py-3 text-sm ${c.retiree_le ? "text-neutral-400 line-through" : ""}`}>
+                          <p>{c.texte}</p>
+                          <p className="mt-1 text-xs text-neutral-500">
+                            {auteur ? `${auteur.first_name ?? ""} ${auteur.last_name ?? ""}`.trim() : "auteur inconnu"} · posée le {heure(c.posee_le)}
+                            {c.retiree_le && <> · retirée le {heure(c.retiree_le)}</>}
+                          </p>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              );
+            })}
+          </div>
         )}
       </section>
     </main>
