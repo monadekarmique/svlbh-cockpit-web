@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ligneCoutDigisha } from "@/lib/cout-digisha";
+import { phraseNonGarde } from "@/lib/digisha-non-garde";
 
 // Le voir-comme (Patrick, 21.10.2026 : « j'ai une fonction voir comme qui existe »). La session vit dans la base
 // (coach_view_session ; start_coach_view / end_coach_view ; portée par le COMPTE, 60 min glissantes) et la base ne
@@ -322,7 +323,7 @@ const DIGISHA_BASE = process.env.DIGISHA_BASE_URL || "https://vlbh-energy-mcp.on
 
 export async function dialoguerDigisha(
   messages: { role: "user" | "assistant"; content: string }[],
-): Promise<{ ok: boolean; reply?: string; erreur?: string }> {
+): Promise<{ ok: boolean; reply?: string; erreur?: string; nonGarde?: string | null }> {
   if (!messages.length) return { ok: false, erreur: "rien à demander" };
   const sb = await createClient();
   const { data: { session } } = await sb.auth.getSession();
@@ -336,7 +337,9 @@ export async function dialoguerDigisha(
     });
     const data = (await res.json().catch(() => ({}))) as { reply?: string; detail?: string };
     if (!res.ok) return { ok: false, erreur: data?.detail ?? `DiGiSha : ${res.status}` };
-    return { ok: true, reply: data.reply ?? "" };
+    // 15.11.2026 (carte ac79ce6b) : le serveur dit quand le tour n'a pas été gardé dans ses pages (non_garde, et la phrase
+    // à afficher). L'action ne rendait que la réponse : la phrase n'arrivait jamais à l'écran.
+    return { ok: true, reply: data.reply ?? "", nonGarde: phraseNonGarde(data) };
   } catch {
     return { ok: false, erreur: "DiGiSha injoignable" };
   }

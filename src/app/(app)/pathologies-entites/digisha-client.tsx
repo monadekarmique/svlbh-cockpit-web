@@ -48,6 +48,8 @@ export function DigishaClient({ lectureSeule = false, apresReponse }: { lectureS
   const [tours, setTours] = useState<Tour[]>([]);
   const [texte, setTexte] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
+  // La phrase du serveur quand la dernière réponse n'a pas été gardée dans ses pages (carte ac79ce6b, 15.11.2026).
+  const [nonGarde, setNonGarde] = useState<string | null>(null);
   const [copie, setCopie] = useState<string | null>(null);
   const [enCours, demarrer] = useTransition();
 
@@ -75,9 +77,10 @@ export function DigishaClient({ lectureSeule = false, apresReponse }: { lectureS
     demarrer(async () => {
       const t = terme.trim();
       if (!t) return;
-      setErreur(null);
+      setErreur(null); setNonGarde(null);
       const r = await dialoguerDigisha([{ role: "user", content: consigneDefinition(t) }]);
       if (!r.ok) { setErreur(r.erreur ?? "refusé"); return; }
+      setNonGarde(r.nonGarde ?? null);
       setDefinitions((xs) => [{ terme: t, texte: markdownVersWhatsApp(r.reply ?? "") }, ...xs]);
       setTerme("");
       void lireLigneCout().then(setCout);
@@ -89,9 +92,10 @@ export function DigishaClient({ lectureSeule = false, apresReponse }: { lectureS
       const q = texte.trim();
       if (!q) return;
       const suite: Tour[] = [...tours, { role: "user", content: q }];
-      setTours(suite); setTexte(""); setErreur(null);
+      setTours(suite); setTexte(""); setErreur(null); setNonGarde(null);
       const r = await dialoguerDigisha(suite);
       if (!r.ok) { setErreur(r.erreur ?? "refusé"); return; }
+      setNonGarde(r.nonGarde ?? null);
       setTours([...suite, { role: "assistant", content: markdownVersWhatsApp(r.reply ?? "") }]);
       void lireLigneCout().then(setCout);
       await apresReponse();
@@ -172,6 +176,7 @@ export function DigishaClient({ lectureSeule = false, apresReponse }: { lectureS
             </div>
           </details>
           {erreur && <p className="text-xs text-red-700">{erreur}</p>}
+          {nonGarde && <p role="status" className="text-xs text-amber-800">{nonGarde}</p>}
           {copie === "refus" && <p className="text-xs text-red-700">le presse-papiers a refusé — sélectionne le texte à la main</p>}
         </div>
       )}
