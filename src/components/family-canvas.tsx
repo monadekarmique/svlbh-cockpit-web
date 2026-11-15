@@ -115,7 +115,7 @@ function rotateHue(hex: string, deg: number): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return hex;
   const n = parseInt(m[1], 16);
-  let r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
   let h = 0;
   const l = (max + min) / 2;

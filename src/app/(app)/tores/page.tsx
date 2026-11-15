@@ -133,7 +133,7 @@ export default function ToresPage() {
       <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <p className="font-semibold">⏳ V1 — référence statique</p>
         <p className="mt-1 text-xs">
-          V2 ajoutera : fetch live d'un Tore par session, push update via
+          V2 ajoutera : fetch live d&apos;un Tore par session, push update via
           webhook /tore/push, vue détail des couplages glycémie ↔ sclérose
           tissulaire.
         </p>

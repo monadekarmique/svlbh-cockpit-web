@@ -139,7 +139,7 @@ export async function ParcoursDuJourSection() {
                 {cert.first_name} {cert.last_name ?? ""}
               </h3>
               <span className="text-xs text-neutral-500">
-                {totalCount} clé{totalCount > 1 ? "s" : ""} aujourd'hui
+                {totalCount} clé{totalCount > 1 ? "s" : ""} aujourd&apos;hui
               </span>
             </header>
 

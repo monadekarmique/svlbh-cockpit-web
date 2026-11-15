@@ -54,7 +54,7 @@ export default function DettesAkaKarmArticlesPage() {
         </h1>
         <p className="mt-1 text-sm text-neutral-600">
           Lectures, audits et outils en lien avec les dettes akakarmiques.
-          Port progressif depuis l'app native SVLBH Routines Cercle Lum.
+          Port progressif depuis l&apos;app native SVLBH Routines Cercle Lum.
         </p>
       </header>
 

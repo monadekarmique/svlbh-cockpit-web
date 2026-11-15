@@ -164,7 +164,7 @@ export default function ScoresPage() {
         </h1>
         <p className="mt-1 text-sm italic text-neutral-600">
           100% compatible avec{" "}
-          <a href="https://discoverhealing.com/the-emotion-code/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">Le Code d'Émotions</a>{" "}
+          <a href="https://discoverhealing.com/the-emotion-code/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">Le Code d&apos;Émotions</a>{" "}
           et{" "}
           <a href="https://discoverhealing.com/the-body-code/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">Le Code du Corps</a>{" "}
           de{" "}

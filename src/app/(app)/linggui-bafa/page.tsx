@@ -49,7 +49,7 @@ export default function LingguiBafaPage() {
       {/* Table 12 créneaux du jour */}
       <section className="space-y-2">
         <h2 className="text-base font-semibold text-blue-900">
-          Aujourd'hui — 12 créneaux Di Zhi
+          Aujourd&apos;hui — 12 créneaux Di Zhi
         </h2>
         <ul className="space-y-1.5">
           {slots.map((s, i) => {

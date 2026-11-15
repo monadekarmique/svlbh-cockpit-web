@@ -17,7 +17,7 @@ export default function PierresPage() {
 
       <header>
         <h1 className="text-2xl font-bold tracking-tight text-blue-950">
-          💎 Pierres d'enseignement
+          💎 Pierres d&apos;enseignement
         </h1>
         <p className="mt-1 text-sm text-neutral-700">
           Les 8 pierres de protection SVLBH — fiches complètes (formule,
