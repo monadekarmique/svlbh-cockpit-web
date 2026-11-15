@@ -28,6 +28,7 @@ test("zéro : la ligne s'écrit, avec 0,00", () => {
   assert.equal(montant(0), "0,00");
   assert.equal(montant(-0), "0,00");
   assert.equal(ligneCoutDigisha(reponse(0, 0, 0, 0)), "Aujourd'hui 0,00 $ · 0,00 CHF — ce mois 0,00 $ · 0,00 CHF");
+  assert.equal(ligneCoutDigisha(reponse(-0, 0, 0, 0)), "Aujourd'hui 0,00 $ · 0,00 CHF — ce mois 0,00 $ · 0,00 CHF");
   // tel que la base l'envoie un jour sans appel (les numériques de jsonb gardent leurs zéros)
   const brut = '{"ouvert":true,"vu_comme":false,"jour":{"appels":0,"usd":0.00,"chf":0.00},' +
     '"mois":{"appels":14,"usd":9.06,"chf":7.43},"taux_usd_chf":0.82067,"taux_releve_le":"2026-11-10"}';
@@ -76,6 +77,9 @@ test("un montant manquant ou qui n'est pas un nombre : rien, plutôt qu'une lign
   assert.equal(ligneCoutDigisha(reponse("5.11", 4.19, 9.06, 7.43)), null);
   assert.equal(ligneCoutDigisha(reponse(Number.NaN, 4.19, 9.06, 7.43)), null);
   assert.equal(ligneCoutDigisha(reponse(5.11, 4.19, Number.POSITIVE_INFINITY, 7.43)), null);
+  // la base ne rend ni l'un ni l'autre ; l'écran n'écrit pas pour autant « -1,00 $ » ou « 1e+21 $ »
+  assert.equal(ligneCoutDigisha(reponse(-1, -0.82, 9.06, 7.43)), null);
+  assert.equal(ligneCoutDigisha(reponse(5.11, 4.19, 1e21, 7.43)), null);
   assert.equal(ligneCoutDigisha({ ouvert: true }), null);
   assert.equal(ligneCoutDigisha({ ouvert: true, jour: { appels: 1, usd: 5.11, chf: 4.19 } }), null);
   assert.equal(ligneCoutDigisha({ ouvert: true, jour: null, mois: null }), null);

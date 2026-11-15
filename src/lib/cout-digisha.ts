@@ -23,7 +23,9 @@ export function montant(n: number): string {
   return n.toFixed(2).replace(".", ",");
 }
 
-const estMontant = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+// Un montant : un nombre fini, positif ou nul. Un coût négatif n'existe pas, et à partir de 1e21 toFixed passe en
+// notation à exposant (« 1e+21 ») : dans les deux cas rien ne s'affiche — la même règle que sur Priv web et Pro web.
+const estMontant = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0 && v < 1e21;
 
 /** La ligne à afficher pour une réponse de mon_cout_digisha(), ou null quand rien ne doit s'afficher. */
 export function ligneCoutDigisha(reponse: unknown): string | null {
