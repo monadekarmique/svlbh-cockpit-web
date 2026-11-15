@@ -19,7 +19,10 @@ const SEUIL_FRAICHEUR_MIN = 90;
 
 type Service = { nom: string; depot: string; branche: string; verdict: string; commit?: string; tete?: string;
   retard_commits?: number; en_service_le?: string; objet?: string; echec?: { statut: string; le: string; commit: string } };
-type Fonction = { slug: string; version?: number; deploye_le: string; verdict: string; source?: string; main_le?: string };
+// code_compare : le relevé a comparé le code en service à sa source, transpilés (« même code que main », « code différent
+// de main », « même code que l'archive »…) — carte 0da4cdce, 15.11.
+type Fonction = { slug: string; version?: number; deploye_le: string; verdict: string; source?: string; main_le?: string;
+  code_compare?: string };
 // rythme, raison, voix, script : lus par le relevé dans l'agent lui-même (bin/agents-launchd.py, carte 71e58509) —
 // absents des relevés d'avant le 15.11.
 type Agent = { label: string; verdict: string; dernier_code?: number | string; dernier_passage?: string;
@@ -126,15 +129,45 @@ export default async function VieSection() {
           const main = c.fonctions.filter((f) => f.verdict === "main plus récent que le service");
           const sans = c.fonctions.filter((f) => f.verdict.startsWith("source absente"));
           const aJour = c.fonctions.filter((f) => f.verdict === "à jour");
+          // Sans dépôt, mais archivées telles qu'elles tournent (vlbh-governance/fonctions, 15.11) ; « archivée en vN » :
+          // l'archive n'est plus le code en service.
+          const archivees = c.fonctions.filter((f) => f.verdict === "source archivée");
+          const aReArchiver = c.fonctions.filter((f) => f.verdict.startsWith("archivée en v") || f.verdict === "source archivée, version non notée");
+          // Un verdict que cette page ne connaît pas est montré tel quel, jamais avalé.
+          const connus = new Set([...main, ...sans, ...aJour, ...archivees, ...aReArchiver]);
+          const autres = c.fonctions.filter((f) => !connus.has(f));
+          const verifiees = aJour.filter((f) => f.code_compare?.startsWith("même code")).length;
           return (
             <>
               <ul className="mt-1 space-y-1 text-sm">
                 {main.map((f) => (
                   <li key={f.slug} className={ROUGE}>
                     {f.slug} — main modifié le {jour(f.main_le)}, en service depuis le {jour(f.deploye_le)} (v{f.version})
+                    {f.code_compare ? <span className="font-normal text-neutral-600"> · {f.code_compare}</span> : null}
                   </li>
                 ))}
+                {aReArchiver.map((f) => (
+                  <li key={f.slug} className={ROUGE}>
+                    {f.slug} — {f.verdict} : l’archive de vlbh-governance n’est plus sûrement le code qui tourne
+                  </li>
+                ))}
+                {autres.map((f) => (
+                  <li key={f.slug} className="text-amber-800">{f.slug} — {f.verdict}</li>
+                ))}
               </ul>
+              {archivees.length > 0 && (
+                <details className="mt-1 text-sm">
+                  <summary className="cursor-pointer text-neutral-700">
+                    {archivees.length} fonctions sans dépôt, archivées telles qu’elles tournent (vlbh-governance/fonctions)
+                  </summary>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Leur code a été lu dans le service et rangé dans vlbh-governance/fonctions/ ; la version archivée est celle en service.
+                  </p>
+                  <ul className="mt-1 grid gap-0.5 sm:grid-cols-2">
+                    {archivees.map((f) => <li key={f.slug}>{f.slug} <span className="text-neutral-500">· v{f.version}</span></li>)}
+                  </ul>
+                </details>
+              )}
               {sans.length > 0 && (
                 <details className="mt-1 text-sm">
                   <summary className="cursor-pointer text-amber-800">
@@ -148,7 +181,10 @@ export default async function VieSection() {
                   </ul>
                 </details>
               )}
-              <p className="mt-1 text-sm text-emerald-800">{aJour.length} fonction{aJour.length > 1 ? "s" : ""} à jour de main.</p>
+              <p className="mt-1 text-sm text-emerald-800">
+                {aJour.length} fonction{aJour.length > 1 ? "s" : ""} à jour de main
+                {verifiees > 0 ? ` (dont ${verifiees} vérifiée${verifiees > 1 ? "s" : ""} sur leur code : la source a bougé après le déploiement, le code en service est le même)` : ""}.
+              </p>
             </>
           );
         })() : <Illis titre="Fonctions" v={c.fonctions} />}
