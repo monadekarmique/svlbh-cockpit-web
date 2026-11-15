@@ -4,9 +4,14 @@ import { useTransition, useState } from "react";
 import { qualifier } from "./actions";
 import { CLASSES_ETAT, etatLigne } from "@/lib/charges-etat";
 
+// Toutes les natures que la base accepte (contrainte de rapprochement.nature) : une nature absente du menu s'affichait
+// comme la première de la liste (15.11.2026, carte 44551562 — « rémunération praticienne » et « charge d'exploitation »).
+// scripts/test-charges-etat.mjs compare cette liste à celle de la base.
 const NATURES = [
   { value: "charge", label: "Charge — TVA récupérable" },
   { value: "charge_sans_tva", label: "Charge — TVA NON récupérable" },
+  { value: "charge_exploitation", label: "Charge d'exploitation" },
+  { value: "remuneration_praticienne", label: "Rémunération praticienne" },
   { value: "hors_activite", label: "Hors activité (privé)" },
   { value: "frais_bancaires", label: "Frais bancaires — hors champ TVA" },
   { value: "interne", label: "Mouvement interne" },

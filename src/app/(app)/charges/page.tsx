@@ -87,6 +87,7 @@ export default async function ChargesPage({
   };
   const ETIQUETTE: Record<string, string> = {
     charge: "Charges (TVA récup.)", charge_sans_tva: "Charges (TVA non récup.)",
+    charge_exploitation: "Charges d'exploitation", remuneration_praticienne: "Rémunérations praticiennes",
     hors_activite: "Hors activité", interne: "Mouvements internes",
     frais_bancaires: "Frais bancaires",
     prestation: "Prestations", don: "Dons", abonnement: "Abonnements",
