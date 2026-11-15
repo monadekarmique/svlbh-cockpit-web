@@ -7,6 +7,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ligneCoutDigisha } from "@/lib/cout-digisha";
 
 // Le voir-comme (Patrick, 21.10.2026 : « j'ai une fonction voir comme qui existe »). La session vit dans la base
 // (coach_view_session ; start_coach_view / end_coach_view ; portée par le COMPTE, 60 min glissantes) et la base ne
@@ -338,5 +339,24 @@ export async function dialoguerDigisha(
     return { ok: true, reply: data.reply ?? "" };
   } catch {
     return { ok: false, erreur: "DiGiSha injoignable" };
+  }
+}
+
+// ── la ligne de coût DiGiSha ─────────────────────────────────────────────────
+// Patrick, 11.11.2026 : « sur tous les DigiSha nous allons brancher cela » (carte 91c366cd). La base calcule
+// (mon_cout_digisha, sous la session de la personne) ; on ne rend au navigateur que la ligne écrite, ou null — et
+// null n'affiche rien : sous ST3, sans session, ou si la lecture échoue, l'écran ne dit rien (ni ligne, ni erreur).
+// AVEC l'en-tête de surface : en « voir comme », la base rend alors les chiffres de la personne observée (Patrick,
+// 11.11 : « non je veux afficher le coût de la personne quand je suis en voir comme »). Sans lui, coach_view_target()
+// reste nul (cf. SURFACE, plus haut) et la ligne montrerait le coût de Patrick pendant qu'il regarde quelqu'un d'autre.
+// Le serveur écrit le coût du tour AVANT de rendre sa réponse (vlbh-energy-mcp routers/digisha.py, lu le 15.11.2026 :
+// await journaliser_cout puis return ChatResponse) : une relecture faite dès la réponse reçue voit déjà ce tour.
+export async function lireCoutDigisha(): Promise<string | null> {
+  try {
+    const sb = await createClient({ surface: SURFACE });
+    const { data, error } = await sb.rpc("mon_cout_digisha");
+    return error ? null : ligneCoutDigisha(data);
+  } catch {
+    return null;
   }
 }

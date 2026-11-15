@@ -8,8 +8,8 @@
 // Le serveur (vlbh-energy-mcp) écrit chaque tour dans digisha_chat_log : la réponse devient une pièce de la colonne
 // DiGiSha au rafraîchissement qui suit. En « voir comme » on regarde : le tour partirait sous le mauvais nom.
 
-import { useState, useTransition, type ReactNode } from "react";
-import { dialoguerDigisha } from "./actions";
+import { startTransition, useCallback, useEffect, useState, useTransition, type ReactNode } from "react";
+import { dialoguerDigisha, lireCoutDigisha } from "./actions";
 import { copier, markdownVersWhatsApp } from "./whatsapp";
 
 type Tour = { role: "user" | "assistant"; content: string };
@@ -48,6 +48,16 @@ export function DigishaClient({ lectureSeule = false, apresReponse }: { lectureS
   const [copie, setCopie] = useState<string | null>(null);
   const [enCours, demarrer] = useTransition();
 
+  // La ligne de coût (Patrick, 11.11.2026 : « sur tous les DigiSha nous allons brancher cela », carte 91c366cd) : lue
+  // quand l'écran se monte, relue après chaque réponse (définition ou dialogue). null = rien à l'écran — sous ST3, sans
+  // session, ou si la lecture échoue : ni ligne, ni message d'erreur. En « voir comme », c'est le coût de la personne
+  // observée (l'encadré est alors en lecture seule : la ligne se lit au montage et ne bouge plus).
+  const [cout, setCout] = useState<string | null>(null);
+  const relireCout = useCallback(async () => {
+    setCout(await lireCoutDigisha().catch(() => null));
+  }, []);
+  useEffect(() => { startTransition(relireCout); }, [relireCout]);
+
   const copierCa = async (t: string, cle: string) => {
     setCopie((await copier(t)) ? cle : "refus");
     setTimeout(() => setCopie(null), 2000);
@@ -63,6 +73,7 @@ export function DigishaClient({ lectureSeule = false, apresReponse }: { lectureS
       if (!r.ok) { setErreur(r.erreur ?? "refusé"); return; }
       setDefinitions((xs) => [{ terme: t, texte: markdownVersWhatsApp(r.reply ?? "") }, ...xs]);
       setTerme("");
+      void relireCout();
       await apresReponse();
     });
 
@@ -75,6 +86,7 @@ export function DigishaClient({ lectureSeule = false, apresReponse }: { lectureS
       const r = await dialoguerDigisha(suite);
       if (!r.ok) { setErreur(r.erreur ?? "refusé"); return; }
       setTours([...suite, { role: "assistant", content: markdownVersWhatsApp(r.reply ?? "") }]);
+      void relireCout();
       await apresReponse();
     });
 
@@ -84,9 +96,10 @@ export function DigishaClient({ lectureSeule = false, apresReponse }: { lectureS
         <button type="button" onClick={() => setOuvert((o) => !o)} className="text-base font-semibold text-indigo-900">
           {ouvert ? "▾" : "▸"} DiGiSha — définitions
         </button>
-        <span className="text-xs text-indigo-900/70">
+        <div className="text-xs text-indigo-900/70">
           chaque réponse devient une pièce de la colonne DiGiSha (clique-la pour la poser sur le banc) — et se copie telle quelle dans WhatsApp
-        </span>
+          {cout && <p className="mt-0.5 tabular-nums text-gray-500">{cout}</p>}
+        </div>
       </div>
       {ouvert && (
         <div className="mt-2 space-y-3">
