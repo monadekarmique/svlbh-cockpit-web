@@ -20,7 +20,10 @@ const SEUIL_FRAICHEUR_MIN = 90;
 type Service = { nom: string; depot: string; branche: string; verdict: string; commit?: string; tete?: string;
   retard_commits?: number; en_service_le?: string; objet?: string; echec?: { statut: string; le: string; commit: string } };
 type Fonction = { slug: string; version?: number; deploye_le: string; verdict: string; source?: string; main_le?: string };
-type Agent = { label: string; verdict: string; dernier_code?: number | string; dernier_passage?: string };
+// rythme, raison, voix, script : lus par le relevé dans l'agent lui-même (bin/agents-launchd.py, carte 71e58509) —
+// absents des relevés d'avant le 15.11.
+type Agent = { label: string; verdict: string; dernier_code?: number | string; dernier_passage?: string;
+  rythme?: string; raison?: string; voix?: string; script?: string | null };
 type Pose = { fichier: string; carte?: string; quoi?: string; approuvee: boolean; sonde: string };
 type Branche = { depot: string; branche: string; le: string; objet: string; commits: number | null };
 type NonPousse = { clone: string; commits_non_pousses: number; fichiers_non_commites: number; tete_locale: string; tete_age_h: number };
@@ -161,12 +164,35 @@ export default async function VieSection() {
                   <li key={a.label} className={ROUGE}>
                     {a.label.replace("com.patricktest.", "")} — {a.verdict}
                     {a.dernier_passage ? <span className="font-normal text-neutral-500"> · dernier passage {jour(a.dernier_passage)}</span> : null}
+                    {a.raison && a.raison !== "—" ? <span className="block font-normal text-neutral-600">{a.raison}</span> : null}
                   </li>
                 ))}
               </ul>
               <p className="mt-1 text-sm text-emerald-800">
                 {c.agents.length - ecarts.length} agent{c.agents.length - ecarts.length > 1 ? "s" : ""} sur {c.agents.length} tournent ou attendent leur heure.
               </p>
+              {/* Patrick, 15.11 : « 34 agents qui tournent sans pouvoir les identifier » — chacun, avec ce qu'il fait et qui l'a écrit. */}
+              <details className="mt-1 text-sm">
+                <summary className="cursor-pointer text-neutral-700">Ce que fait chacun des {c.agents.length} agents, et qui l’a écrit</summary>
+                <p className="mt-1 text-xs text-neutral-500">
+                  « Ce qu’il fait » est la première phrase de son script ; « écrit par » est l’auteur du dernier commit du
+                  script (« hors dépôt » : le script n’est dans aucun dépôt git).
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {c.agents.map((a) => (
+                    <li key={a.label}>
+                      <span className={OK.includes(a.verdict) ? "font-medium text-neutral-800" : ROUGE}>
+                        {a.label.replace("com.patricktest.", "")}
+                      </span>
+                      <span className="text-neutral-500">
+                        {" "}· {a.verdict}{a.rythme ? ` · ${a.rythme}` : ""}{a.voix ? ` · écrit par ${a.voix}` : ""}
+                        {a.script ? <> · <code>{a.script}</code></> : null}
+                      </span>
+                      <span className="block text-neutral-600">{a.raison && a.raison !== "—" ? a.raison : "— (le relevé ne le dit pas encore)"}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </>
           );
         })() : <Illis titre="Agents" v={c.agents} />}
