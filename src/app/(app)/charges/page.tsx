@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireSt6 } from "@/lib/owner-gate";
 import { createClient } from "@/lib/supabase/server";
 import { NatureSelect } from "./nature-select";
+import { POSE_PAR_APPRIS } from "@/lib/charges-etat";
 
 export const metadata: Metadata = { title: "Charges" };
 export const dynamic = "force-dynamic";
@@ -59,6 +60,14 @@ export default async function ChargesPage({
   }
 
   const toutes = (data ?? []) as Ligne[];
+  // Carte 44551562 (15.11.2026) : la vue ne dit pas QUI a posé une annotation. Les lignes apprises par fable (pose_par
+  // « fable-appris ») sont lues à part, pour rester distinctes à l'écran de ce que Patrick a validé lui-même. Si cette
+  // lecture échoue, la page s'affiche comme avant.
+  const { data: apprises } = await supabase
+    .from("rapprochement")
+    .select("ligne_id")
+    .eq("pose_par", POSE_PAR_APPRIS);
+  const appris = new Set(((apprises ?? []) as { ligne_id: string }[]).map((r) => r.ligne_id));
   const natureDe = (l: Ligne) => l.nature ?? l.suggestion;
   const lignes = toutes.filter((l) => !masquees.has(natureDe(l)));
 
@@ -185,7 +194,10 @@ export default async function ChargesPage({
         Les lignes en <span className="italic text-neutral-500">gris italique</span> sont
         des <strong>suggestions</strong> de la règle, pas des décisions : elles comptent
         déjà dans le total, mais rien n’est écrit tant que tu n’as pas choisi. Une fois
-        validées elles passent en vert. L’impôt préalable ne compte QUE les charges
+        validées elles passent en vert. Les lignes en <span className="font-medium text-sky-800">bleu</span> sont{" "}
+        <strong>apprises</strong> : fable les a écrites d’après ce que tu as déjà validé pour le même fournisseur
+        ou la même opération ; elles comptent comme des décisions, et choisir une nature dans leur menu les
+        reprend à ton nom. L’impôt préalable ne compte QUE les charges
         à <strong>TVA récupérable</strong>, à 8.1 % incluse : un fournisseur étranger
         sans numéro de TVA suisse donne une charge bien réelle mais rien à déduire —
         ça se lit sur sa facture, pas sur un relevé de carte.
@@ -225,7 +237,7 @@ export default async function ChargesPage({
                         {CHF.format(Math.abs(Number(l.montant)))}
                       </td>
                       <td className="px-3 py-2">
-                        <NatureSelect ligneId={l.ligne_id} valeur={l.nature} suggestion={l.suggestion} />
+                        <NatureSelect ligneId={l.ligne_id} valeur={l.nature} suggestion={l.suggestion} appris={appris.has(l.ligne_id)} />
                       </td>
                     </tr>
                   ))}

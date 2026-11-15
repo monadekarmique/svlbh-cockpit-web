@@ -2,6 +2,7 @@
 
 import { useTransition, useState } from "react";
 import { qualifier } from "./actions";
+import { CLASSES_ETAT, etatLigne } from "@/lib/charges-etat";
 
 const NATURES = [
   { value: "charge", label: "Charge — TVA récupérable" },
@@ -16,14 +17,16 @@ const NATURES = [
 ];
 
 export function NatureSelect({
-  ligneId, valeur, suggestion,
-}: { ligneId: string; valeur: string | null; suggestion: string }) {
+  ligneId, valeur, suggestion, appris = false,
+}: { ligneId: string; valeur: string | null; suggestion: string; appris?: boolean }) {
   const [pending, start] = useTransition();
   // `valeur` = ce qui est ÉCRIT en base. `suggestion` = ce que la règle propose.
   // On distingue les deux à l'écran : une suggestion non validée reste en gris,
   // sinon on ne saurait plus ce que Patrick a réellement tranché.
   const [choix, setChoix] = useState(valeur ?? suggestion);
-  const valide = valeur !== null;
+  // `appris` = l'annotation est signée « fable-appris » (apprise de ses validations) : ni proposée, ni validée par lui.
+  // Dès qu'il choisit une nature, l'écriture est à son nom : la ligne quitte le bleu.
+  const [signeFable, setSigneFable] = useState(appris);
 
   return (
     <select
@@ -32,6 +35,7 @@ export function NatureSelect({
       onChange={(e) => {
         const v = e.target.value;
         setChoix(v);
+        setSigneFable(false);
         const fd = new FormData();
         fd.set("ligne_id", ligneId);
         fd.set("nature", v);
@@ -40,10 +44,9 @@ export function NatureSelect({
       className={
         "w-full rounded-md border px-2 py-1 text-sm " +
         (pending ? "opacity-50 " : "") +
-        (valide
-          ? "border-emerald-300 bg-emerald-50 text-emerald-900"
-          : "border-neutral-300 bg-white text-neutral-500 italic")
+        CLASSES_ETAT[etatLigne(valeur, signeFable)]
       }
+      title={valeur !== null && signeFable ? "Appris de tes validations (écrit par fable) — choisis une nature pour la reprendre à ton nom" : undefined}
     >
       {NATURES.map((n) => (
         <option key={n.value} value={n.value}>{n.label}</option>
