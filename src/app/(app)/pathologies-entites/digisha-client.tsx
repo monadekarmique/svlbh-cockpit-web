@@ -8,11 +8,14 @@
 // Le serveur (vlbh-energy-mcp) écrit chaque tour dans digisha_chat_log : la réponse devient une pièce de la colonne
 // DiGiSha au rafraîchissement qui suit. En « voir comme » on regarde : le tour partirait sous le mauvais nom.
 
-import { startTransition, useCallback, useEffect, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { dialoguerDigisha, lireCoutDigisha } from "./actions";
 import { copier, markdownVersWhatsApp } from "./whatsapp";
 
 type Tour = { role: "user" | "assistant"; content: string };
+
+/** La ligne de coût écrite, ou null. Jamais d'erreur : une lecture qui échoue n'affiche rien. */
+const lireLigneCout = (): Promise<string | null> => lireCoutDigisha().catch(() => null);
 
 // La consigne qui fait d'une réponse d'accompagnement une définition publiable. Première ligne = le terme : c'est elle
 // que la pièce du banc montre comme question (questionDe).
@@ -53,10 +56,14 @@ export function DigishaClient({ lectureSeule = false, apresReponse }: { lectureS
   // session, ou si la lecture échoue : ni ligne, ni message d'erreur. En « voir comme », c'est le coût de la personne
   // observée (l'encadré est alors en lecture seule : la ligne se lit au montage et ne bouge plus).
   const [cout, setCout] = useState<string | null>(null);
-  const relireCout = useCallback(async () => {
-    setCout(await lireCoutDigisha().catch(() => null));
+  // Hors transition, comme le direct d'à côté (indexer-client) : tant qu'une action asynchrone est en cours, React
+  // retient TOUTES les autres transitions de la page (un clic sur « ← veille » attendrait cette lecture). Une ligne
+  // discrète ne retient personne.
+  useEffect(() => {
+    let vivant = true;
+    void lireLigneCout().then((ligne) => { if (vivant) setCout(ligne); });
+    return () => { vivant = false; };
   }, []);
-  useEffect(() => { startTransition(relireCout); }, [relireCout]);
 
   const copierCa = async (t: string, cle: string) => {
     setCopie((await copier(t)) ? cle : "refus");
@@ -73,7 +80,7 @@ export function DigishaClient({ lectureSeule = false, apresReponse }: { lectureS
       if (!r.ok) { setErreur(r.erreur ?? "refusé"); return; }
       setDefinitions((xs) => [{ terme: t, texte: markdownVersWhatsApp(r.reply ?? "") }, ...xs]);
       setTerme("");
-      void relireCout();
+      void lireLigneCout().then(setCout);
       await apresReponse();
     });
 
@@ -86,7 +93,7 @@ export function DigishaClient({ lectureSeule = false, apresReponse }: { lectureS
       const r = await dialoguerDigisha(suite);
       if (!r.ok) { setErreur(r.erreur ?? "refusé"); return; }
       setTours([...suite, { role: "assistant", content: markdownVersWhatsApp(r.reply ?? "") }]);
-      void relireCout();
+      void lireLigneCout().then(setCout);
       await apresReponse();
     });
 
