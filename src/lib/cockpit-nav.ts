@@ -188,6 +188,15 @@ export const COCKPIT_NAV: CockpitNavItem[] = [
     group: "owner",
   },
   {
+    href: "/semaine-acceleration",
+    label: "Semaine d'accélération · auteur",
+    navLabel: "Semaine d'accélération",
+    icon: "✦",
+    desc: "Les 36 modules et leurs liens : à retester à 300 %, blocs à vérifier, liens sans bloc, chapitres des livres",
+    color: "#8B3A62",
+    group: "owner",
+  },
+  {
     href: "/canaux-recoltes",
     label: "Canaux récoltés",
     navLabel: "Canaux",
